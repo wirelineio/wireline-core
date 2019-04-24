@@ -25,22 +25,6 @@ jobs:
             - v0.1-dependencies-{{ checksum "package.json" }}
             # fallback to using the latest cache if no exact match is found
             - v0.1-dependencies-
-            - v1-phantomjs-2.1.1    
-
-      # Workaround for error /home/circleci/repo/node_modules/phantomjs-prebuilt: Command failed.
-      - run:
-          name: Install phantomjs
-          command: |
-            if ! [ $(which phantomjs) ]; then                
-              sudo curl --output /usr/local/bin/phantomjs https://s3.amazonaws.com/circle-downloads/phantomjs-2.1.1
-            fi
-                  
-            sudo chmod ugo+x /usr/local/bin/phantomjs
-
-      - save_cache:
-          key: v1-phantomjs-2.1.1
-          paths:            
-            - /usr/local/bin/phantomjs
 
       - run: yarn
       - run: yarn build
