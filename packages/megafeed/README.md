@@ -1,5 +1,8 @@
 # Wireline Megafeed
 
+[![CircleCI](https://circleci.com/gh/wirelineio/wireline-core.svg?style=svg&circle-token=93ede761391f88aa9fffd7fd9e6fe3b552e9cf9d)](https://circleci.com/gh/wirelineio/wireline-core)
+[![npm version](https://badge.fury.io/js/%40wirelineio%2Fmegafeed.svg)](https://badge.fury.io/js/%40wirelineio%2Fmegafeed)
+
 Megafeed is a module that manages multiple hypercore feeds.
 
 It uses a [hypertrie](https://github.com/mafintosh/hypertrie) to keep all the feeds persisted.
