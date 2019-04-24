@@ -1,7 +1,7 @@
 {
   "name": "@wirelineio/megafeed",
   "version": "0.1.12",
-  "description": "Work with multiple feeds",
+  "description": "Manage multiple hypercore feeds.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/megafeed#readme",
   "bugs": {
     "url": "https://github.com/wirelineio/wireline-core/issues"

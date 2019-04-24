@@ -1,4 +1,4 @@
-# Megafeed
+# Wireline Megafeed
 
 Megafeed is a module that manages multiple hypercore feeds.
 
