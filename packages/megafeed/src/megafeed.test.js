@@ -11,37 +11,39 @@ const ram = require('random-access-memory');
 
 const megafeed = require('./megafeed');
 
-test('config with raf and valueEncoding utf-8', () => {
-  const mf = megafeed(tempy.directory(), {
-    valueEncoding: 'utf-8'
+describe('config megafeed', () => {
+  test('config with raf and valueEncoding utf-8', () => {
+    const mf = megafeed(tempy.directory(), {
+      valueEncoding: 'utf-8'
+    });
+
+    expect(mf._feeds._opts.valueEncoding).toBe('utf-8');
+    expect(mf._root.feed._storage.key.constructor.name).toBe('RandomAccessFile');
   });
 
-  expect(mf._feeds._opts.valueEncoding).toBe('utf-8');
-  expect(mf._root.feed._storage.key.constructor.name).toBe('RandomAccessFile');
-});
+  test('config with ram and valueEncoding json', () => {
+    const mf = megafeed(ram, {
+      valueEncoding: 'json'
+    });
 
-test('config with ram and valueEncoding json', () => {
-  const mf = megafeed(ram, {
-    valueEncoding: 'json'
+    expect(mf._feeds._opts.valueEncoding).toBe('json');
+    expect(mf._root.feed._storage.key.constructor.name).toBe('RAM');
   });
 
-  expect(mf._feeds._opts.valueEncoding).toBe('json');
-  expect(mf._root.feed._storage.key.constructor.name).toBe('RAM');
-});
-
-test('megafeed should be ready after the initialize process', () => {
-  const mf = megafeed(ram);
-  return mf.ready();
-});
-
-test('initialize megafeed with a list of feeds', async () => {
-  const mf = megafeed(ram, {
-    feeds: [{ name: 'documentOne' }, { name: 'documentTwo' }]
+  test('megafeed should be ready after the initialize process', () => {
+    const mf = megafeed(ram);
+    return mf.ready();
   });
 
-  await mf.ready();
+  test('initialize megafeed with a list of feeds', async () => {
+    const mf = megafeed(ram, {
+      feeds: [{ name: 'documentOne' }, { name: 'documentTwo' }]
+    });
 
-  expect(mf.feeds().length).toBe(2);
+    await mf.ready();
+
+    expect(mf.feeds().length).toBe(2);
+  });
 });
 
 describe('add operations in a persistent feed', () => {
