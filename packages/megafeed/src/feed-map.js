@@ -250,11 +250,12 @@ class FeedMap extends EventEmitter {
   }
 
   async loadFeeds(userPattern, options = {}) {
-    let pattern;
-    if (Array.isArray(userPattern)) {
-      pattern = userPattern.filter(Boolean).map(value => keyToHex(value));
+    let pattern = userPattern;
+
+    if (Array.isArray(pattern)) {
+      pattern = pattern.filter(Boolean).map(value => keyToHex(value));
     } else {
-      pattern = keyToHex(userPattern);
+      pattern = keyToHex(pattern);
     }
 
     const feeds = Array.from(this._feeds.values()).filter((f) => {

@@ -20,9 +20,16 @@ const { keyToHex, keyToBuffer, getDiscoveryKey } = require('./utils/keys');
 const pNoop = () => Promise.resolve();
 
 class Peer extends EventEmitter {
-  constructor({
-    partyMap, party, stream, opts,
-  }) {
+  static _parseTransactionMessages(type, message = {}) {
+    switch (type) {
+      case 'IntroduceFeeds': return Object.assign({}, message, {
+        keys: message.keys ? message.keys.map(key => keyToBuffer(key)) : []
+      });
+      default: return {};
+    }
+  }
+
+  constructor({ partyMap, party, stream, opts }) {
     super();
 
     // we need to have access to the entire list of parties
@@ -45,7 +52,7 @@ class Peer extends EventEmitter {
     this.transactions = new Map();
 
     // we track each feed that we are replicating
-    this.replicating = stream.feeds.map(feed => keyToHex(feed.key));
+    this.replicating = stream.feeds.map(feed => feed.key.toString('hex'));
 
     this._initializePartyExtension();
   }
@@ -83,7 +90,7 @@ class Peer extends EventEmitter {
 
     const transaction = this._emitTransaction({
       type,
-      data: Peer._parseTransactionMessages(type, message),
+      data: Peer._parseTransactionMessages(type, message)
     });
 
     resolveCallback(transaction, cb);
@@ -91,15 +98,15 @@ class Peer extends EventEmitter {
     return cb.promise;
   }
 
-  sendMessage({ id, subject, data }) {
-    let formatData = data;
+  sendMessage({ id, subject, data: userData }) {
+    let data = userData;
 
-    if (!Buffer.isBuffer(formatData)) {
-      if (typeof formatData === 'object') {
-        formatData = JSON.parse(formatData);
+    if (!Buffer.isBuffer(data)) {
+      if (typeof data === 'object') {
+        data = JSON.parse(data);
       }
 
-      formatData = Buffer.from(formatData);
+      data = Buffer.from(data);
     }
 
     this.feed.extension('party', Peer._codec.encode({
@@ -107,8 +114,8 @@ class Peer extends EventEmitter {
       message: {
         id: id || crypto.randomBytes(12).toString('hex'),
         subject,
-        data: formatData,
-      },
+        data
+      }
     }));
   }
 
@@ -149,7 +156,7 @@ class Peer extends EventEmitter {
 
       this.feed.extension('party', Peer._codec.encode({
         type,
-        message,
+        message
       }));
     });
   }
@@ -168,24 +175,13 @@ class Peer extends EventEmitter {
 
     const returnMessage = Peer._parseTransactionMessages(
       type,
-      Object.assign({ id: message.id }, data || {}),
+      Object.assign({ id: message.id }, data || {})
     );
 
     this.feed.extension('party', Peer._codec.encode({
       type,
-      message: returnMessage,
+      message: returnMessage
     }));
-
-    return null;
-  }
-
-  static _parseTransactionMessages(type, message = {}) {
-    switch (type) {
-      case 'IntroduceFeeds': return Object.assign({}, message, {
-        keys: message.keys ? message.keys.map(key => keyToBuffer(key)) : [],
-      });
-      default: return {};
-    }
   }
 }
 
@@ -226,12 +222,11 @@ class PartyMap extends EventEmitter {
     const result = new Set();
     const party = this.party(partyKey);
 
-
     this.peers(partyKey).forEach((peer) => {
       peer.replicating.forEach((key) => {
         if (!party.isFeed && key === peer.replicating[0]) {
           // If the party is not a feed we don't want to add the initial key as a feed.
-          return;
+          return null;
         }
 
         result.add(key);
@@ -241,16 +236,12 @@ class PartyMap extends EventEmitter {
     return Array.from(result.values()).map(key => keyToBuffer(key));
   }
 
-  addPeer({
-    party, stream, feed, options,
-  }) {
+  addPeer({ party, stream, feed, opts: options }) {
     const opts = Object.assign({}, options, { stream });
 
-    if (stream.destroyed) return null;
+    if (stream.destroyed) return;
 
-    const peer = new Peer({
-      partyMap: this, party, stream, feed, opts,
-    });
+    const peer = new Peer({ partyMap: this, party, stream, feed, opts });
 
     this._peers.add(peer);
 
@@ -271,21 +262,18 @@ class PartyMap extends EventEmitter {
     return peer;
   }
 
-  setRules(newRules) {
-    const rules = Object.assign({}, newRules);
-
+  setRules(rules) {
     assert(typeof rules.name === 'string' && rules.name.length > 0, 'Name rule string is required.');
     assert(typeof rules.handshake === 'function', 'Handshake rule method is required.');
 
-    rules.replicateOptions = rules.replicateOptions || {};
-    rules.remoteIntroduceFeeds = rules.remoteIntroduceFeeds || pNoop;
-    rules.remoteMessage = rules.remoteMessage || pNoop;
-    this._rules.set(rules.name, rules);
+    this._rules.set(rules.name, Object.assign({}, rules, {
+      replicateOptions: rules.replicateOptions || {},
+      remoteIntroduceFeeds: rules.remoteIntroduceFeeds || pNoop,
+      remoteMessage: rules.remoteMessage || pNoop
+    }));
   }
 
-  async setParty({
-    name, key, rules, isFeed, metadata,
-  }) {
+  async setParty({ name, key, rules, isFeed, metadata }) {
     assert(Buffer.isBuffer(key) || typeof key === 'string', 'Public key for the party is required.');
     assert(typeof rules === 'string' && rules.length > 0, 'Rules string is required.');
 
@@ -296,7 +284,7 @@ class PartyMap extends EventEmitter {
       key: bufferKey,
       rules,
       isFeed,
-      metadata,
+      metadata
     };
 
     if (!this._rules.has(rules)) {
@@ -327,14 +315,13 @@ class PartyMap extends EventEmitter {
     let party = this._parties.get(hexKey);
 
     if (!party) {
-      party = Array.from(this._parties.values())
-        .find(p => keyToHex(p.key) === hexKey || p.name === hexKey);
+      party = Array.from(this._parties.values()).find(p => keyToHex(p.key) === hexKey || p.name === hexKey);
     }
 
     if (party && this._rules.has(party.rules)) {
       return Object.assign({}, party, {
         discoveryKey: getDiscoveryKey(party.key),
-        rules: this._rules.get(party.rules),
+        rules: this._rules.get(party.rules)
       });
     }
 
@@ -342,11 +329,12 @@ class PartyMap extends EventEmitter {
   }
 
   async loadParties(userPattern) {
-    let pattern;
-    if (Array.isArray(userPattern)) {
-      pattern = userPattern.filter(Boolean).map(value => keyToHex(value));
+    let pattern = userPattern;
+
+    if (Array.isArray(pattern)) {
+      pattern = pattern.filter(Boolean).map(value => keyToHex(value));
     } else {
-      pattern = keyToHex(userPattern);
+      pattern = keyToHex(pattern);
     }
 
     const partiesLoaded = this.list().map(party => keyToHex(party.key));
@@ -381,7 +369,7 @@ class PartyMap extends EventEmitter {
 // codec to encode/decode party extension messages
 Peer._codec = codecProtobuf(schema, {
   IntroduceFeeds: 0,
-  EphemeralMessage: 1,
+  EphemeralMessage: 1
 });
 
 module.exports = PartyMap;
