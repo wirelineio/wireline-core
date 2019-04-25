@@ -31,7 +31,7 @@ class FeedMap extends EventEmitter {
     this._locker = new Locker();
   }
 
-  async initFeeds(feeds = []) {
+  async initFeeds(initFeeds = []) {
     const root = this._root;
 
     const persistedFeeds = (await root.getFeedList()).map((msg) => {
@@ -40,27 +40,28 @@ class FeedMap extends EventEmitter {
       return value;
     });
 
-    const result = persistedFeeds
+    const feeds = persistedFeeds
       .concat(
-        feeds.filter((feed) => {
-          const searchFor = [keyToHex(feed.name), keyToHex(feed.key)].filter(Boolean);
-          const idx = persistedFeeds.findIndex(
-            pf => searchFor.includes(keyToHex(pf.name)) || searchFor.includes(keyToHex(pf.key)),
-          );
+        initFeeds
+          .map(feed => Object.assign({}, feed, { fromInit: true }))
+          .filter((feed) => {
+            const searchFor = [keyToHex(feed.name), keyToHex(feed.key)].filter(Boolean);
+            const idx = persistedFeeds.findIndex(
+              pf => searchFor.includes(keyToHex(pf.name)) || searchFor.includes(keyToHex(pf.key)),
+            );
 
-          if (idx === -1) {
-            return true;
-          }
+            if (idx === -1) {
+              return true;
+            }
 
-          persistedFeeds[idx] = Object.assign({}, persistedFeeds[idx], feed);
-
-          return false;
-        }),
+            persistedFeeds[idx] = Object.assign({}, persistedFeeds[idx], feed);
+            return false;
+          }),
       )
-      .map(feed => Object.assign({}, feed, { fromInit: true, load: feed.load === undefined }));
+      .map(feed => Object.assign({}, feed, { load: feed.load === undefined ? true : feed.load }));
 
     await Promise.all(
-      result.map((opts) => {
+      feeds.map((opts) => {
         const { fromInit } = opts;
 
         if (opts.load || fromInit) {
