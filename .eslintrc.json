@@ -21,8 +21,10 @@
         "react"
     ],
     "rules": {
-        "no-console": "off",
-        "no-debugger": "off",
+        "comma-dangle": "off",
+        "import/prefer-default-export": "off",
+        "no-console": "warn",
+        "no-debugger": "warn",
         "react/prop-types": "off",
         "no-underscore-dangle": "off"
     }

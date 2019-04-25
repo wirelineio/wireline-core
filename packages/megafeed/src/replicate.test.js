@@ -29,16 +29,16 @@ test.skip('replicate by channel', async () => {
   const r2 = remoteFeed.replicate();
 
   return new Promise((resolve, reject) => {
-    pump(r1, r2, r1, (err) => {
-      if (err) {
-        return reject(err);
+    pump(r1, r2, r1, (closeErr) => {
+      if (closeErr) {
+        return reject(closeErr);
       }
-      remoteFeed.get(0, (err, block) => {
+      return remoteFeed.get(0, (err, block) => {
         if (err) {
           return reject(err);
         }
         expect(block).toEqual({ message: 'hi' });
-        resolve();
+        return resolve();
       });
     });
   });

@@ -63,20 +63,19 @@ class Megafeed extends EventEmitter {
 
     this._defaultStorage = storage;
 
-    this._storage = (dir, randomAccessStorage) => {
-      const ras = randomAccessStorage || this._defaultStorage;
+    this._storage = (dir, customStorage) => {
+      const ras = customStorage || this._defaultStorage;
 
       return (name) => {
         if (typeof ras === 'string') {
           return raf(path.join(ras, dir, name));
         }
-
         return ras(`${dir}/${name}`);
       };
     };
 
     // we save all our personal information like the feed list in a private feed
-    this._root = initializeRootFeed(this._storage('root', storage), key, opts);
+    this._root = initializeRootFeed(this._storage('root', storage), rootKey, opts);
 
     // feeds manager instance
     this._feeds = new FeedMap({ storage: this._storage, opts, root: this._root });
