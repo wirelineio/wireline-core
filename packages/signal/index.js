@@ -9,6 +9,6 @@ server.listen(port, () => {
   console.log('discovery-signal-webrtc running on %s', port);
 });
 
-process.on('unhandledRejection', function (err) {
+process.on('unhandledRejection', (err) => {
   console.error('Unhandled rejection:', err.message);
 });

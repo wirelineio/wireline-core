@@ -15,8 +15,8 @@ module.exports = function initializeRootFeed(storage, key, opts) {
   const root = hypertrie(storage, key, Object.assign({}, opts, {
     valueEncoding: codecProtobuf(schema, {
       Feed: 0,
-      Party: 1
-    })
+      Party: 1,
+    }),
   }));
 
   root.pPut = pify(root.put.bind(root));

@@ -6,7 +6,7 @@ function createServer({ io }) {
   const connections = new Set();
 
   signalSwarm.on('peer:leave', ({ peerId }) => {
-    connections.forEach(connection => {
+    connections.forEach((connection) => {
       if (connection.includes(peerId)) {
         connections.delete(connection);
       }
@@ -26,14 +26,17 @@ function createServer({ io }) {
 
     const result = Array.from(connections.values())
       .filter(connection => connection.includes(channelName))
-      .map(connection => {
-        const peers = connection.split(':');
-        return [ peers[1], peers[2] ];
+      .map((connection) => {
+        const conn = connection.split(':');
+        return [conn[1], conn[2]];
       });
 
-    signalSwarm.channels.get(channelName).forEach(peerId => {
+    signalSwarm.channels.get(channelName).forEach((peerId) => {
+      // eslint-disable-next-line no-underscore-dangle
       const socket = signalSwarm._sockets[peerId];
-      socket && socket.emit('simple-signal[info]', { channel: channelName, connections: result });
+      if (socket) {
+        socket.emit('simple-signal[info]', { channel: channelName, connections: result });
+      }
     });
 
     request.forward();

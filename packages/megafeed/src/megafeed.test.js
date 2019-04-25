@@ -14,7 +14,7 @@ const megafeed = require('./megafeed');
 describe('config megafeed', () => {
   test('config with raf and valueEncoding utf-8', () => {
     const mf = megafeed(tempy.directory(), {
-      valueEncoding: 'utf-8'
+      valueEncoding: 'utf-8',
     });
 
     expect(mf._feeds._opts.valueEncoding).toBe('utf-8');
@@ -23,7 +23,7 @@ describe('config megafeed', () => {
 
   test('config with ram and valueEncoding json', () => {
     const mf = megafeed(ram, {
-      valueEncoding: 'json'
+      valueEncoding: 'json',
     });
 
     expect(mf._feeds._opts.valueEncoding).toBe('json');
@@ -37,7 +37,7 @@ describe('config megafeed', () => {
 
   test('initialize megafeed with a list of feeds', async () => {
     const mf = megafeed(ram, {
-      feeds: [{ name: 'documentOne' }, { name: 'documentTwo' }]
+      feeds: [{ name: 'documentOne' }, { name: 'documentTwo' }],
     });
 
     await mf.ready();
@@ -49,7 +49,7 @@ describe('config megafeed', () => {
 describe('add operations in a persistent feed', () => {
   beforeAll(() => {
     this.mf = megafeed(tempy.directory(), {
-      valueEncoding: 'json'
+      valueEncoding: 'json',
     });
   });
 
@@ -71,7 +71,7 @@ describe('add operations in a persistent feed', () => {
 describe('list / get / delete / load / close operations', () => {
   beforeEach(async () => {
     this.mf = megafeed(tempy.directory(), {
-      valueEncoding: 'json'
+      valueEncoding: 'json',
     });
 
     this.feed = await this.mf.addFeed({ name: 'documentOne' });
@@ -100,14 +100,12 @@ describe('list / get / delete / load / close operations', () => {
   });
 
   test('load feeds: documentOne', async () => {
-    let feed = await this.mf.addFeed({ name: 'documentOne' });
+    const feed = await this.mf.addFeed({ name: 'documentOne' });
     await pify(feed.close.bind(feed))();
 
     const result = await this.mf.loadFeeds(feed.key);
     expect(result.length).toBe(1);
-
-    feed = result[0];
-    expect(this.mf.feed('documentOne')).toBe(feed);
+    expect(this.mf.feed('documentOne')).toBe(result[0]);
   });
 
   test('close all feed', async () => {
@@ -128,7 +126,7 @@ describe('destroy megafeed storage', () => {
     this.dir = tempy.directory();
 
     this.mf = megafeed(tempy.directory(), {
-      valueEncoding: 'json'
+      valueEncoding: 'json',
     });
 
     this.feed = await this.mf.addFeed({ name: 'documentOne' });
