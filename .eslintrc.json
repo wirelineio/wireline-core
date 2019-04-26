@@ -18,10 +18,17 @@
     "comma-dangle": "off",
     "consistent-return": "off",
     "import/prefer-default-export": "off",
-    "max-len": [2, 120, 2, {"ignoreUrls": true}],
+    "max-len": [2, 120, 2, {
+      "ignoreComments": true,
+      "ignoreStrings": true,
+      "ignoreTemplateLiterals": true,
+      "ignoreUrls": true
+      }
+    ],
     "no-console": "off",
     "no-underscore-dangle": "off",
     "object-curly-newline": "off",
-    "padded-blocks": "off"
+    "padded-blocks": "off",
+    "react/prop-types": "off"
   }
 }
