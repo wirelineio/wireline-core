@@ -8,6 +8,7 @@ const { EventEmitter } = require('events');
 
 const pify = require('pify');
 const crypto = require('hypercore-crypto');
+const raf = require('random-access-file');
 
 const initializeRootFeed = require('./root');
 const replicate = require('./replicate');
@@ -35,20 +36,23 @@ class Megafeed extends EventEmitter {
     return keyToHex(...args);
   }
 
-  constructor(storage, key, opts) {
+  constructor(storage, key, options) {
     super();
     assert(storage, 'A default storage is required.');
 
     // TODO(burdon): Comment?
     this.setMaxListeners(Infinity);
 
-    if (typeof key === 'string') {
-      key = keyToBuffer(key);
+    let rootKey = key;
+    let opts = options;
+
+    if (typeof rootKey === 'string') {
+      rootKey = keyToBuffer(rootKey);
     }
 
-    if (!Buffer.isBuffer(key) && !opts) {
-      opts = key;
-      key = null;
+    if (!Buffer.isBuffer(rootKey) && !opts) {
+      opts = rootKey;
+      rootKey = null;
     }
 
     if (!opts) {
@@ -59,20 +63,19 @@ class Megafeed extends EventEmitter {
 
     this._defaultStorage = storage;
 
-    this._storage = (dir, storage) => {
-      storage = storage || this._defaultStorage;
+    this._storage = (dir, customStorage) => {
+      const ras = customStorage || this._defaultStorage;
 
-      return name => {
-        if (typeof storage === 'string') {
-          return require('random-access-file')(path.join(storage, dir, name));
-        } else {
-          return storage(dir + '/' + name);
+      return (name) => {
+        if (typeof ras === 'string') {
+          return raf(path.join(ras, dir, name));
         }
+        return ras(`${dir}/${name}`);
       };
     };
 
     // we save all our personal information like the feed list in a private feed
-    this._root = initializeRootFeed(this._storage('root', storage), key, opts);
+    this._root = initializeRootFeed(this._storage('root', storage), rootKey, opts);
 
     // feeds manager instance
     this._feeds = new FeedMap({ storage: this._storage, opts, root: this._root });
@@ -106,7 +109,7 @@ class Megafeed extends EventEmitter {
     return this._root.feed.secretKey;
   }
 
-  /*** Feeds API ***/
+  /** * Feeds API ** */
 
   feed(...args) {
     return this._feeds.feed(...args);
@@ -120,9 +123,9 @@ class Megafeed extends EventEmitter {
     return this._feeds.feeds(...args);
   }
 
-  addFeed(opts, cb = callbackPromise()) {
+  addFeed(options, cb = callbackPromise()) {
     this.ready(() => {
-      resolveCallback(this._feeds.addFeed(opts), cb);
+      resolveCallback(this._feeds.addFeed(options), cb);
     });
 
     return cb.promise;
@@ -144,17 +147,17 @@ class Megafeed extends EventEmitter {
     return cb.promise;
   }
 
-  loadFeeds(pattern, opts, cb = callbackPromise()) {
+  loadFeeds(pattern, options, cb = callbackPromise()) {
     this.ready(() => {
-      resolveCallback(this._feeds.loadFeeds(pattern, opts), cb);
+      resolveCallback(this._feeds.loadFeeds(pattern, options), cb);
     });
 
     return cb.promise;
   }
 
-  persistFeed(feed, opts, cb = callbackPromise()) {
+  persistFeed(feed, options, cb = callbackPromise()) {
     this.ready(() => {
-      resolveCallback(this._feeds.persistFeed(feed, opts), cb);
+      resolveCallback(this._feeds.persistFeed(feed, options), cb);
     });
 
     return cb.promise;
@@ -168,7 +171,7 @@ class Megafeed extends EventEmitter {
     return cb.promise;
   }
 
-  /*** Parties API ***/
+  /** * Parties API ** */
 
   addPeer(...args) {
     return this._parties.addPeer(...args);
@@ -202,7 +205,7 @@ class Megafeed extends EventEmitter {
     return cb.promise;
   }
 
-  /*** Megafeed ***/
+  /** * Megafeed ** */
 
   ready(cb = callbackPromise()) {
     if (this._isReady) {
@@ -228,15 +231,17 @@ class Megafeed extends EventEmitter {
   }
 
   destroy(cb = callbackPromise()) {
-    this.close(err => {
+    this.close((closeErr) => {
       const warnings = [];
-      if (err) {
-        warnings.push(err);
+
+      if (closeErr) {
+        warnings.push(closeErr);
       }
 
-      const pifyDestroy = s => pify(s.destroy.bind(s))().catch(err => warnings.push(err));
+      const pifyDestroy = s => pify(s.destroy.bind(s))()
+        .catch(destroyErr => warnings.push(destroyErr));
 
-      const destroyStorage = feed => {
+      const destroyStorage = (feed) => {
         const s = feed._storage;
         return Promise.all([
           pifyDestroy(s.bitfield),
@@ -244,7 +249,7 @@ class Megafeed extends EventEmitter {
           pifyDestroy(s.data),
           pifyDestroy(s.key),
           pifyDestroy(s.secretKey),
-          pifyDestroy(s.signatures)
+          pifyDestroy(s.signatures),
         ]);
       };
 
@@ -252,7 +257,7 @@ class Megafeed extends EventEmitter {
         destroyStorage(this._root.feed),
         ...this.feeds(true)
           .filter(f => f.closed)
-          .map(f => destroyStorage(f))
+          .map(f => destroyStorage(f)),
       ]);
 
       resolveCallback(promise, cb);
@@ -262,7 +267,7 @@ class Megafeed extends EventEmitter {
   }
 
   _initialize(feeds) {
-    resolveCallback(this._feeds.initFeeds(feeds), err => {
+    resolveCallback(this._feeds.initFeeds(feeds), (err) => {
       if (err) {
         this.emit('ready', err);
         this.emit('error', err);

@@ -3,16 +3,19 @@
 //
 
 const protocol = require('hypercore-protocol');
-const { resolveCallback } = require('./utils/promise-help');
-
 const debug = require('debug')('megafeed:replicate');
 
-module.exports = function replicate(partyDiscoveryKey, opts = {}) {
-  let stream, party, partyFeed, peer;
+const { resolveCallback } = require('./utils/promise-help');
 
-  opts = Object.assign(
+module.exports = function replicate(partyDiscoveryKey, options = {}) {
+  let stream;
+  let party;
+  let partyFeed;
+  let peer;
+
+  let opts = Object.assign(
     { id: this.id, extensions: [] },
-    opts
+    options,
   );
 
   opts.extensions.push('party');
@@ -21,31 +24,31 @@ module.exports = function replicate(partyDiscoveryKey, opts = {}) {
     party = this.party(partyDiscoveryKey);
   }
 
-  const addInitialFeed = dk => {
+  const addInitialFeed = (dk) => {
     if (party.isFeed) {
-      let feed = this.feedByDK(dk);
+      const feed = this.feedByDK(dk);
 
       if (feed) {
         feed.replicate(Object.assign({}, opts, { stream }));
         return;
       }
 
-      this.addFeed({ key: party.key }, (err, feed) => {
+      this.addFeed({ key: party.key }, (err, newFeed) => {
         if (err) {
           throw err;
         }
 
-        feed.replicate(Object.assign({}, opts, { stream }));
+        newFeed.replicate(Object.assign({}, opts, { stream }));
       });
     } else {
       stream.feed(party.key);
     }
   };
 
-  const add = discoveryKey => {
-    this.ready(err => {
+  const add = (discoveryKey) => {
+    this.ready((err) => {
       if (err) return stream.destroy(err);
-      if (stream.destroyed) return;
+      if (stream.destroyed) return null;
 
       if (!party) {
         const remoteParty = this.party(discoveryKey);
@@ -53,13 +56,15 @@ module.exports = function replicate(partyDiscoveryKey, opts = {}) {
           party = remoteParty;
           addInitialFeed(discoveryKey);
         }
-        return;
+        return null;
       }
 
       const feed = this.feedByDK(discoveryKey);
       if (feed && peer) {
         peer.replicate(feed);
       }
+
+      return null;
     });
   };
 
@@ -77,9 +82,13 @@ module.exports = function replicate(partyDiscoveryKey, opts = {}) {
   stream.on('feed', add);
 
   stream.once('handshake', () => {
-    partyFeed = stream.feeds[0];
-    peer = this.addPeer({ party, stream, feed: partyFeed, opts });
-    resolveCallback(party.rules.handshake({ peer }), err => {
+    [partyFeed] = stream.feeds;
+
+    peer = this.addPeer({
+      party, stream, feed: partyFeed, opts,
+    });
+
+    resolveCallback(party.rules.handshake({ peer }), (err) => {
       debug('Rule handshake', err);
     });
   });
