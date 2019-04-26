@@ -8,8 +8,10 @@ const debug = require('debug')('megafeed:replicate');
 const { resolveCallback } = require('./utils/promise-help');
 
 module.exports = function replicate(partyDiscoveryKey, options = {}) {
-  let stream; let party; let partyFeed; let
-    peer;
+  let stream;
+  let party;
+  let partyFeed;
+  let peer;
 
   let opts = Object.assign(
     { id: this.id, extensions: [] },

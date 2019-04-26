@@ -13,6 +13,39 @@ const { keyToHex, getDiscoveryKey, keyToBuffer } = require('./utils/keys');
 const Locker = require('./utils/locker');
 
 class FeedMap extends EventEmitter {
+  static optsToRoot(feed, opts) {
+    return {
+      name: feed.name,
+      key: keyToBuffer(opts.key || feed.key),
+      secretKey: keyToBuffer(opts.secretKey || feed.secretKey),
+      // should be loaded during the initialization
+      load: opts.load,
+      // should be persisted in the root
+      persist: opts.persist,
+      // hypercore opts derivated
+      valueEncoding: opts.valueEncoding,
+    };
+  }
+
+  static optsToHypercore(opts) {
+    return {
+      secretKey: opts.secretKey,
+      valueEncoding: opts.valueEncoding,
+    };
+  }
+
+  static isOpen(feed) {
+    return feed.loaded && !feed.closed;
+  }
+
+  static feedPromisify(feed) {
+    const newFeed = feed;
+    newFeed.pReady = pify(feed.ready.bind(feed));
+    newFeed.pAppend = pify(feed.append.bind(feed));
+    newFeed.pClose = pify(feed.close.bind(feed));
+    return feed;
+  }
+
   constructor({ storage, opts = {}, root }) {
     super();
 
@@ -317,39 +350,6 @@ class FeedMap extends EventEmitter {
     }
 
     return null;
-  }
-
-  static optsToRoot(feed, opts) {
-    return {
-      name: feed.name,
-      key: keyToBuffer(opts.key || feed.key),
-      secretKey: keyToBuffer(opts.secretKey || feed.secretKey),
-      // should be loaded during the initialization
-      load: opts.load,
-      // should be persisted in the root
-      persist: opts.persist,
-      // hypercore opts derivated
-      valueEncoding: opts.valueEncoding,
-    };
-  }
-
-  static optsToHypercore(opts) {
-    return {
-      secretKey: opts.secretKey,
-      valueEncoding: opts.valueEncoding,
-    };
-  }
-
-  static isOpen(feed) {
-    return feed.loaded && !feed.closed;
-  }
-
-  static feedPromisify(feed) {
-    const newFeed = feed;
-    newFeed.pReady = pify(feed.ready.bind(feed));
-    newFeed.pAppend = pify(feed.append.bind(feed));
-    newFeed.pClose = pify(feed.close.bind(feed));
-    return feed;
   }
 
   bindEvents(mega) {
