@@ -184,8 +184,10 @@ class FeedMap extends EventEmitter {
 
       await release();
 
-      this.emit('feed:added', feed);
-      this.emit('feed', feed); // kappa support
+      if (!opts.silent) {
+        this.emit('feed:added', feed);
+        this.emit('feed', feed); // kappa support
+      }
 
       return feed;
     } catch (err) {
