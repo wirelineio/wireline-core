@@ -168,6 +168,8 @@ class FeedMap extends EventEmitter {
 
       feed.name = name;
       feed.loaded = true;
+      feed.silent = opts.silent;
+      feed.announced = false;
 
       feed.on('append', () => this.emit('append', feed));
       feed.on('download', (...args) => this.emit('download', ...args, feed));
@@ -184,9 +186,8 @@ class FeedMap extends EventEmitter {
 
       await release();
 
-      if (!opts.silent) {
-        this.emit('feed:added', feed);
-        this.emit('feed', feed); // kappa support
+      if (!feed.silent) {
+        this.announce(feed);
       }
 
       return feed;
@@ -195,6 +196,20 @@ class FeedMap extends EventEmitter {
       await release();
       throw err;
     }
+  }
+
+  announce(feed) {
+    if (feed.announced) {
+      return;
+    }
+
+    this.emit('feed:added', feed);
+    this.emit('feed', feed); // kappa support
+
+    /* eslint-disable */
+    delete feed.silent;
+    feed.announced = true;
+    /* eslint-enable */
   }
 
   async addFeed({

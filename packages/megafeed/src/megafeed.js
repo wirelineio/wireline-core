@@ -171,6 +171,10 @@ class Megafeed extends EventEmitter {
     return cb.promise;
   }
 
+  announceFeed(feed) {
+    this._feeds.announce(feed);
+  }
+
   /** * Parties API ** */
 
   addPeer(...args) {
