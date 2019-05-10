@@ -30,7 +30,7 @@ class Peer extends EventEmitter {
     }
   }
 
-  constructor({ partyMap, party, stream, opts }) {
+  constructor({ partyMap, party, stream, opts = {} }) {
     super();
 
     // we need to have access to the entire list of parties
@@ -47,7 +47,7 @@ class Peer extends EventEmitter {
     this.feed = rootFeed;
 
     // options for the replicate
-    this.opts = opts;
+    this.opts = Object.assign({}, opts, { stream });
 
     // we track each party message extension using transaction [ [id, promise] ]
     this.transactions = new Map();
@@ -187,15 +187,12 @@ class Peer extends EventEmitter {
 }
 
 class PartyMap extends EventEmitter {
-  constructor({ root, feeds = {} }) {
+  constructor({ root, findFeed }) {
     super();
-    assert(typeof feeds.ready === 'function', 'Ready function is required.');
-    assert(typeof feeds.add === 'function', 'Add function is required.');
-    assert(typeof feeds.find === 'function', 'Find function is required.');
 
     this._root = root;
 
-    this._feeds = feeds;
+    this._findFeed = findFeed;
 
     this._rules = new Map();
 
@@ -230,12 +227,11 @@ class PartyMap extends EventEmitter {
   // Feed keys in the party.
   guestFeedKeys(partyKey) {
     const result = new Set();
-    const party = this.party(partyKey);
 
     this.peers(partyKey).forEach((peer) => {
       peer.replicating.forEach((key) => {
-        if (!party.isFeed && key === peer.replicating[0]) {
-          // If the party is not a feed we don't want to add the initial key as a feed.
+        if (key === peer.feed.key.toString('hex')) {
+          // The initial feed is the party, we don't want to share it.
           return null;
         }
 
@@ -246,12 +242,10 @@ class PartyMap extends EventEmitter {
     return Array.from(result.values()).map(key => keyToBuffer(key));
   }
 
-  addPeer({ party, stream, feed, opts: options }) {
-    const opts = Object.assign({}, options, { stream });
-
+  addPeer({ party, stream, opts }) {
     if (stream.destroyed) return;
 
-    const peer = new Peer({ partyMap: this, party, stream, feed, opts });
+    const peer = new Peer({ partyMap: this, party, stream, opts });
 
     this._peers.add(peer);
 
@@ -283,7 +277,7 @@ class PartyMap extends EventEmitter {
     }));
   }
 
-  async setParty({ name, key, rules, isFeed, metadata }) {
+  async setParty({ name, key, rules, metadata }) {
     assert(Buffer.isBuffer(key) || typeof key === 'string', 'Public key for the party is required.');
     assert(typeof rules === 'string' && rules.length > 0, 'Rules string is required.');
 
@@ -293,7 +287,6 @@ class PartyMap extends EventEmitter {
       name: name || keyToHex(bufferKey),
       key: bufferKey,
       rules,
-      isFeed,
       metadata
     };
 
@@ -372,7 +365,6 @@ class PartyMap extends EventEmitter {
   replicate({ partyDiscoveryKey, ...options } = {}) {
     let stream;
     let party;
-    let partyFeed;
     let peer;
 
     let opts = Object.assign(
@@ -382,48 +374,26 @@ class PartyMap extends EventEmitter {
 
     opts.extensions.push('party');
 
-    const addInitialFeed = (dk) => {
-      if (party.isFeed) {
-        const feed = this._feeds.find(dk);
-
-        if (feed) {
-          feed.replicate(Object.assign({}, opts, { stream }));
-          return;
-        }
-
-        this._feeds.add({ key: party.key }, (err, newFeed) => {
-          if (err) {
-            throw err;
-          }
-
-          newFeed.replicate(Object.assign({}, opts, { stream }));
-        });
-      } else {
-        stream.feed(party.key);
-      }
-    };
-
     const add = (discoveryKey) => {
-      this._feeds.ready((err) => {
-        if (err) return stream.destroy(err);
-        if (stream.destroyed) return null;
+      if (stream.destroyed) return null;
 
-        if (!party) {
-          const remoteParty = this.party(discoveryKey);
-          if (remoteParty) {
-            party = remoteParty;
-            addInitialFeed(discoveryKey);
-          }
-          return null;
-        }
+      if (!party) {
+        const remoteParty = this.party(discoveryKey);
 
-        const feed = this._feeds.find(discoveryKey);
-        if (feed && peer) {
-          peer.replicate(feed);
+        if (remoteParty) {
+          party = remoteParty;
+          stream.feed(party.key);
         }
 
         return null;
-      });
+      }
+
+      const feed = this._findFeed(discoveryKey);
+      if (feed && peer) {
+        peer.replicate(feed);
+      }
+
+      return null;
     };
 
     if (partyDiscoveryKey) {
@@ -438,16 +408,14 @@ class PartyMap extends EventEmitter {
     stream = protocol(opts);
 
     if (party) {
-      addInitialFeed(partyDiscoveryKey);
+      stream.feed(party.key);
     }
 
     stream.on('feed', add);
 
     stream.once('handshake', () => {
-      [partyFeed] = stream.feeds;
-
       peer = this.addPeer({
-        party, stream, feed: partyFeed, opts,
+        party, stream, opts,
       });
 
       resolveCallback(party.rules.handshake({ peer }), (err) => {

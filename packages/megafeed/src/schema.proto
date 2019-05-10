@@ -4,7 +4,6 @@ message Party {
   required string name = 1;
   required bytes key = 2;
   required string rules = 3;
-  bool isFeed = 4;
   bytes metadata = 5;
 }
 

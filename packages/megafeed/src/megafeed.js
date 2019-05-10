@@ -82,11 +82,7 @@ class Megafeed extends EventEmitter {
 
     this._parties = new PartyMap({
       root: this._root,
-      feeds: {
-        ready: this.ready.bind(this),
-        add: this.addFeed.bind(this),
-        find: this.feedByDK.bind(this)
-      }
+      findFeed: this.feedByDK.bind(this)
     });
     this._parties.bindEvents(this);
 

@@ -46,8 +46,7 @@ defineEphemeralMessage()
 function defineParty () {
   var enc = [
     encodings.string,
-    encodings.bytes,
-    encodings.bool
+    encodings.bytes
   ]
 
   Party.encodingLength = encodingLength
@@ -65,10 +64,6 @@ function defineParty () {
     if (!defined(obj.rules)) throw new Error("rules is required")
     var len = enc[0].encodingLength(obj.rules)
     length += 1 + len
-    if (defined(obj.isFeed)) {
-      var len = enc[2].encodingLength(obj.isFeed)
-      length += 1 + len
-    }
     if (defined(obj.metadata)) {
       var len = enc[1].encodingLength(obj.metadata)
       length += 1 + len
@@ -92,11 +87,6 @@ function defineParty () {
     buf[offset++] = 26
     enc[0].encode(obj.rules, buf, offset)
     offset += enc[0].encode.bytes
-    if (defined(obj.isFeed)) {
-      buf[offset++] = 32
-      enc[2].encode(obj.isFeed, buf, offset)
-      offset += enc[2].encode.bytes
-    }
     if (defined(obj.metadata)) {
       buf[offset++] = 42
       enc[1].encode(obj.metadata, buf, offset)
@@ -115,7 +105,6 @@ function defineParty () {
       name: "",
       key: null,
       rules: "",
-      isFeed: false,
       metadata: null
     }
     var found0 = false
@@ -145,10 +134,6 @@ function defineParty () {
         obj.rules = enc[0].decode(buf, offset)
         offset += enc[0].decode.bytes
         found2 = true
-        break
-        case 4:
-        obj.isFeed = enc[2].decode(buf, offset)
-        offset += enc[2].decode.bytes
         break
         case 5:
         obj.metadata = enc[1].decode(buf, offset)
