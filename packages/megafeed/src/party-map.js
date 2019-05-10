@@ -8,6 +8,7 @@ const crypto = require('crypto');
 
 const mm = require('micromatch');
 const eos = require('end-of-stream');
+const protocol = require('hypercore-protocol');
 const debug = require('debug')('megafeed:party-map');
 
 const schema = require('./schema');
@@ -186,16 +187,25 @@ class Peer extends EventEmitter {
 }
 
 class PartyMap extends EventEmitter {
-  constructor({ root }) {
+  constructor({ root, feeds = {} }) {
     super();
+    assert(typeof feeds.ready === 'function', 'Ready function is required.');
+    assert(typeof feeds.add === 'function', 'Add function is required.');
+    assert(typeof feeds.find === 'function', 'Find function is required.');
 
     this._root = root;
+
+    this._feeds = feeds;
 
     this._rules = new Map();
 
     this._parties = new Map();
 
     this._peers = new Set();
+  }
+
+  get id() {
+    return this._root.feed.id;
   }
 
   rules() {
@@ -357,6 +367,95 @@ class PartyMap extends EventEmitter {
       debug(err);
       throw err;
     }
+  }
+
+  replicate({ partyDiscoveryKey, ...options } = {}) {
+    let stream;
+    let party;
+    let partyFeed;
+    let peer;
+
+    let opts = Object.assign(
+      { id: this.id, extensions: [] },
+      options,
+    );
+
+    opts.extensions.push('party');
+
+    const addInitialFeed = (dk) => {
+      if (party.isFeed) {
+        const feed = this._feeds.find(dk);
+
+        if (feed) {
+          feed.replicate(Object.assign({}, opts, { stream }));
+          return;
+        }
+
+        this._feeds.add({ key: party.key }, (err, newFeed) => {
+          if (err) {
+            throw err;
+          }
+
+          newFeed.replicate(Object.assign({}, opts, { stream }));
+        });
+      } else {
+        stream.feed(party.key);
+      }
+    };
+
+    const add = (discoveryKey) => {
+      this._feeds.ready((err) => {
+        if (err) return stream.destroy(err);
+        if (stream.destroyed) return null;
+
+        if (!party) {
+          const remoteParty = this.party(discoveryKey);
+          if (remoteParty) {
+            party = remoteParty;
+            addInitialFeed(discoveryKey);
+          }
+          return null;
+        }
+
+        const feed = this._feeds.find(discoveryKey);
+        if (feed && peer) {
+          peer.replicate(feed);
+        }
+
+        return null;
+      });
+    };
+
+    if (partyDiscoveryKey) {
+      party = this.party(partyDiscoveryKey);
+
+      if (party) {
+        const { replicateOptions = {} } = party.rules;
+        opts = Object.assign({}, opts, replicateOptions);
+      }
+    }
+
+    stream = protocol(opts);
+
+    if (party) {
+      addInitialFeed(partyDiscoveryKey);
+    }
+
+    stream.on('feed', add);
+
+    stream.once('handshake', () => {
+      [partyFeed] = stream.feeds;
+
+      peer = this.addPeer({
+        party, stream, feed: partyFeed, opts,
+      });
+
+      resolveCallback(party.rules.handshake({ peer }), (err) => {
+        debug('Rule handshake', err);
+      });
+    });
+
+    return stream;
   }
 
   bindEvents(mega) {

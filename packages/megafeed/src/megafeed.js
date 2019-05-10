@@ -11,7 +11,6 @@ const crypto = require('hypercore-crypto');
 const raf = require('random-access-file');
 
 const initializeRootFeed = require('./root');
-const replicate = require('./replicate');
 const FeedMap = require('./feed-map');
 const PartyMap = require('./party-map');
 
@@ -81,14 +80,18 @@ class Megafeed extends EventEmitter {
     this._feeds = new FeedMap({ storage: this._storage, opts, root: this._root });
     this._feeds.bindEvents(this);
 
-    this._parties = new PartyMap({ root: this._root });
+    this._parties = new PartyMap({
+      root: this._root,
+      feeds: {
+        ready: this.ready.bind(this),
+        add: this.addFeed.bind(this),
+        find: this.feedByDK.bind(this)
+      }
+    });
     this._parties.bindEvents(this);
 
     // everything is ready
     this._isReady = false;
-
-    // public methods
-    this.replicate = replicate.bind(this);
 
     this._initialize(feeds);
   }
@@ -209,6 +212,10 @@ class Megafeed extends EventEmitter {
     return cb.promise;
   }
 
+  replicate(...args) {
+    return this._parties.replicate(...args);
+  }
+
   /** * Megafeed ** */
 
   ready(cb = callbackPromise()) {
@@ -283,8 +290,6 @@ class Megafeed extends EventEmitter {
   }
 }
 
-// TODO(burdon): Don't export both.
-
 module.exports = (...args) => new Megafeed(...args);
-
 module.exports.Megafeed = Megafeed;
+module.exports.PartyMap = PartyMap;
