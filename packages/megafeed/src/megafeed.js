@@ -212,8 +212,9 @@ class Megafeed extends EventEmitter {
     return cb.promise;
   }
 
-  replicate(...args) {
-    return this._parties.replicate(...args);
+  replicate(partyDiscoveryKey, options = {}) {
+    // Compatibility with the old version of dsuite core (for now).
+    return this._parties.replicate(Object.assign({}, options, { partyDiscoveryKey }));
   }
 
   /** * Megafeed ** */
