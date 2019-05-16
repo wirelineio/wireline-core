@@ -19,12 +19,10 @@ const createFeed = (...args) => {
 };
 
 class Peer extends EventEmitter {
-  constructor(partyKey) {
+  constructor() {
     super();
 
     const { publicKey, secretKey } = crypto.keyPair();
-
-    this.partyKey = partyKey;
 
     this.localFeed = createFeed(ram, publicKey, { valueEncoding: 'utf-8', secretKey });
 
@@ -68,16 +66,16 @@ class Peer extends EventEmitter {
     });
   }
 
-  async connect() {
+  async connect(partyKey) {
     await this.localFeed.pReady();
 
     await this.parties.setParty({
       name: 'party',
-      key: this.partyKey,
+      key: partyKey,
       rules: 'simple-party'
     });
 
-    return this.parties.replicate({ partyDiscoveryKey: crypto.discoveryKey(this.partyKey) });
+    return this.parties.replicate({ partyDiscoveryKey: crypto.discoveryKey(partyKey) });
   }
 }
 
@@ -85,14 +83,14 @@ describe('simple party replication', () => {
   test('one feed replication', async () => {
     const partyKey = crypto.keyPair().publicKey;
 
-    const peerOne = new Peer(partyKey);
+    const peerOne = new Peer();
     peerOne.localFeed.append('hi from peerOne');
 
-    const peerTwo = new Peer(partyKey);
+    const peerTwo = new Peer();
     peerTwo.localFeed.append('hi from peerTwo');
 
-    const streamOne = await peerOne.connect();
-    const streamTwo = await peerTwo.connect();
+    const streamOne = await peerOne.connect(partyKey);
+    const streamTwo = await peerTwo.connect(partyKey);
 
     await new Promise((resolve, reject) => {
       pump(streamOne, streamTwo, streamOne, (err) => {
