@@ -43,6 +43,8 @@ class FeedMap extends EventEmitter {
     newFeed.pReady = pify(feed.ready.bind(feed));
     newFeed.pAppend = pify(feed.append.bind(feed));
     newFeed.pClose = pify(feed.close.bind(feed));
+    newFeed.pGet = pify(feed.get.bind(feed));
+    newFeed.pHead = pify(feed.head.bind(feed));
     return feed;
   }
 

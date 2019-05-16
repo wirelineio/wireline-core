@@ -11,7 +11,7 @@ const schema = require('./schema');
 const codecProtobuf = require('./utils/codec-protobuf');
 const { keyToHex } = require('./utils/keys');
 
-module.exports = function initializeRootFeed(storage, rootKey, opts) {
+module.exports = function createRoot(storage, rootKey, opts) {
   const root = hypertrie(storage, rootKey, Object.assign({}, opts, {
     valueEncoding: codecProtobuf(schema, {
       Feed: 0,

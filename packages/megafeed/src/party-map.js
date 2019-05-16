@@ -52,8 +52,7 @@ class Peer extends EventEmitter {
     // we track each party message extension using transaction [ [id, promise] ]
     this.transactions = new Map();
 
-    // we track each feed that we are replicating
-    this.replicating = stream.feeds.map(feed => feed.key.toString('hex'));
+    this.replicating = [];
 
     this._initializePartyExtension();
   }

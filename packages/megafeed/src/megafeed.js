@@ -10,7 +10,7 @@ const pify = require('pify');
 const crypto = require('hypercore-crypto');
 const raf = require('random-access-file');
 
-const initializeRootFeed = require('./root');
+const createRoot = require('./root');
 const FeedMap = require('./feed-map');
 const PartyMap = require('./party-map');
 
@@ -74,7 +74,7 @@ class Megafeed extends EventEmitter {
     };
 
     // we save all our personal information like the feed list in a private feed
-    this._root = initializeRootFeed(this._storage('root', storage), rootKey, opts);
+    this._root = createRoot(this._storage('root', storage), rootKey, opts);
 
     // feeds manager instance
     this._feeds = new FeedMap({ storage: this._storage, opts, root: this._root });
