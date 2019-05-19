@@ -25,6 +25,7 @@
     "hypercore-protocol": "^6.9.0",
     "hypertrie": "^3.4.0",
     "micromatch": "^3.1.10",
+    "multi-read-stream": "^2.0.0",
     "mutexify": "^1.2.0",
     "pify": "^4.0.1",
     "protocol-buffers-encodings": "^1.1.0",

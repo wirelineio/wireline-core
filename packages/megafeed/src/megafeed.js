@@ -9,6 +9,8 @@ const { EventEmitter } = require('events');
 const pify = require('pify');
 const crypto = require('hypercore-crypto');
 const raf = require('random-access-file');
+const multi = require('multi-read-stream');
+const eos = require('end-of-stream');
 
 const createRoot = require('./root');
 const FeedMap = require('./feed-map');
@@ -272,6 +274,27 @@ class Megafeed extends EventEmitter {
     });
 
     return cb.promise;
+  }
+
+  createReadStream(opts = {}) {
+    const streams = [];
+
+    this.feeds().forEach((feed) => {
+      streams.push(feed.createReadStream(opts));
+    });
+
+    const multiReader = multi.obj(streams);
+
+    const onFeed = (feed) => {
+      feed.ready(() => {
+        multiReader.add(feed.createReadStream(opts));
+      });
+    };
+
+    this.on('feed', onFeed);
+    eos(multiReader, () => this.removeListener('feed', onFeed));
+
+    return multiReader;
   }
 
   _initialize(feeds) {
