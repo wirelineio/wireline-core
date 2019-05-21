@@ -182,7 +182,7 @@ class Peer extends EventEmitter {
 
     if (options.transactionTimeout) {
       timer = setTimeout(() => {
-        ('Transaction timeout.');
+        _reject('Transaction timeout.');
       }, options.transactionTimeout);
     }
 

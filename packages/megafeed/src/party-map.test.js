@@ -39,9 +39,6 @@ class Peer extends EventEmitter {
 
     this._parties.setRules({
       name: 'simple-party',
-      options: {
-        transactionTimeout: 1
-      },
 
       replicateOptions: {
         expectedFeeds: 2
