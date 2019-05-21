@@ -169,26 +169,24 @@ class Peer extends EventEmitter {
 
     let timer;
 
-    const newReject = (error) => {
-      this.transactions.delete(id);
-      reject(error);
-    };
-
-    const newResolve = (...args) => {
+    const cleanTransaction = cb => (...args) => {
       if (timer) {
         clearTimeout(timer);
       }
       this.transactions.delete(id);
-      resolve(...args);
+      cb(...args);
     };
+
+    const _resolve = cleanTransaction(resolve);
+    const _reject = cleanTransaction(reject);
 
     if (options.transactionTimeout) {
       timer = setTimeout(() => {
-        newReject('Transaction timeout.');
+        ('Transaction timeout.');
       }, options.transactionTimeout);
     }
 
-    this.transactions.set(id, { resolve: newResolve, reject: newReject });
+    this.transactions.set(id, { resolve: _resolve, reject: _reject });
   }
 
   async _onTransaction({ type, message, method }) {
