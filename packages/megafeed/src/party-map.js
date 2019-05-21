@@ -147,8 +147,8 @@ class Peer extends EventEmitter {
   async _emitTransaction({ type, data }) {
     const id = crypto.randomBytes(12).toString('hex');
 
-    return new Promise((resolve) => {
-      this.transactions.set(id, resolve);
+    return new Promise((resolve, reject) => {
+      this._transactionResolveReject(id, resolve, reject);
 
       const message = Object.assign({ id }, data);
 
@@ -161,21 +161,46 @@ class Peer extends EventEmitter {
     });
   }
 
-  async _onTransaction({ type, message, method }) {
-    const resolve = this.transactions.get(message.id);
+  _transactionResolveReject(id, resolve, reject) {
+    const { rules: { options } } = this.party;
 
-    // answer
-    if (resolve) {
-      this.transactions.delete(message.id);
+    let timer;
+
+    const newReject = (error) => {
+      this.transactions.delete(id);
+      reject(error);
+    };
+
+    const newResolve = (...args) => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      this.transactions.delete(id);
+      resolve(...args);
+    };
+
+    if (options.transactionTimeout) {
+      timer = setTimeout(() => {
+        newReject('Transaction timeout.');
+      }, options.transactionTimeout);
+    }
+
+    this.transactions.set(id, { resolve: newResolve, reject: newReject });
+  }
+
+  async _onTransaction({ type, message, method }) {
+    if (message.return) {
+      // answer
+      const { resolve } = this.transactions.get(message.id);
       debug(`<-- ${type}`, message);
-      return resolve(message);
+      return resolve && resolve(message);
     }
 
     const data = await this.party.rules[method]({ peer: this, message });
 
     const returnMessage = Peer._parseTransactionMessages(
       type,
-      Object.assign({ id: message.id }, data || {})
+      Object.assign({ id: message.id, return: true }, data || {})
     );
 
     this.feed.extension('party', Peer._codec.encode({
@@ -265,15 +290,24 @@ class PartyMap extends EventEmitter {
     return peer;
   }
 
-  setRules(rules) {
-    assert(typeof rules.name === 'string' && rules.name.length > 0, 'Name rule string is required.');
-    assert(typeof rules.handshake === 'function', 'Handshake rule method is required.');
+  setRules({
+    name,
+    handshake,
+    options = {},
+    replicateOptions = {},
+    remoteIntroduceFeeds = pNoop,
+    remoteMessage = pNoop
+  }) {
+    assert(typeof name === 'string' && name.length > 0, 'Name rule string is required.');
+    assert(typeof handshake === 'function', 'Handshake rule method is required.');
 
-    this._rules.set(rules.name, Object.assign({}, rules, {
-      replicateOptions: rules.replicateOptions || {},
-      remoteIntroduceFeeds: rules.remoteIntroduceFeeds || pNoop,
-      remoteMessage: rules.remoteMessage || pNoop
-    }));
+    this._rules.set(name, {
+      options,
+      replicateOptions,
+      handshake,
+      remoteIntroduceFeeds,
+      remoteMessage
+    });
   }
 
   async setParty({ name, key, rules, metadata }) {
@@ -413,12 +447,18 @@ class PartyMap extends EventEmitter {
     stream.on('feed', add);
 
     stream.once('handshake', () => {
+      if (!stream.remoteSupports('party')) {
+        throw new Error('The peer does not have support for the party extension.');
+      }
+
       peer = this.addPeer({
         party, stream, opts,
       });
 
       resolveCallback(party.rules.handshake({ peer }), (err) => {
-        debug('Rule handshake', err);
+        if (err) {
+          console.error(err);
+        }
       });
     });
 

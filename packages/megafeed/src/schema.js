@@ -88,7 +88,7 @@ function defineParty () {
     enc[0].encode(obj.rules, buf, offset)
     offset += enc[0].encode.bytes
     if (defined(obj.metadata)) {
-      buf[offset++] = 42
+      buf[offset++] = 34
       enc[1].encode(obj.metadata, buf, offset)
       offset += enc[1].encode.bytes
     }
@@ -135,7 +135,7 @@ function defineParty () {
         offset += enc[0].decode.bytes
         found2 = true
         break
-        case 5:
+        case 4:
         obj.metadata = enc[1].decode(buf, offset)
         offset += enc[1].decode.bytes
         break
@@ -295,6 +295,7 @@ function defineFeed () {
 function defineIntroduceFeeds () {
   var enc = [
     encodings.string,
+    encodings.bool,
     encodings.bytes
   ]
 
@@ -307,10 +308,14 @@ function defineIntroduceFeeds () {
     if (!defined(obj.id)) throw new Error("id is required")
     var len = enc[0].encodingLength(obj.id)
     length += 1 + len
+    if (defined(obj.return)) {
+      var len = enc[1].encodingLength(obj.return)
+      length += 1 + len
+    }
     if (defined(obj.keys)) {
       for (var i = 0; i < obj.keys.length; i++) {
         if (!defined(obj.keys[i])) continue
-        var len = enc[1].encodingLength(obj.keys[i])
+        var len = enc[2].encodingLength(obj.keys[i])
         length += 1 + len
       }
     }
@@ -325,12 +330,17 @@ function defineIntroduceFeeds () {
     buf[offset++] = 10
     enc[0].encode(obj.id, buf, offset)
     offset += enc[0].encode.bytes
+    if (defined(obj.return)) {
+      buf[offset++] = 16
+      enc[1].encode(obj.return, buf, offset)
+      offset += enc[1].encode.bytes
+    }
     if (defined(obj.keys)) {
       for (var i = 0; i < obj.keys.length; i++) {
         if (!defined(obj.keys[i])) continue
-        buf[offset++] = 18
-        enc[1].encode(obj.keys[i], buf, offset)
-        offset += enc[1].encode.bytes
+        buf[offset++] = 26
+        enc[2].encode(obj.keys[i], buf, offset)
+        offset += enc[2].encode.bytes
       }
     }
     encode.bytes = offset - oldOffset
@@ -344,6 +354,7 @@ function defineIntroduceFeeds () {
     var oldOffset = offset
     var obj = {
       id: "",
+      return: false,
       keys: []
     }
     var found0 = false
@@ -363,8 +374,12 @@ function defineIntroduceFeeds () {
         found0 = true
         break
         case 2:
-        obj.keys.push(enc[1].decode(buf, offset))
+        obj.return = enc[1].decode(buf, offset)
         offset += enc[1].decode.bytes
+        break
+        case 3:
+        obj.keys.push(enc[2].decode(buf, offset))
+        offset += enc[2].decode.bytes
         break
         default:
         offset = skip(prefix & 7, buf, offset)
