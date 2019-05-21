@@ -131,6 +131,9 @@ class Peer extends EventEmitter {
         case 'IntroduceFeeds':
           resolveCallback(this._onTransaction({ type, message, method: 'remoteIntroduceFeeds' }), (err) => {
             debug(`<-- ${type}`, err);
+            if (err) {
+              console.error(err);
+            }
           });
           break;
         case 'EphemeralMessage':
@@ -340,7 +343,6 @@ class PartyMap extends EventEmitter {
 
       return party;
     } catch (err) {
-      debug(err);
       throw err;
     }
   }
@@ -390,7 +392,6 @@ class PartyMap extends EventEmitter {
     try {
       return await Promise.all(partiesToLoad.map(party => this.setParty(party)));
     } catch (err) {
-      debug(err);
       throw err;
     }
   }
