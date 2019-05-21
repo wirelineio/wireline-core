@@ -8,35 +8,36 @@ const crypto = require('hypercore-crypto');
 const pump = require('pump');
 const { EventEmitter } = require('events');
 
-const createRoot = require('./root');
-const FeedMap = require('./feed-map');
+const { feedPromisify } = require('./feed-map');
 const { PartyMap } = require('./megafeed');
 
-const createFeed = (...args) => {
-  const feed = hypercore(...args);
-
-  return FeedMap.feedPromisify(feed);
-};
+const rootMockup = () => ({
+  _parties: new Map(),
+  feed: {
+    id: crypto.randomBytes(32)
+  },
+  async getPartyList() {
+    return Array.from(this._parties.values());
+  },
+  async putParty(party) {
+    return this._parties.set(party.name.toString('hex'), party);
+  }
+});
 
 class Peer extends EventEmitter {
   constructor() {
     super();
 
-    const { publicKey, secretKey } = crypto.keyPair();
+    this._feeds = new Map();
 
-    this.localFeed = createFeed(ram, publicKey, { valueEncoding: 'utf-8', secretKey });
+    this.addFeed('local', ram, { valueEncoding: 'utf-8' });
 
-    this.feeds = [
-      createFeed(ram, { valueEncoding: 'utf-8' }),
-      this.localFeed
-    ];
-
-    this.parties = new PartyMap({
-      root: createRoot(ram),
+    this._parties = new PartyMap({
+      root: rootMockup(),
       findFeed: dk => this.feeds.find(feed => feed.discoveryKey.toString('hex') === dk)
     });
 
-    this.parties.setRules({
+    this._parties.setRules({
       name: 'simple-party',
 
       replicateOptions: {
@@ -44,21 +45,20 @@ class Peer extends EventEmitter {
       },
 
       handshake: async ({ peer }) => {
+        const localFeed = this.feed('local');
+
         await peer.introduceFeeds({
-          keys: [this.localFeed.key]
+          keys: [localFeed.key]
         });
 
-        peer.replicate(this.localFeed);
+        peer.replicate(localFeed);
       },
 
       remoteIntroduceFeeds: async ({ message, peer }) => {
         const { keys } = message;
-        keys.forEach((key) => {
-          const feed = createFeed(ram, key, { valueEncoding: 'utf-8' });
 
-          if (!this.feeds.find(f => f.key.toString('hex') === feed.key.toString('hex'))) {
-            this.feeds.push(feed);
-          }
+        keys.forEach((key) => {
+          const feed = this.addFeed(key, ram, key, { valueEncoding: 'utf-8' });
 
           peer.replicate(feed);
         });
@@ -66,16 +66,30 @@ class Peer extends EventEmitter {
     });
   }
 
-  async connect(partyKey) {
-    await this.localFeed.pReady();
+  get feeds() {
+    return Array.from(this._feeds.values());
+  }
 
-    await this.parties.setParty({
+  feed(key) {
+    return this._feeds.get(key);
+  }
+
+  addFeed(key, ...args) {
+    const feed = feedPromisify(hypercore(...args));
+    this._feeds.set(key.toString('hex'), feed);
+    return feed;
+  }
+
+  async connect(partyKey) {
+    await this.feed('local').pReady();
+
+    await this._parties.setParty({
       name: 'party',
       key: partyKey,
       rules: 'simple-party'
     });
 
-    return this.parties.replicate({ partyDiscoveryKey: crypto.discoveryKey(partyKey) });
+    return this._parties.replicate({ partyDiscoveryKey: crypto.discoveryKey(partyKey) });
   }
 }
 
@@ -84,10 +98,10 @@ describe('simple party replication', () => {
     const partyKey = crypto.keyPair().publicKey;
 
     const peerOne = new Peer();
-    peerOne.localFeed.append('hi from peerOne');
+    peerOne.feed('local').append('hi from peerOne');
 
     const peerTwo = new Peer();
-    peerTwo.localFeed.append('hi from peerTwo');
+    peerTwo.feed('local').append('hi from peerTwo');
 
     const streamOne = await peerOne.connect(partyKey);
     const streamTwo = await peerTwo.connect(partyKey);
@@ -102,8 +116,8 @@ describe('simple party replication', () => {
       });
     });
 
-    const remoteFeedOne = peerTwo.feeds.find(feed => feed.key.toString('hex') === peerOne.localFeed.key.toString('hex'));
-    const remoteFeedTwo = peerOne.feeds.find(feed => feed.key.toString('hex') === peerTwo.localFeed.key.toString('hex'));
+    const remoteFeedOne = peerTwo.feed(peerOne.feed('local').key.toString('hex'));
+    const remoteFeedTwo = peerOne.feed(peerTwo.feed('local').key.toString('hex'));
 
     expect(remoteFeedOne).not.toBeUndefined();
     expect(remoteFeedTwo).not.toBeUndefined();
