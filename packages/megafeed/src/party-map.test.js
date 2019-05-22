@@ -121,6 +121,7 @@ describe('simple party replication', () => {
 
     expect(remoteFeedOne).not.toBeUndefined();
     expect(remoteFeedTwo).not.toBeUndefined();
+
     await expect(remoteFeedOne.pHead()).resolves.toBe('hi from peerOne');
     await expect(remoteFeedTwo.pHead()).resolves.toBe('hi from peerTwo');
   });
