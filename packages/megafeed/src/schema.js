@@ -403,12 +403,14 @@ function defineEphemeralMessage () {
     if (!defined(obj.id)) throw new Error("id is required")
     var len = enc[0].encodingLength(obj.id)
     length += 1 + len
-    if (!defined(obj.subject)) throw new Error("subject is required")
-    var len = enc[0].encodingLength(obj.subject)
-    length += 1 + len
-    if (!defined(obj.data)) throw new Error("data is required")
-    var len = enc[1].encodingLength(obj.data)
-    length += 1 + len
+    if (defined(obj.subject)) {
+      var len = enc[0].encodingLength(obj.subject)
+      length += 1 + len
+    }
+    if (defined(obj.data)) {
+      var len = enc[1].encodingLength(obj.data)
+      length += 1 + len
+    }
     return length
   }
 
@@ -420,14 +422,16 @@ function defineEphemeralMessage () {
     buf[offset++] = 10
     enc[0].encode(obj.id, buf, offset)
     offset += enc[0].encode.bytes
-    if (!defined(obj.subject)) throw new Error("subject is required")
-    buf[offset++] = 18
-    enc[0].encode(obj.subject, buf, offset)
-    offset += enc[0].encode.bytes
-    if (!defined(obj.data)) throw new Error("data is required")
-    buf[offset++] = 26
-    enc[1].encode(obj.data, buf, offset)
-    offset += enc[1].encode.bytes
+    if (defined(obj.subject)) {
+      buf[offset++] = 18
+      enc[0].encode(obj.subject, buf, offset)
+      offset += enc[0].encode.bytes
+    }
+    if (defined(obj.data)) {
+      buf[offset++] = 26
+      enc[1].encode(obj.data, buf, offset)
+      offset += enc[1].encode.bytes
+    }
     encode.bytes = offset - oldOffset
     return buf
   }
@@ -443,11 +447,9 @@ function defineEphemeralMessage () {
       data: null
     }
     var found0 = false
-    var found1 = false
-    var found2 = false
     while (true) {
       if (end <= offset) {
-        if (!found0 || !found1 || !found2) throw new Error("Decoded message is not valid")
+        if (!found0) throw new Error("Decoded message is not valid")
         decode.bytes = offset - oldOffset
         return obj
       }
@@ -463,12 +465,10 @@ function defineEphemeralMessage () {
         case 2:
         obj.subject = enc[0].decode(buf, offset)
         offset += enc[0].decode.bytes
-        found1 = true
         break
         case 3:
         obj.data = enc[1].decode(buf, offset)
         offset += enc[1].decode.bytes
-        found2 = true
         break
         default:
         offset = skip(prefix & 7, buf, offset)

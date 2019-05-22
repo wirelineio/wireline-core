@@ -291,24 +291,29 @@ class PartyMap extends EventEmitter {
     return peer;
   }
 
-  setRules({
-    name,
-    handshake,
-    options = {},
-    replicateOptions = {},
-    remoteIntroduceFeeds = pNoop,
-    remoteMessage = pNoop
-  }) {
-    assert(typeof name === 'string' && name.length > 0, 'Name rule string is required.');
-    assert(typeof handshake === 'function', 'Handshake rule method is required.');
+  setRules(rules) {
+    const partyRules = rules;
 
-    this._rules.set(name, {
-      options,
-      replicateOptions,
-      handshake,
-      remoteIntroduceFeeds,
-      remoteMessage
-    });
+    assert(typeof partyRules.name === 'string' && partyRules.name.length > 0, 'Name rule string is required.');
+    assert(typeof partyRules.handshake === 'function', 'Handshake rule method is required.');
+
+    if (!partyRules.options) {
+      partyRules.options = {};
+    }
+
+    if (!partyRules.replicateOptions) {
+      partyRules.replicateOptions = {};
+    }
+
+    if (!partyRules.remoteIntroduceFeeds) {
+      partyRules.remoteIntroduceFeeds = pNoop;
+    }
+
+    if (!partyRules.remoteMessage) {
+      partyRules.remoteMessage = pNoop;
+    }
+
+    this._rules.set(partyRules.name, partyRules);
   }
 
   async setParty({ name, key, rules, metadata }) {

@@ -25,6 +25,6 @@ message IntroduceFeeds {
 
 message EphemeralMessage {
   required string id = 1;
-  required string subject = 2;
-  required bytes data = 3;
+  string subject = 2;
+  bytes data = 3;
 }
