@@ -217,7 +217,7 @@ class PartyMap extends EventEmitter {
 
     if (typeof logs === 'object' && logs.constructor.name === 'Megafeed') {
       this._root = logs._root;
-      this._findFeed = logs.feedByDk.bind(logs);
+      this._findFeed = logs.feedByDK.bind(logs);
     } else {
       this._root = logs.root;
       this._findFeed = logs.findFeed;
