@@ -212,12 +212,16 @@ class Peer extends EventEmitter {
 }
 
 class PartyMap extends EventEmitter {
-  constructor({ root, findFeed }) {
+  constructor(logs) {
     super();
 
-    this._root = root;
-
-    this._findFeed = findFeed;
+    if (typeof logs === 'object' && logs.constructor.name === 'Megafeed') {
+      this._root = logs._root;
+      this._findFeed = logs.feedByDk.bind(logs);
+    } else {
+      this._root = logs.root;
+      this._findFeed = logs.findFeed;
+    }
 
     this._rules = new Map();
 
