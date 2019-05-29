@@ -3,7 +3,7 @@ syntax = "proto3";
 message Party {
   required string name = 1;
   required bytes key = 2;
-  required string rules = 3;
+  string rules = 3;
   bytes metadata = 4;
 }
 
@@ -15,6 +15,7 @@ message Feed {
   bool persist = 5;
   string valueEncoding = 6;
   bytes metadata = 7;
+  string type = 8;
 }
 
 message IntroduceFeeds {

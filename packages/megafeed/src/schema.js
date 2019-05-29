@@ -61,9 +61,10 @@ function defineParty () {
     if (!defined(obj.key)) throw new Error("key is required")
     var len = enc[1].encodingLength(obj.key)
     length += 1 + len
-    if (!defined(obj.rules)) throw new Error("rules is required")
-    var len = enc[0].encodingLength(obj.rules)
-    length += 1 + len
+    if (defined(obj.rules)) {
+      var len = enc[0].encodingLength(obj.rules)
+      length += 1 + len
+    }
     if (defined(obj.metadata)) {
       var len = enc[1].encodingLength(obj.metadata)
       length += 1 + len
@@ -83,10 +84,11 @@ function defineParty () {
     buf[offset++] = 18
     enc[1].encode(obj.key, buf, offset)
     offset += enc[1].encode.bytes
-    if (!defined(obj.rules)) throw new Error("rules is required")
-    buf[offset++] = 26
-    enc[0].encode(obj.rules, buf, offset)
-    offset += enc[0].encode.bytes
+    if (defined(obj.rules)) {
+      buf[offset++] = 26
+      enc[0].encode(obj.rules, buf, offset)
+      offset += enc[0].encode.bytes
+    }
     if (defined(obj.metadata)) {
       buf[offset++] = 34
       enc[1].encode(obj.metadata, buf, offset)
@@ -109,10 +111,9 @@ function defineParty () {
     }
     var found0 = false
     var found1 = false
-    var found2 = false
     while (true) {
       if (end <= offset) {
-        if (!found0 || !found1 || !found2) throw new Error("Decoded message is not valid")
+        if (!found0 || !found1) throw new Error("Decoded message is not valid")
         decode.bytes = offset - oldOffset
         return obj
       }
@@ -133,7 +134,6 @@ function defineParty () {
         case 3:
         obj.rules = enc[0].decode(buf, offset)
         offset += enc[0].decode.bytes
-        found2 = true
         break
         case 4:
         obj.metadata = enc[1].decode(buf, offset)
@@ -185,6 +185,10 @@ function defineFeed () {
       var len = enc[1].encodingLength(obj.metadata)
       length += 1 + len
     }
+    if (defined(obj.type)) {
+      var len = enc[0].encodingLength(obj.type)
+      length += 1 + len
+    }
     return length
   }
 
@@ -225,6 +229,11 @@ function defineFeed () {
       enc[1].encode(obj.metadata, buf, offset)
       offset += enc[1].encode.bytes
     }
+    if (defined(obj.type)) {
+      buf[offset++] = 66
+      enc[0].encode(obj.type, buf, offset)
+      offset += enc[0].encode.bytes
+    }
     encode.bytes = offset - oldOffset
     return buf
   }
@@ -241,7 +250,8 @@ function defineFeed () {
       load: false,
       persist: false,
       valueEncoding: "",
-      metadata: null
+      metadata: null,
+      type: ""
     }
     var found0 = false
     var found1 = false
@@ -284,6 +294,10 @@ function defineFeed () {
         case 7:
         obj.metadata = enc[1].decode(buf, offset)
         offset += enc[1].decode.bytes
+        break
+        case 8:
+        obj.type = enc[0].decode(buf, offset)
+        offset += enc[0].decode.bytes
         break
         default:
         offset = skip(prefix & 7, buf, offset)
