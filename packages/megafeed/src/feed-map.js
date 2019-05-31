@@ -24,6 +24,8 @@ class FeedMap extends EventEmitter {
       persist: opts.persist,
       // hypercore opts derivated
       valueEncoding: opts.valueEncoding,
+      // type of constructor for that feed
+      type: opts.type
     };
   }
 
@@ -40,12 +42,12 @@ class FeedMap extends EventEmitter {
 
   static feedPromisify(feed) {
     const newFeed = feed;
-    newFeed.pReady = pify(feed.ready.bind(feed));
-    newFeed.pAppend = pify(feed.append.bind(feed));
-    newFeed.pClose = pify(feed.close.bind(feed));
-    newFeed.pGet = pify(feed.get.bind(feed));
-    newFeed.pHead = pify(feed.head.bind(feed));
-    return feed;
+    ['ready', 'append', 'close', 'get', 'head'].forEach((prop) => {
+      if (feed[prop]) {
+        newFeed[`p${prop[0].toUpperCase() + prop.slice(1)}`] = pify(feed[prop].bind(feed));
+      }
+    });
+    return newFeed;
   }
 
   constructor({ storage, opts = {}, root }) {
@@ -55,10 +57,13 @@ class FeedMap extends EventEmitter {
 
     this._storage = storage;
 
+    this._types = opts.types || {};
+
     this._opts = Object.assign({}, opts, {
       // we purge the options to get a default options for every feed
       feeds: undefined,
       secretKey: undefined,
+      types: undefined
     });
 
     this._root = root;
@@ -162,7 +167,9 @@ class FeedMap extends EventEmitter {
     const release = await this._locker.pLock(name);
 
     try {
-      let feed = hypercore(this._storage(name, storage), key, FeedMap.optsToHypercore(opts));
+      const createFeed = this._types[opts.type] || hypercore;
+
+      let feed = createFeed(this._storage(name, storage), key, FeedMap.optsToHypercore(opts));
 
       feed = FeedMap.feedPromisify(feed);
 
