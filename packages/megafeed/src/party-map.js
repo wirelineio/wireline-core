@@ -10,13 +10,14 @@ const mm = require('micromatch');
 const eos = require('end-of-stream');
 const protocol = require('hypercore-protocol');
 const debug = require('debug')('megafeed:party-map');
-
-const schema = require('./schema');
+const protobuf = require('protobufjs');
+const codecProtobuf = require('@wirelineio/codec-protobuf');
 
 // utils
-const codecProtobuf = require('./utils/codec-protobuf');
 const { callbackPromise, resolveCallback } = require('./utils/promise-help');
 const { keyToHex, keyToBuffer, getDiscoveryKey } = require('./utils/keys');
+
+const schema = require('./schema.json');
 
 const pNoop = () => Promise.resolve();
 
@@ -481,9 +482,8 @@ class PartyMap extends EventEmitter {
 }
 
 // codec to encode/decode party extension messages
-Peer._codec = codecProtobuf(schema, {
-  IntroduceFeeds: 0,
-  EphemeralMessage: 1
+Peer._codec = codecProtobuf(protobuf.Root.fromJSON(schema), {
+  packageName: 'megafeed'
 });
 
 module.exports = PartyMap;

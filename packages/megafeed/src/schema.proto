@@ -1,10 +1,12 @@
 syntax = "proto3";
+package megafeed;
 
 message Party {
   required string name = 1;
   required bytes key = 2;
-  string rules = 3;
-  bytes metadata = 4;
+  bytes secretKey = 3;
+  string rules = 4;
+  bytes metadata = 5;
 }
 
 message Feed {
@@ -25,7 +27,6 @@ message IntroduceFeeds {
 }
 
 message EphemeralMessage {
-  required string id = 1;
-  string subject = 2;
-  bytes data = 3;
+  string subject = 1;
+  bytes data = 2;
 }

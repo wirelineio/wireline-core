@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+message Message {
+  required string subject = 1;
+  bytes body = 2;
+}

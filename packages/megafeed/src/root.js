@@ -4,18 +4,18 @@
 
 const pify = require('pify');
 const hypertrie = require('hypertrie');
-
-const schema = require('./schema');
+const protobuf = require('protobufjs');
+const codecProtobuf = require('@wirelineio/codec-protobuf');
 
 // utils
-const codecProtobuf = require('./utils/codec-protobuf');
 const { keyToHex } = require('./utils/keys');
+
+const schema = require('./schema.json');
 
 module.exports = function createRoot(storage, rootKey, opts) {
   const root = hypertrie(storage, rootKey, Object.assign({}, opts, {
-    valueEncoding: codecProtobuf(schema, {
-      Feed: 0,
-      Party: 1,
+    valueEncoding: codecProtobuf(protobuf.Root.fromJSON(schema), {
+      packageName: 'megafeed'
     }),
   }));
 

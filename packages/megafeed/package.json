@@ -14,10 +14,11 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint **/*.js --ignore-path ../../.eslintignore",
-    "protobuf": "protocol-buffers src/schema.proto -o src/schema.js",
+    "protobuf": "pbjs -t json src/schema.proto -o src/schema.json",
     "test": "jest --verbose"
   },
   "dependencies": {
+    "@wirelineio/codec-protobuf": "^0.1.13",
     "debug": "^4.1.1",
     "end-of-stream": "^1.4.1",
     "hypercore": "^6.24.0",
@@ -28,15 +29,13 @@
     "multi-read-stream": "^2.0.0",
     "mutexify": "^1.2.0",
     "pify": "^4.0.1",
-    "protocol-buffers-encodings": "^1.1.0",
+    "protobufjs": "^6.8.8",
     "pump": "^3.0.0",
-    "random-access-file": "^2.1.0",
-    "varint": "^5.0.0"
+    "random-access-file": "^2.1.0"
   },
   "devDependencies": {
     "discovery-swarm": "^5.1.4",
     "jest": "^24.5.0",
-    "protocol-buffers": "^4.1.0",
     "random-access-memory": "^3.1.1",
     "tempy": "^0.2.1"
   },

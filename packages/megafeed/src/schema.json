@@ -1,0 +1,102 @@
+{
+  "nested": {
+    "megafeed": {
+      "nested": {
+        "Party": {
+          "fields": {
+            "name": {
+              "rule": "required",
+              "type": "string",
+              "id": 1
+            },
+            "key": {
+              "rule": "required",
+              "type": "bytes",
+              "id": 2
+            },
+            "secretKey": {
+              "type": "bytes",
+              "id": 3
+            },
+            "rules": {
+              "type": "string",
+              "id": 4
+            },
+            "metadata": {
+              "type": "bytes",
+              "id": 5
+            }
+          }
+        },
+        "Feed": {
+          "fields": {
+            "name": {
+              "rule": "required",
+              "type": "string",
+              "id": 1
+            },
+            "key": {
+              "rule": "required",
+              "type": "bytes",
+              "id": 2
+            },
+            "secretKey": {
+              "type": "bytes",
+              "id": 3
+            },
+            "load": {
+              "type": "bool",
+              "id": 4
+            },
+            "persist": {
+              "type": "bool",
+              "id": 5
+            },
+            "valueEncoding": {
+              "type": "string",
+              "id": 6
+            },
+            "metadata": {
+              "type": "bytes",
+              "id": 7
+            },
+            "type": {
+              "type": "string",
+              "id": 8
+            }
+          }
+        },
+        "IntroduceFeeds": {
+          "fields": {
+            "id": {
+              "rule": "required",
+              "type": "string",
+              "id": 1
+            },
+            "return": {
+              "type": "bool",
+              "id": 2
+            },
+            "keys": {
+              "rule": "repeated",
+              "type": "bytes",
+              "id": 3
+            }
+          }
+        },
+        "EphemeralMessage": {
+          "fields": {
+            "subject": {
+              "type": "string",
+              "id": 1
+            },
+            "data": {
+              "type": "bytes",
+              "id": 2
+            }
+          }
+        }
+      }
+    }
+  }
+}
