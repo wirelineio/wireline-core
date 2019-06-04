@@ -6,16 +6,23 @@ const hypercore = require('hypercore');
 const ram = require('random-access-memory');
 const crypto = require('hypercore-crypto');
 const pump = require('pump');
+const pify = require('pify');
 const { EventEmitter } = require('events');
 
-const { feedPromisify } = require('./feed-map');
-const { PartyMap } = require('./megafeed');
+const PartyMap = require('./party-map');
+
+const feedPromisify = (feed) => {
+  const newFeed = feed;
+  ['ready', 'append', 'close', 'get', 'head'].forEach((prop) => {
+    if (feed[prop]) {
+      newFeed[`p${prop[0].toUpperCase() + prop.slice(1)}`] = pify(feed[prop].bind(feed));
+    }
+  });
+  return newFeed;
+};
 
 const rootMockup = () => ({
   _parties: new Map(),
-  feed: {
-    id: crypto.randomBytes(32)
-  },
   async getPartyList() {
     return Array.from(this._parties.values());
   },

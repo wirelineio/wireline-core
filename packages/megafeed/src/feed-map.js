@@ -7,12 +7,28 @@ const hypercore = require('hypercore');
 const mm = require('micromatch');
 const pify = require('pify');
 const debug = require('debug')('megafeed:feed-map');
+const protobuf = require('protobufjs');
+const codecProtobuf = require('@wirelineio/codec-protobuf');
 
 // utils
 const { keyToHex, getDiscoveryKey, keyToBuffer } = require('./utils/keys');
 const Locker = require('./utils/locker');
 
+const schema = require('./schema.json');
+
+const codec = codecProtobuf(protobuf.Root.fromJSON(schema), {
+  packageName: 'megafeed'
+});
+
 class FeedMap extends EventEmitter {
+  static get codec() {
+    return codec;
+  }
+
+  static encodeFeed(message) {
+    return codec.encode({ type: 'Feed', message });
+  }
+
   static optsToRoot(feed, opts) {
     return {
       name: feed.name,
@@ -74,7 +90,7 @@ class FeedMap extends EventEmitter {
   async initFeeds(initFeeds = []) {
     const root = this._root;
 
-    const persistedFeeds = (await root.getFeedList()).map((msg) => {
+    const persistedFeeds = (await root.getFeedList({ codec })).map((msg) => {
       const { value } = msg;
       value.persist = false;
       return value;
@@ -291,7 +307,7 @@ class FeedMap extends EventEmitter {
     const root = this._root;
 
     try {
-      const feed = await root.getFeed(key);
+      const feed = await root.getFeed(key, { codec });
 
       if (!feed) {
         return null;
@@ -299,7 +315,7 @@ class FeedMap extends EventEmitter {
 
       const update = transform(feed.value);
 
-      await root.putFeed(update);
+      await root.putFeed(update, { encode: FeedMap.encodeFeed });
 
       return null;
     } catch (err) {
@@ -355,7 +371,7 @@ class FeedMap extends EventEmitter {
     const opts = Object.assign({}, options, { persist: true });
 
     try {
-      await root.putFeed(FeedMap.optsToRoot(feed, opts));
+      await root.putFeed(FeedMap.optsToRoot(feed, opts), { encode: FeedMap.encodeFeed });
       this._feeds.set(discoveryKey, feed);
       return feed;
     } catch (err) {
@@ -376,12 +392,6 @@ class FeedMap extends EventEmitter {
     }
 
     return null;
-  }
-
-  bindEvents(mega) {
-    ['append', 'download', 'feed:added', 'feed', 'feed:deleted'].forEach((event) => {
-      this.on(event, (...args) => mega.emit(event, ...args));
-    });
   }
 }
 

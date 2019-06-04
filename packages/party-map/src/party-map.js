@@ -14,12 +14,15 @@ const protobuf = require('protobufjs');
 const codecProtobuf = require('@wirelineio/codec-protobuf');
 
 // utils
-const { callbackPromise, resolveCallback } = require('./utils/promise-help');
 const { keyToHex, keyToBuffer, getDiscoveryKey } = require('./utils/keys');
 
 const schema = require('./schema.json');
 
 const pNoop = () => Promise.resolve();
+
+const codec = codecProtobuf(protobuf.Root.fromJSON(schema), {
+  packageName: 'partymap'
+});
 
 class Peer extends EventEmitter {
   static _parseTransactionMessages(type, message = {}) {
@@ -29,6 +32,10 @@ class Peer extends EventEmitter {
       });
       default: return {};
     }
+  }
+
+  static get codec() {
+    return codec;
   }
 
   constructor({ partyMap, party, stream, opts = {} }) {
@@ -92,17 +99,13 @@ class Peer extends EventEmitter {
     return true;
   }
 
-  introduceFeeds(message, cb = callbackPromise()) {
+  introduceFeeds(message) {
     const type = 'IntroduceFeeds';
 
-    const transaction = this._emitTransaction({
+    return this._emitTransaction({
       type,
       data: Peer._parseTransactionMessages(type, message)
     });
-
-    resolveCallback(transaction, cb);
-
-    return cb.promise;
   }
 
   sendMessage({ subject, data: userData }) {
@@ -116,7 +119,7 @@ class Peer extends EventEmitter {
       data = Buffer.from(data);
     }
 
-    this.feed.extension('party', Peer._codec.encode({
+    this.feed.extension('party', Peer.codec.encode({
       type: 'EphemeralMessage',
       message: {
         subject,
@@ -128,27 +131,24 @@ class Peer extends EventEmitter {
   _initializePartyExtension() {
     const { rules } = this.party;
 
-    this.feed.on('extension', (extensionType, buffer) => {
+    this.feed.on('extension', async (extensionType, buffer) => {
       if (extensionType !== 'party') return;
 
-      const { type, message } = Peer._codec.decode(buffer, false);
+      try {
+        const { type, message } = Peer.codec.decode(buffer, false);
 
-      switch (type) {
-        case 'IntroduceFeeds':
-          resolveCallback(this._onTransaction({ type, message, method: 'remoteIntroduceFeeds' }), (err) => {
-            debug(`<-- ${type}`, err);
-            if (err) {
-              console.error(err);
-            }
-          });
-          break;
-        case 'EphemeralMessage':
-          if (rules.remoteMessage) {
-            rules.remoteMessage({ peer: this, message });
-          }
-          break;
-        default:
-          break;
+        switch (type) {
+          case 'IntroduceFeeds':
+            await this._onTransaction({ type, message, method: 'remoteIntroduceFeeds' });
+            break;
+          case 'EphemeralMessage':
+            await rules.remoteMessage({ peer: this, message });
+            break;
+          default:
+            break;
+        }
+      } catch (err) {
+        console.error('PartyExtensionError', err);
       }
     });
   }
@@ -163,7 +163,7 @@ class Peer extends EventEmitter {
 
       debug(`--> ${type}`, message);
 
-      this.feed.extension('party', Peer._codec.encode({
+      this.feed.extension('party', Peer.codec.encode({
         type,
         message
       }));
@@ -210,7 +210,7 @@ class Peer extends EventEmitter {
       Object.assign({ id: message.id, return: true }, data || {})
     );
 
-    this.feed.extension('party', Peer._codec.encode({
+    this.feed.extension('party', Peer.codec.encode({
       type,
       message: returnMessage
     }));
@@ -218,7 +218,15 @@ class Peer extends EventEmitter {
 }
 
 class PartyMap extends EventEmitter {
-  constructor(logs) {
+  static get codec() {
+    return codec;
+  }
+
+  static encodeParty(message) {
+    return codec.encode({ type: 'Party', message });
+  }
+
+  constructor(logs, opts = {}) {
     super();
 
     if (typeof logs === 'object' && logs.constructor.name === 'Megafeed') {
@@ -229,15 +237,13 @@ class PartyMap extends EventEmitter {
       this._findFeed = logs.findFeed;
     }
 
+    this.id = opts.id || crypto.randomBytes(32);
+
     this._rules = new Map();
 
     this._parties = new Map();
 
     this._peers = new Set();
-  }
-
-  get id() {
-    return this._root.feed.id;
   }
 
   rules() {
@@ -344,7 +350,7 @@ class PartyMap extends EventEmitter {
     }
 
     try {
-      await this._root.putParty(party);
+      await this._root.putParty(party, { encode: PartyMap.encodeParty });
 
       const discoveryKey = keyToHex(getDiscoveryKey(bufferKey));
 
@@ -390,8 +396,14 @@ class PartyMap extends EventEmitter {
 
     const partiesLoaded = this.list().map(party => keyToHex(party.key));
 
-    const partiesPersisted = (await this._root.getPartyList())
-      .map(msg => msg.value)
+    const partiesPersisted = (await this._root.getPartyList({ codec }))
+      .map((msg) => {
+        if (Buffer.isBuffer(msg)) {
+          return PartyMap.decode(msg).value;
+        }
+
+        return msg.value;
+      })
       .filter(party => !partiesLoaded.includes(keyToHex(party.key)));
 
     const partiesToLoad = partiesPersisted.filter((party) => {
@@ -460,7 +472,7 @@ class PartyMap extends EventEmitter {
 
     stream.on('feed', add);
 
-    stream.once('handshake', () => {
+    stream.once('handshake', async () => {
       if (!stream.remoteSupports('party')) {
         throw new Error('The peer does not have support for the party extension.');
       }
@@ -469,26 +481,15 @@ class PartyMap extends EventEmitter {
         party, stream, opts,
       });
 
-      resolveCallback(party.rules.handshake({ peer }), (err) => {
-        if (err) {
-          console.error(err);
-        }
-      });
+      try {
+        await party.rules.handshake({ peer });
+      } catch (err) {
+        console.error('handshake', err);
+      }
     });
 
     return stream;
   }
-
-  bindEvents(mega) {
-    ['party', 'peer-add', 'peer-remove'].forEach((event) => {
-      this.on(event, (...args) => mega.emit(event, ...args));
-    });
-  }
 }
-
-// codec to encode/decode party extension messages
-Peer._codec = codecProtobuf(protobuf.Root.fromJSON(schema), {
-  packageName: 'megafeed'
-});
 
 module.exports = PartyMap;
