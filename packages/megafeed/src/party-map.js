@@ -79,9 +79,15 @@ class Peer extends EventEmitter {
 
     debug('replicate', { peerId: this.peerId.toString('hex'), replicate: feed.key.toString('hex') });
 
-    feed.replicate(Object.assign({}, this.opts, opts));
+    const replicateOptions = Object.assign({}, this.opts, opts);
+
+    feed.replicate(replicateOptions);
 
     this.replicating.push(key);
+
+    if (!replicateOptions.live && replicateOptions.expectedFeeds === undefined) {
+      this.stream.expectedFeeds = this.replicating.length;
+    }
 
     return true;
   }

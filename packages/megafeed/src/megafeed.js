@@ -184,8 +184,14 @@ class Megafeed extends EventEmitter {
   }
 
   setParty(party, cb = callbackPromise()) {
+    const newParty = party;
+
+    if (!newParty.rules) {
+      newParty.rules = 'megafeed:default';
+    }
+
     this.ready(() => {
-      resolveCallback(this._parties.setParty(party), cb);
+      resolveCallback(this._parties.setParty(newParty), cb);
     });
 
     return cb.promise;
@@ -295,6 +301,8 @@ class Megafeed extends EventEmitter {
   }
 
   _initialize(feeds) {
+    this._defineDefaultPartyRules();
+
     resolveCallback(this._feeds.initFeeds(feeds), (err) => {
       if (err) {
         this.emit('ready', err);
@@ -303,6 +311,37 @@ class Megafeed extends EventEmitter {
       }
       this._isReady = true;
       this.emit('ready');
+    });
+  }
+
+  _defineDefaultPartyRules() {
+    this._parties.setRules({
+      name: 'megafeed:default',
+
+      handshake: async ({ peer }) => {
+        const feeds = this.feeds();
+
+        await peer.introduceFeeds({
+          keys: feeds.map(feed => feed.key)
+        });
+
+        feeds.forEach(feed => peer.replicate(feed));
+
+        this.on('feed', async (feed) => {
+          await peer.introduceFeeds({
+            keys: [feed.key]
+          });
+          peer.replicate(feed);
+        });
+      },
+
+      remoteIntroduceFeeds: async ({ message }) => {
+        const { keys } = message;
+
+        return Promise.all(
+          keys.map(key => this.addFeed({ key }))
+        );
+      }
     });
   }
 }
