@@ -99,7 +99,7 @@ class Peer extends EventEmitter {
     return cb.promise;
   }
 
-  sendMessage({ id, subject, data: userData }) {
+  sendMessage({ subject, data: userData }) {
     let data = userData;
 
     if (!Buffer.isBuffer(data)) {
@@ -113,7 +113,6 @@ class Peer extends EventEmitter {
     this.feed.extension('party', Peer._codec.encode({
       type: 'EphemeralMessage',
       message: {
-        id: id || crypto.randomBytes(12).toString('hex'),
         subject,
         data
       }
