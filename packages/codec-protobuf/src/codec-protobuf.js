@@ -2,12 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const protobuf = require('protobufjs');
-
-protobuf.util.Buffer = Buffer;
-protobuf.configure();
-
-const AnyType = protobuf.Root.fromJSON(require('./schema.json')).lookupType('codecprotobuf.AnyType');
+const { AnyType } = require('./schema.js');
 
 /**
  * encode / decode protobuffers
@@ -17,7 +12,7 @@ const AnyType = protobuf.Root.fromJSON(require('./schema.json')).lookupType('cod
  *   'Message2': 2
  * }
  */
-function codecProtobuf(root, { packageName } = {}) {
+function codecProtobuf(root) {
   return {
     encode: function encodeProtobuf(obj) {
       if (typeof obj !== 'object') {
@@ -26,31 +21,19 @@ function codecProtobuf(root, { packageName } = {}) {
 
       const { type, message } = obj;
 
-      const Message = root.lookupType(packageName ? `${packageName}.${type}` : type);
+      const Message = root[type];
 
-      const err = Message.verify(message);
+      const value = Message.encode(message);
 
-      if (err) {
-        throw new Error(`CodecProtobuf: ${err}`);
-      }
-
-      const value = Message.encode(message).finish();
-
-      return Buffer.from(AnyType.encode({ type, value }).finish());
+      return AnyType.encode({ type, value });
     },
 
     decode: function decodeProtobuf(buffer, onlyMessage = true) {
-      const { type, value } = AnyType.toObject(AnyType.decode(buffer));
+      const { type, value } = AnyType.decode(buffer);
 
-      const Message = root.lookupType(packageName ? `${packageName}.${type}` : type);
+      const Message = root[type];
 
       const message = Message.decode(value);
-
-      Object.keys(message).forEach((prop) => {
-        if (message[prop] instanceof Uint8Array) {
-          message[prop] = Buffer.from(message[prop]);
-        }
-      });
 
       if (onlyMessage) {
         return message;
@@ -64,4 +47,4 @@ function codecProtobuf(root, { packageName } = {}) {
   };
 }
 
-module.exports = { codecProtobuf, protobuf };
+module.exports = codecProtobuf;

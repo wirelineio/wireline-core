@@ -14,7 +14,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint **/*.js --ignore-path ../../.eslintignore",
-    "protobuf": "pbjs -t json src/schema.proto -o src/schema.json",
+    "protobuf": "protocol-buffers src/schema.proto -o src/schema.js",
     "test": "jest --verbose"
   },
   "dependencies": {
@@ -29,14 +29,15 @@
     "multi-read-stream": "^2.0.0",
     "mutexify": "^1.2.0",
     "pify": "^4.0.1",
-    "protobufjs": "^6.8.8",
+    "protocol-buffers-encodings": "^1.1.0",
     "random-access-file": "^2.1.0"
   },
   "devDependencies": {
     "jest": "^24.5.0",
+    "protocol-buffers": "^4.1.0",
+    "pump": "^3.0.0",
     "random-access-memory": "^3.1.1",
     "stream-to-promise": "^2.2.0",
-    "pump": "^3.0.0",
     "tempy": "^0.2.1"
   },
   "publishConfig": {

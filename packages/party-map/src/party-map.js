@@ -8,7 +8,7 @@ const crypto = require('crypto');
 
 const mm = require('micromatch');
 const protocol = require('hypercore-protocol');
-const { codecProtobuf, protobuf } = require('@wirelineio/codec-protobuf');
+const codecProtobuf = require('@wirelineio/codec-protobuf');
 
 const createStorage = require('./storage');
 const Rules = require('./rules');
@@ -17,11 +17,9 @@ const Party = require('./party');
 // utils
 const { keyToHex } = require('./utils/keys');
 
-const schema = require('./schema.json');
+const schema = require('./schema.js');
 
-const codec = codecProtobuf(protobuf.Root.fromJSON(schema), {
-  packageName: 'partymap'
-});
+const codec = codecProtobuf(schema);
 
 class PartyMap extends EventEmitter {
   static get codec() {

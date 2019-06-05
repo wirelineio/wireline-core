@@ -6,16 +6,14 @@ const { EventEmitter } = require('events');
 const crypto = require('crypto');
 
 const debug = require('debug')('party-map:peer');
-const { codecProtobuf, protobuf } = require('@wirelineio/codec-protobuf');
+const codecProtobuf = require('@wirelineio/codec-protobuf');
 
 // utils
 const { keyToBuffer } = require('./utils/keys');
 
-const schema = require('./schema.json');
+const schema = require('./schema.js');
 
-const codec = codecProtobuf(protobuf.Root.fromJSON(schema), {
-  packageName: 'partymap'
-});
+const codec = codecProtobuf(schema);
 
 class Peer extends EventEmitter {
   static _parseTransactionMessages(type, message = {}) {

@@ -6,18 +6,16 @@ const { EventEmitter } = require('events');
 const hypercore = require('hypercore');
 const pify = require('pify');
 const debug = require('debug')('megafeed:feed-map');
-const { codecProtobuf, protobuf } = require('@wirelineio/codec-protobuf');
+const codecProtobuf = require('@wirelineio/codec-protobuf');
 
 // utils
 const { keyToHex, getDiscoveryKey, keyToBuffer } = require('./utils/keys');
 const Locker = require('./utils/locker');
 const { filterFeedByPattern } = require('./utils/glob');
 
-const schema = require('./schema.json');
+const schema = require('./schema.js');
 
-const codec = codecProtobuf(protobuf.Root.fromJSON(schema), {
-  packageName: 'megafeed'
-});
+const codec = codecProtobuf(schema);
 
 class FeedMap extends EventEmitter {
   static get codec() {

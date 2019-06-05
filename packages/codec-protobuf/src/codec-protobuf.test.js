@@ -1,11 +1,11 @@
-const { codecProtobuf, protobuf } = require('./codec-protobuf');
+const codecProtobuf = require('./codec-protobuf');
 
-const schema = require('./schema-test.json');
+const schema = require('./schema-test.js');
 
 test('encode/decode message', () => {
   expect.assertions(2);
 
-  const codec = codecProtobuf(protobuf.Root.fromJSON(schema));
+  const codec = codecProtobuf(schema);
 
   const message = { subject: 'hi', body: Buffer.from('how are you?') };
 
