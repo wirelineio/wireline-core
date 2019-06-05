@@ -18,6 +18,7 @@ const FeedMap = require('./feed-map');
 
 // utils
 const { getDiscoveryKey, keyToBuffer, keyToHex } = require('./utils/keys');
+const { buildPartyFeedFilter } = require('./utils/glob');
 
 class Megafeed extends EventEmitter {
   static keyPair(seed) {
@@ -298,7 +299,11 @@ class Megafeed extends EventEmitter {
       name: 'megafeed:default',
 
       handshake: async ({ peer }) => {
-        const feeds = this.feeds();
+        const { party } = peer;
+
+        const filterFeeds = buildPartyFeedFilter(party);
+
+        const feeds = this.feeds().filter(filterFeeds);
 
         await peer.introduceFeeds({
           keys: feeds.map(feed => feed.key)
@@ -307,6 +312,10 @@ class Megafeed extends EventEmitter {
         feeds.forEach(feed => peer.replicate(feed));
 
         this.on('feed', async (feed) => {
+          if (!filterFeeds(feed)) {
+            return;
+          }
+
           await peer.introduceFeeds({
             keys: [feed.key]
           });
@@ -314,11 +323,12 @@ class Megafeed extends EventEmitter {
         });
       },
 
-      remoteIntroduceFeeds: async ({ message }) => {
+      remoteIntroduceFeeds: async ({ message, peer }) => {
+        const { key: partyKey } = peer.party;
         const { keys } = message;
 
         return Promise.all(
-          keys.map(key => this.addFeed({ key }))
+          keys.map(key => this.addFeed({ name: `party-feed/${keyToHex(partyKey)}/${keyToHex(key)}`, key }))
         );
       }
     });

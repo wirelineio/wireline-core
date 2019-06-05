@@ -4,7 +4,6 @@
 
 const { EventEmitter } = require('events');
 const hypercore = require('hypercore');
-const mm = require('micromatch');
 const pify = require('pify');
 const debug = require('debug')('megafeed:feed-map');
 const protobuf = require('protobufjs');
@@ -13,6 +12,7 @@ const codecProtobuf = require('@wirelineio/codec-protobuf');
 // utils
 const { keyToHex, getDiscoveryKey, keyToBuffer } = require('./utils/keys');
 const Locker = require('./utils/locker');
+const { filterFeedByPattern } = require('./utils/glob');
 
 const schema = require('./schema.json');
 
@@ -333,17 +333,7 @@ class FeedMap extends EventEmitter {
       pattern = keyToHex(pattern);
     }
 
-    const feeds = Array.from(this._feeds.values()).filter((f) => {
-      const list = [f.name, keyToHex(f.key), keyToHex(getDiscoveryKey(f.key))].filter(Boolean);
-
-      if (f.secretKey) {
-        list.push(keyToHex(f.secretKey));
-      }
-
-      const matches = mm(list, pattern);
-
-      return matches.length > 0;
-    });
+    const feeds = Array.from(this._feeds.values()).filter(filterFeedByPattern(pattern));
 
     try {
       const result = await Promise.all(

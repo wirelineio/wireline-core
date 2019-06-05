@@ -341,9 +341,12 @@ class PartyMap extends EventEmitter {
     let party = {
       name: name || keyToHex(bufferKey),
       key: bufferKey,
-      rules,
-      metadata
+      rules
     };
+
+    if (metadata) {
+      party.metadata = Buffer.isBuffer(metadata) ? metadata : Buffer.from(JSON.stringify(metadata));
+    }
 
     if (!this._rules.has(rules)) {
       throw new Error(`There is not rules for "${rules}"`);
