@@ -7,215 +7,21 @@ const assert = require('assert');
 const crypto = require('crypto');
 
 const mm = require('micromatch');
-const eos = require('end-of-stream');
 const protocol = require('hypercore-protocol');
-const debug = require('debug')('megafeed:party-map');
-const protobuf = require('protobufjs');
-const codecProtobuf = require('@wirelineio/codec-protobuf');
+const { codecProtobuf, protobuf } = require('@wirelineio/codec-protobuf');
+
+const createStorage = require('./storage');
+const Rules = require('./rules');
+const Party = require('./party');
 
 // utils
-const { keyToHex, keyToBuffer, getDiscoveryKey } = require('./utils/keys');
+const { keyToHex } = require('./utils/keys');
 
 const schema = require('./schema.json');
-
-const pNoop = () => Promise.resolve();
 
 const codec = codecProtobuf(protobuf.Root.fromJSON(schema), {
   packageName: 'partymap'
 });
-
-class Peer extends EventEmitter {
-  static _parseTransactionMessages(type, message = {}) {
-    switch (type) {
-      case 'IntroduceFeeds': return Object.assign({}, message, {
-        keys: message.keys ? message.keys.map(key => keyToBuffer(key)) : []
-      });
-      default: return {};
-    }
-  }
-
-  static get codec() {
-    return codec;
-  }
-
-  constructor({ partyMap, party, stream, opts = {} }) {
-    super();
-
-    // we need to have access to the entire list of parties
-    this.partyMap = partyMap;
-
-    // party + party.rules
-    this.party = party;
-
-    // connection
-    this.stream = stream;
-
-    // root feed (which we used to encrypt the hypercore-protocol)
-    const [rootFeed] = stream.feeds;
-    this.feed = rootFeed;
-
-    // options for the replicate
-    this.opts = Object.assign({}, opts, { stream });
-
-    // we track each party message extension using transaction [ [id, promise] ]
-    this.transactions = new Map();
-
-    this.replicating = [];
-
-    this._initializePartyExtension();
-  }
-
-  get peerId() {
-    return this.stream.remoteId;
-  }
-
-  get partyKey() {
-    return this.party.key;
-  }
-
-  guestFeedKeys() {
-    return this.partyMap.guestFeedKeys(this.party.key);
-  }
-
-  replicate(feed, opts = {}) {
-    const key = feed.key.toString('hex');
-
-    if (this.replicating.includes(key)) {
-      return false;
-    }
-
-    debug('replicate', { peerId: this.peerId.toString('hex'), replicate: feed.key.toString('hex') });
-
-    const replicateOptions = Object.assign({}, this.opts, opts);
-
-    feed.replicate(replicateOptions);
-
-    this.replicating.push(key);
-
-    if (!replicateOptions.live && replicateOptions.expectedFeeds === undefined) {
-      this.stream.expectedFeeds = this.replicating.length;
-    }
-
-    return true;
-  }
-
-  introduceFeeds(message) {
-    const type = 'IntroduceFeeds';
-
-    return this._emitTransaction({
-      type,
-      data: Peer._parseTransactionMessages(type, message)
-    });
-  }
-
-  sendMessage({ subject, data: userData }) {
-    let data = userData;
-
-    if (!Buffer.isBuffer(data)) {
-      if (typeof data === 'object') {
-        data = JSON.parse(data);
-      }
-
-      data = Buffer.from(data);
-    }
-
-    this.feed.extension('party', Peer.codec.encode({
-      type: 'EphemeralMessage',
-      message: {
-        subject,
-        data
-      }
-    }));
-  }
-
-  _initializePartyExtension() {
-    const { rules } = this.party;
-
-    this.feed.on('extension', async (extensionType, buffer) => {
-      if (extensionType !== 'party') return;
-
-      try {
-        const { type, message } = Peer.codec.decode(buffer, false);
-
-        switch (type) {
-          case 'IntroduceFeeds':
-            await this._onTransaction({ type, message, method: 'remoteIntroduceFeeds' });
-            break;
-          case 'EphemeralMessage':
-            await rules.remoteMessage({ peer: this, message });
-            break;
-          default:
-            break;
-        }
-      } catch (err) {
-        console.error('PartyExtensionError', err);
-      }
-    });
-  }
-
-  async _emitTransaction({ type, data }) {
-    const id = crypto.randomBytes(12).toString('hex');
-
-    return new Promise((resolve, reject) => {
-      this._transactionResolveReject(id, resolve, reject);
-
-      const message = Object.assign({ id }, data);
-
-      debug(`--> ${type}`, message);
-
-      this.feed.extension('party', Peer.codec.encode({
-        type,
-        message
-      }));
-    });
-  }
-
-  _transactionResolveReject(id, resolve, reject) {
-    const { rules: { options } } = this.party;
-
-    let timer;
-
-    const cleanTransaction = cb => (...args) => {
-      if (timer) {
-        clearTimeout(timer);
-      }
-      this.transactions.delete(id);
-      cb(...args);
-    };
-
-    const _resolve = cleanTransaction(resolve);
-    const _reject = cleanTransaction(reject);
-
-    if (options.transactionTimeout) {
-      timer = setTimeout(() => {
-        _reject('Transaction timeout.');
-      }, options.transactionTimeout);
-    }
-
-    this.transactions.set(id, { resolve: _resolve, reject: _reject });
-  }
-
-  async _onTransaction({ type, message, method }) {
-    if (message.return) {
-      // answer
-      const { resolve } = this.transactions.get(message.id);
-      debug(`<-- ${type}`, message);
-      return resolve && resolve(message);
-    }
-
-    const data = await this.party.rules[method]({ peer: this, message });
-
-    const returnMessage = Peer._parseTransactionMessages(
-      type,
-      Object.assign({ id: message.id, return: true }, data || {})
-    );
-
-    this.feed.extension('party', Peer.codec.encode({
-      type,
-      message: returnMessage
-    }));
-  }
-}
 
 class PartyMap extends EventEmitter {
   static get codec() {
@@ -223,27 +29,26 @@ class PartyMap extends EventEmitter {
   }
 
   static encodeParty(message) {
-    return codec.encode({ type: 'Party', message });
+    return codec.encode({ type: 'Party', message: message.serialize() });
   }
 
-  constructor(logs, opts = {}) {
+  constructor(handler) {
     super();
 
-    if (typeof logs === 'object' && logs.constructor.name === 'Megafeed') {
-      this._root = logs._root;
-      this._findFeed = logs.feedByDK.bind(logs);
-    } else {
-      this._root = logs.root;
-      this._findFeed = logs.findFeed;
-    }
+    this.id = handler.id || crypto.randomBytes(32);
 
-    this.id = opts.id || crypto.randomBytes(32);
+    if (typeof handler === 'object' && handler.constructor.name === 'Megafeed') {
+      this._handler = {
+        storage: createStorage(handler._root),
+        findFeed: handler.feedByDK.bind(handler)
+      };
+    } else {
+      this._handler = handler;
+    }
 
     this._rules = new Map();
 
     this._parties = new Map();
-
-    this._peers = new Set();
   }
 
   rules() {
@@ -254,112 +59,39 @@ class PartyMap extends EventEmitter {
     return Array.from(this._parties.values());
   }
 
-  peers(partyKey) {
-    const bufferPartyKey = keyToBuffer(partyKey);
-    const peers = Array.from(this._peers.values());
+  setRules(handler) {
+    assert(typeof handler.name === 'string' && handler.name.length > 0, 'Name rule string is required.');
 
-    if (!bufferPartyKey) {
-      return peers;
-    }
-
-    return peers.filter(peer => Buffer.compare(peer.party.key, bufferPartyKey) === 0);
+    this._rules.set(handler.name, new Rules(handler));
   }
 
-  // Feed keys in the party.
-  guestFeedKeys(partyKey) {
-    const result = new Set();
+  async setParty({ name, key, secretKey, rules, metadata }) {
+    let newRules = rules;
 
-    this.peers(partyKey).forEach((peer) => {
-      peer.replicating.forEach((key) => {
-        if (key === peer.feed.key.toString('hex')) {
-          // The initial feed is the party, we don't want to share it.
-          return null;
-        }
+    if (typeof newRules === 'string') {
+      if (!this._rules.has(newRules)) {
+        throw new Error(`There is not rules for "${newRules}"`);
+      }
 
-        result.add(key);
-      });
+      newRules = this._rules.get(newRules);
+    }
+
+    const party = new Party({
+      id: this.id,
+      name,
+      key,
+      secretKey,
+      metadata,
+      rules: newRules,
+      findFeed: this._handler.findFeed.bind(this._handler)
     });
-
-    return Array.from(result.values()).map(key => keyToBuffer(key));
-  }
-
-  addPeer({ party, stream, opts }) {
-    if (stream.destroyed) return;
-
-    const peer = new Peer({ partyMap: this, party, stream, opts });
-
-    this._peers.add(peer);
-
-    debug('peer-add', peer);
-    this.emit('peer-add', peer);
-
-    eos(stream, (err) => {
-      peer.emit('destroy', err, peer);
-
-      debug('peer-destroy', err);
-
-      this._peers.delete(peer);
-
-      debug('peer-remove', peer);
-      this.emit('peer-remove', peer);
-    });
-
-    return peer;
-  }
-
-  setRules(rules) {
-    const partyRules = rules;
-
-    assert(typeof partyRules.name === 'string' && partyRules.name.length > 0, 'Name rule string is required.');
-    assert(typeof partyRules.handshake === 'function', 'Handshake rule method is required.');
-
-    if (!partyRules.options) {
-      partyRules.options = {};
-    }
-
-    if (!partyRules.replicateOptions) {
-      partyRules.replicateOptions = {};
-    }
-
-    if (!partyRules.remoteIntroduceFeeds) {
-      partyRules.remoteIntroduceFeeds = pNoop;
-    }
-
-    if (!partyRules.remoteMessage) {
-      partyRules.remoteMessage = pNoop;
-    }
-
-    this._rules.set(partyRules.name, partyRules);
-  }
-
-  async setParty({ name, key, rules, metadata }) {
-    assert(Buffer.isBuffer(key) || typeof key === 'string', 'Public key for the party is required.');
-    assert(typeof rules === 'string' && rules.length > 0, 'Rules string is required.');
-
-    const bufferKey = keyToBuffer(key);
-
-    let party = {
-      name: name || keyToHex(bufferKey),
-      key: bufferKey,
-      rules
-    };
-
-    if (metadata) {
-      party.metadata = Buffer.isBuffer(metadata) ? metadata : Buffer.from(JSON.stringify(metadata));
-    }
-
-    if (!this._rules.has(rules)) {
-      throw new Error(`There is not rules for "${rules}"`);
-    }
 
     try {
-      await this._root.putParty(party, { encode: PartyMap.encodeParty });
+      await this._handler.storage.putParty(party, { encode: PartyMap.encodeParty });
 
-      const discoveryKey = keyToHex(getDiscoveryKey(bufferKey));
+      const discoveryKey = keyToHex(party.discoveryKey);
 
       this._parties.set(discoveryKey, party);
-
-      party = this.party(discoveryKey);
 
       this.emit('party', party);
 
@@ -375,14 +107,11 @@ class PartyMap extends EventEmitter {
     let party = this._parties.get(hexKey);
 
     if (!party) {
-      party = Array.from(this._parties.values()).find(p => keyToHex(p.key) === hexKey || p.name === hexKey);
+      party = this.list().find(p => keyToHex(p.key) === hexKey || p.name === hexKey);
     }
 
-    if (party && this._rules.has(party.rules)) {
-      return Object.assign({}, party, {
-        discoveryKey: getDiscoveryKey(party.key),
-        rules: this._rules.get(party.rules)
-      });
+    if (party && party.rules) {
+      return party;
     }
 
     return null;
@@ -399,7 +128,7 @@ class PartyMap extends EventEmitter {
 
     const partiesLoaded = this.list().map(party => keyToHex(party.key));
 
-    const partiesPersisted = (await this._root.getPartyList({ codec }))
+    const partiesPersisted = (await this._handler.storage.getPartyList({ codec }))
       .map((msg) => {
         if (Buffer.isBuffer(msg)) {
           return PartyMap.decode(msg).value;
@@ -425,69 +154,32 @@ class PartyMap extends EventEmitter {
   }
 
   replicate({ partyDiscoveryKey, ...options } = {}) {
-    let stream;
     let party;
-    let peer;
-
-    let opts = Object.assign(
-      { id: this.id, extensions: [] },
-      options,
-    );
-
-    opts.extensions.push('party');
-
-    const add = (discoveryKey) => {
-      if (stream.destroyed) return null;
-
-      if (!party) {
-        const remoteParty = this.party(discoveryKey);
-
-        if (remoteParty) {
-          party = remoteParty;
-          stream.feed(party.key);
-        }
-
-        return null;
-      }
-
-      const feed = this._findFeed(discoveryKey);
-      if (feed && peer) {
-        peer.replicate(feed);
-      }
-
-      return null;
-    };
+    let stream;
 
     if (partyDiscoveryKey) {
       party = this.party(partyDiscoveryKey);
 
       if (party) {
-        const { replicateOptions = {} } = party.rules;
-        opts = Object.assign({}, opts, replicateOptions);
-      }
-    }
-
-    stream = protocol(opts);
-
-    if (party) {
-      stream.feed(party.key);
-    }
-
-    stream.on('feed', add);
-
-    stream.once('handshake', async () => {
-      if (!stream.remoteSupports('party')) {
-        throw new Error('The peer does not have support for the party extension.');
+        return party.replicate(options);
       }
 
-      peer = this.addPeer({
-        party, stream, opts,
-      });
+      stream = protocol(options);
+      stream.destroy();
+      return stream;
+    }
 
-      try {
-        await party.rules.handshake({ peer });
-      } catch (err) {
-        console.error('handshake', err);
+    stream = protocol(options);
+
+    stream.on('feed', (discoveryKey) => {
+      if (stream.destroyed) return null;
+
+      if (!party) {
+        party = this.party(discoveryKey);
+
+        if (party) {
+          return party.replicate({ ...options, stream });
+        }
       }
     });
 

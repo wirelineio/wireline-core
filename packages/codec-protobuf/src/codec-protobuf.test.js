@@ -1,8 +1,6 @@
-const protobuf = require('protobufjs');
+const { codecProtobuf, protobuf } = require('./codec-protobuf');
 
-const codecProtobuf = require('./codec-protobuf');
-
-const schema = require('./test.json');
+const schema = require('./schema-test.json');
 
 test('encode/decode message', () => {
   expect.assertions(2);

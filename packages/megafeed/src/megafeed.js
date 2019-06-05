@@ -17,6 +17,7 @@ const createRoot = require('./root');
 const FeedMap = require('./feed-map');
 
 // utils
+const { callbackPromise } = require('./utils/promise-help');
 const { getDiscoveryKey, keyToBuffer, keyToHex } = require('./utils/keys');
 const { buildPartyFeedFilter } = require('./utils/glob');
 
@@ -209,14 +210,14 @@ class Megafeed extends EventEmitter {
 
   /** * Megafeed ** */
 
-  async ready() {
+  ready(cb = callbackPromise()) {
     if (this._isReady) {
-      return;
+      return cb();
     }
 
-    return new Promise((resolve, reject) => {
-      this.on('ready', err => (err ? reject(err) : resolve()));
-    });
+    this.on('ready', cb);
+
+    return cb.promise;
   }
 
   async close() {

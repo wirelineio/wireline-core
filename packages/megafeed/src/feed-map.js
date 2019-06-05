@@ -6,8 +6,7 @@ const { EventEmitter } = require('events');
 const hypercore = require('hypercore');
 const pify = require('pify');
 const debug = require('debug')('megafeed:feed-map');
-const protobuf = require('protobufjs');
-const codecProtobuf = require('@wirelineio/codec-protobuf');
+const { codecProtobuf, protobuf } = require('@wirelineio/codec-protobuf');
 
 // utils
 const { keyToHex, getDiscoveryKey, keyToBuffer } = require('./utils/keys');
@@ -90,11 +89,8 @@ class FeedMap extends EventEmitter {
   async initFeeds(initFeeds = []) {
     const root = this._root;
 
-    const persistedFeeds = (await root.getFeedList({ codec })).map((msg) => {
-      const { value } = msg;
-      value.persist = false;
-      return value;
-    });
+    const persistedFeeds = (await root.getFeedList({ codec }))
+      .map(value => Object.assign({}, value, { persist: false }));
 
     const feeds = persistedFeeds
       .concat(

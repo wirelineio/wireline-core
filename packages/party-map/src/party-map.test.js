@@ -21,7 +21,7 @@ const feedPromisify = (feed) => {
   return newFeed;
 };
 
-const rootMockup = () => ({
+const storageMockup = () => ({
   _parties: new Map(),
   async getPartyList() {
     return Array.from(this._parties.values());
@@ -40,7 +40,7 @@ class Peer extends EventEmitter {
     this.addFeed('local', ram, { valueEncoding: 'utf-8' });
 
     this._parties = new PartyMap({
-      root: rootMockup(),
+      storage: storageMockup(),
       findFeed: dk => this.feeds.find(feed => feed.discoveryKey.toString('hex') === dk)
     });
 

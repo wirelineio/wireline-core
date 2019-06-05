@@ -2,9 +2,9 @@ const mm = require('micromatch');
 
 const { keyToHex, getDiscoveryKey } = require('./keys');
 
-const parseMetadata = (buffer) => {
+const parseMetadata = (metadata) => {
   try {
-    return JSON.parse(buffer);
+    return Buffer.isBuffer(metadata) ? JSON.parse(metadata) : metadata;
   } catch (err) {
     return null;
   }

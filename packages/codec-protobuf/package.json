@@ -15,7 +15,7 @@
   "scripts": {
     "lint": "eslint **/*.js --ignore-path ../../.eslintignore",
     "protobuf": "pbjs -t json src/schema.proto -o src/schema.json",
-    "protobuf-test": "pbjs -t json src/test.proto -o src/test.json",
+    "protobuf-test": "pbjs -t json src/schema-test.proto -o src/schema-test.json",
     "test": "jest --verbose"
   },
   "dependencies": {

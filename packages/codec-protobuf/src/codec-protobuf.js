@@ -4,6 +4,9 @@
 
 const protobuf = require('protobufjs');
 
+protobuf.util.Buffer = Buffer;
+protobuf.configure();
+
 const AnyType = protobuf.Root.fromJSON(require('./schema.json')).lookupType('codecprotobuf.AnyType');
 
 /**
@@ -14,7 +17,7 @@ const AnyType = protobuf.Root.fromJSON(require('./schema.json')).lookupType('cod
  *   'Message2': 2
  * }
  */
-module.exports = function codecProtobuf(root, { packageName } = {}) {
+function codecProtobuf(root, { packageName } = {}) {
   return {
     encode: function encodeProtobuf(obj) {
       if (typeof obj !== 'object') {
@@ -33,7 +36,7 @@ module.exports = function codecProtobuf(root, { packageName } = {}) {
 
       const value = Message.encode(message).finish();
 
-      return AnyType.encode({ type, value }).finish();
+      return Buffer.from(AnyType.encode({ type, value }).finish());
     },
 
     decode: function decodeProtobuf(buffer, onlyMessage = true) {
@@ -41,7 +44,13 @@ module.exports = function codecProtobuf(root, { packageName } = {}) {
 
       const Message = root.lookupType(packageName ? `${packageName}.${type}` : type);
 
-      const message = Message.toObject(Message.decode(value));
+      const message = Message.decode(value);
+
+      Object.keys(message).forEach((prop) => {
+        if (message[prop] instanceof Uint8Array) {
+          message[prop] = Buffer.from(message[prop]);
+        }
+      });
 
       if (onlyMessage) {
         return message;
@@ -53,4 +62,6 @@ module.exports = function codecProtobuf(root, { packageName } = {}) {
       };
     }
   };
-};
+}
+
+module.exports = { codecProtobuf, protobuf };

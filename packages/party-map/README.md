@@ -3,9 +3,22 @@
 [![CircleCI](https://circleci.com/gh/wirelineio/wireline-core.svg?style=svg&circle-token=93ede761391f88aa9fffd7fd9e6fe3b552e9cf9d)](https://circleci.com/gh/wirelineio/wireline-core)
 [![npm version](https://badge.fury.io/js/%40wirelineio%2Fparty-map.svg)](https://badge.fury.io/js/%40wirelineio%2Fparty-map)
 
-> A Party is an abstraction on top of the [hypercore-protocol](https://github.com/mafintosh/hypercore-protocol) to provide way to replicate multiple feeds but following a set of rules.
+> Module for manage parties of feeds. A Party is an abstraction on top of the [hypercore-protocol](https://github.com/mafintosh/hypercore-protocol) to provide a way to replicate feeds following a set of rules.
 
-## Why we need it?
+## Install
+
+```
+$ npm install @wirelineio/party-map
+```
+
+## Usage
+
+```javascript
+
+
+```
+
+## Background
 
 ### Hypercore Protocol Feature/Constraints
 
@@ -29,9 +42,9 @@
 
 ### Current solutions
 
-#### Multifeed
+#### [Multifeed](https://github.com/kappa-db/multifeed) + [kappa-core](https://github.com/kappa-db/kappa-core)
 
-Multifeed it's a module for management feeds (writer and reader) and replicate them.
+It's a module for management feeds (writer and reader) and replicate them.
 
 The module uses a global `key` hardcoded or set it by option as `the first feed key`.
 
@@ -41,7 +54,7 @@ It's doesn't have a way to selects which feeds want to share or receive.
 
 Multifeed uses kappa to provide a `multi-writer` solution.
 
-#### Hyperdb
+#### [Hyperdb](https://github.com/mafintosh/hyperdb)
 
 It's a module that provides a key/value database on top multiple hypercores.
 
@@ -52,3 +65,10 @@ write in the database.
 
 When a connection is established, hyperdb share the list of authorized feeds with the other peer. That's how Hyperdb selects
 which feeds want to share o receive.
+
+### Our solution
+
+Our solution comes from how Hyperdb does a `selective replication feeds` by authorization and how multifeed + kappa `materialized` the
+data inside our feeds. We take the best features of both worlds.
+
+

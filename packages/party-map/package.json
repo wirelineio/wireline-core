@@ -21,17 +21,18 @@
     "@wirelineio/codec-protobuf": "^0.1.13",
     "debug": "^4.1.1",
     "end-of-stream": "^1.4.1",
-    "hypercore": "^6.24.0",
     "hypercore-protocol": "^6.9.0",
+    "hypercore-crypto": "^1.0.0",
     "micromatch": "^3.1.10",
-    "protobufjs": "^6.8.8"
+    "pify": "^4.0.1",
+    "protobufjs": "^6.8.8",
+    "random-access-memory": "^3.1.1"
   },
   "devDependencies": {
+    "hypercore": "^6.24.0",
     "jest": "^24.5.0",
-    "hypercore-crypto": "^1.0.0",
-    "random-access-memory": "^3.1.1",
-    "pify": "^4.0.1",
-    "pump": "^3.0.0"
+    "pump": "^3.0.0",
+    "random-access-memory": "^3.1.1"
   },
   "publishConfig": {
     "access": "public"

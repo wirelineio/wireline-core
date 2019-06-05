@@ -2,7 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const hypercore = require('hypercore');
+const crypto = require('hypercore-crypto');
 
 function keyToBuffer(key) {
   if (!key) {
@@ -20,13 +20,13 @@ exports.keyToHex = (key) => {
   return key;
 };
 
-exports.getDiscoveryKey = key => hypercore.discoveryKey(keyToBuffer(key));
+exports.getDiscoveryKey = key => crypto.discoveryKey(keyToBuffer(key));
 
 exports.parseToKeys = (key) => {
   const bKey = keyToBuffer(key);
   return {
     publicKey: bKey,
-    discoveryKey: hypercore.discoveryKey(bKey)
+    discoveryKey: crypto.discoveryKey(bKey)
   };
 };
 
