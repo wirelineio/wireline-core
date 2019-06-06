@@ -2,4 +2,5 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-module.exports = require('./src/party-map');
+exports.PartyMap = require('./src/party-map');
+exports.Party = require('./src/party');

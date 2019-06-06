@@ -8,18 +8,14 @@ const crypto = require('crypto');
 
 const mm = require('micromatch');
 const protocol = require('hypercore-protocol');
-const codecProtobuf = require('@wirelineio/codec-protobuf');
 
 const createStorage = require('./storage');
 const Rules = require('./rules');
 const Party = require('./party');
+const codec = require('./codec');
 
 // utils
 const { keyToHex } = require('./utils/keys');
-
-const schema = require('./schema.js');
-
-const codec = codecProtobuf(schema);
 
 class PartyMap extends EventEmitter {
   static get codec() {
@@ -30,18 +26,17 @@ class PartyMap extends EventEmitter {
     return codec.encode({ type: 'Party', message: message.serialize() });
   }
 
-  constructor(handler) {
+  constructor(opts = {}) {
     super();
 
-    this.id = handler.id || crypto.randomBytes(32);
+    this.id = opts.id || crypto.randomBytes(32);
 
-    if (typeof handler === 'object' && handler.constructor.name === 'Megafeed') {
-      this._handler = {
-        storage: createStorage(handler._root),
-        findFeed: handler.feedByDK.bind(handler)
-      };
+    if (typeof opts === 'object' && opts.constructor.name === 'Megafeed') {
+      this.storage = createStorage(opts._root);
+      this._megaReady = () => opts.ready();
+      this._megaFindFeed = ({ discoveryKey }) => opts.feedByDK(discoveryKey);
     } else {
-      this._handler = handler;
+      this.storage = opts.storage;
     }
 
     this._rules = new Map();
@@ -57,10 +52,15 @@ class PartyMap extends EventEmitter {
     return Array.from(this._parties.values());
   }
 
-  setRules(handler) {
-    assert(typeof handler.name === 'string' && handler.name.length > 0, 'Name rule string is required.');
+  setRules(rules) {
+    const newRules = rules;
 
-    this._rules.set(handler.name, new Rules(handler));
+    assert(typeof newRules.name === 'string' && newRules.name.length > 0, 'Name rule string is required.');
+
+    newRules.ready = newRules.ready || this._megaReady;
+    newRules.findFeed = newRules.findFeed || this._megaFindFeed;
+
+    this._rules.set(newRules.name, new Rules(newRules));
   }
 
   async setParty({ name, key, secretKey, rules, metadata }) {
@@ -80,12 +80,11 @@ class PartyMap extends EventEmitter {
       key,
       secretKey,
       metadata,
-      rules: newRules,
-      findFeed: this._handler.findFeed.bind(this._handler)
+      rules: newRules
     });
 
     try {
-      await this._handler.storage.putParty(party, { encode: PartyMap.encodeParty });
+      await this.storage.putParty(party, { encode: PartyMap.encodeParty });
 
       const discoveryKey = keyToHex(party.discoveryKey);
 
@@ -126,7 +125,7 @@ class PartyMap extends EventEmitter {
 
     const partiesLoaded = this.list().map(party => keyToHex(party.key));
 
-    const partiesPersisted = (await this._handler.storage.getPartyList({ codec }))
+    const partiesPersisted = (await this.storage.getPartyList({ codec }))
       .map((msg) => {
         if (Buffer.isBuffer(msg)) {
           return PartyMap.decode(msg).value;

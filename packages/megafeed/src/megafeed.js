@@ -12,7 +12,7 @@ const raf = require('random-access-file');
 const multi = require('multi-read-stream');
 const eos = require('end-of-stream');
 
-const PartyMap = require('@wirelineio/party-map');
+const { PartyMap } = require('@wirelineio/party-map');
 const createRoot = require('./root');
 const FeedMap = require('./feed-map');
 

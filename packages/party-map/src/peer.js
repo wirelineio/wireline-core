@@ -6,14 +6,11 @@ const { EventEmitter } = require('events');
 const crypto = require('crypto');
 
 const debug = require('debug')('party-map:peer');
-const codecProtobuf = require('@wirelineio/codec-protobuf');
+
+const codec = require('./codec');
 
 // utils
 const { keyToBuffer } = require('./utils/keys');
-
-const schema = require('./schema.js');
-
-const codec = codecProtobuf(schema);
 
 class Peer extends EventEmitter {
   static _parseTransactionMessages(type, message = {}) {
@@ -68,7 +65,11 @@ class Peer extends EventEmitter {
     return this.partyMap.guestFeedKeys(this.party.key);
   }
 
-  replicate(feed, opts = {}) {
+  async replicate(feed, opts = {}) {
+    await new Promise(resolve => feed.ready(resolve));
+
+    if (this.stream.destroyed) return null;
+
     const key = feed.key.toString('hex');
 
     if (this.replicating.includes(key)) {

@@ -1,7 +1,6 @@
 //
 // Copyright 2019 Wireline, Inc.
 //
-const assert = require('assert');
 const { EventEmitter } = require('events');
 
 const crypto = require('hypercore-crypto');
@@ -14,30 +13,37 @@ const Peer = require('./peer');
 const Rules = require('./rules');
 
 class Party extends EventEmitter {
-  constructor({ id = crypto.randomBytes(32), name, key, secretKey, rules, findFeed, metadata = {} }) {
+  constructor({ id = crypto.randomBytes(32), name, key, secretKey, rules, metadata = {} }) {
     super();
 
-    assert(Buffer.isBuffer(key) || typeof key === 'string', 'Public key for the party is required.');
-    assert(typeof rules === 'object', 'Party rules are required.');
+    if (!key) {
+      const keys = crypto.keyPair();
+      this.key = keys.publicKey;
+      this.secretKey = keys.secretKey;
+    } else {
+      this.key = keyToBuffer(key);
+      this.secretKey = keyToBuffer(secretKey);
+    }
 
-    const bufferKey = keyToBuffer(key);
+    this.discoveryKey = getDiscoveryKey(this.key);
 
     this.id = id;
-    this.name = name || keyToHex(bufferKey);
+    this.name = name || keyToHex(this.key);
     this.metadata = metadata;
 
-    this.key = bufferKey;
-    this.secretKey = keyToBuffer(secretKey);
-    this.discoveryKey = getDiscoveryKey(key);
+    this.rules = null;
 
     this.setRules(rules);
-
-    this._findFeed = findFeed;
 
     this._peers = new Set();
   }
 
   setRules(handler) {
+    if (typeof handler === 'string') {
+      console.warn(`Cannot set the rules ${handler} for party ${this.name}. It should be an object.`);
+      return;
+    }
+
     if (handler instanceof Rules) {
       this.rules = handler;
       return;
@@ -47,6 +53,10 @@ class Party extends EventEmitter {
   }
 
   replicate(options = {}) {
+    if (!this.rules) {
+      throw new Error('Party needs rules for replicate.');
+    }
+
     let stream;
     const party = this;
     let peer;
@@ -63,15 +73,24 @@ class Party extends EventEmitter {
       opts.extensions.push('party');
     }
 
-    const add = (discoveryKey) => {
+    const add = async (discoveryKey) => {
       if (stream.destroyed) return null;
-
-      const feed = this._findFeed(discoveryKey);
-      if (feed && peer) {
-        peer.replicate(feed);
+      if (discoveryKey.equals(party.discoveryKey)) {
+        return null;
       }
 
-      return null;
+      try {
+        const feed = await party.rules.findFeed({ peer, discoveryKey });
+
+        if (feed && peer) {
+          peer.replicate(feed);
+        }
+      } catch (err) {
+        console.error('Error trying to replicate a feed', {
+          discoveryKey: keyToHex(discoveryKey),
+          error: err.message
+        });
+      }
     };
 
     stream = opts.stream || protocol(opts);
@@ -90,6 +109,8 @@ class Party extends EventEmitter {
       });
 
       try {
+        await party.rules.ready({ peer });
+
         await party.rules.handshake({ peer });
       } catch (err) {
         console.error('handshake', err);

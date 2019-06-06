@@ -40,8 +40,7 @@ class Peer extends EventEmitter {
     this.addFeed('local', ram, { valueEncoding: 'utf-8' });
 
     this._parties = new PartyMap({
-      storage: storageMockup(),
-      findFeed: dk => this.feeds.find(feed => feed.discoveryKey.toString('hex') === dk)
+      storage: storageMockup()
     });
 
     this._parties.setRules({
@@ -50,6 +49,8 @@ class Peer extends EventEmitter {
       replicateOptions: {
         expectedFeeds: 2
       },
+
+      findFeed: ({ discoveryKey }) => this.feeds.find(feed => feed.discoveryKey.toString('hex') === discoveryKey),
 
       handshake: async ({ peer }) => {
         const localFeed = this.feed('local');
