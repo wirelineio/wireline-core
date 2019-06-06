@@ -54,7 +54,7 @@ const crypto = require('crypto');
 const ram = require('random-access-memory');
 const hypercore = require('hypercore');
 
-const { Party } = require('./index');
+const { Party } = require('@wirelineio/party-map');
 
 class Peer extends EventEmitter {
   constructor(partyKey) {
