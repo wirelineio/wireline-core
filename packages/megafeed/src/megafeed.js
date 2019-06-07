@@ -324,7 +324,7 @@ class Megafeed extends EventEmitter {
         });
       },
 
-      remoteIntroduceFeeds: async ({ message, peer }) => {
+      onIntroduceFeeds: async ({ message, peer }) => {
         const { key: partyKey } = peer.party;
         const { keys } = message;
 

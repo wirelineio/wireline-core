@@ -4,7 +4,7 @@
 
 const assert = require('assert');
 
-const pNoop = () => Promise.resolve();
+const pNoop = () => Promise.resolve(null);
 
 class Rules {
   constructor(handler) {
@@ -23,9 +23,11 @@ class Rules {
 
     this.ready = handler.ready ? handler.ready.bind(handler) : pNoop;
 
-    this.remoteIntroduceFeeds = handler.remoteIntroduceFeeds ? handler.remoteIntroduceFeeds.bind(handler) : pNoop;
+    this.onIntroduceFeeds = handler.onIntroduceFeeds ? handler.onIntroduceFeeds.bind(handler) : pNoop;
 
-    this.remoteMessage = handler.remoteMessage ? handler.remoteMessage.bind(handler) : pNoop;
+    this.onEphemeralMessage = handler.onEphemeralMessage ? handler.onEphemeralMessage.bind(handler) : pNoop;
+
+    this.onRequest = handler.onRequest ? handler.onRequest.bind(handler) : pNoop;
   }
 }
 

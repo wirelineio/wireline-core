@@ -18,6 +18,7 @@ class Peer extends EventEmitter {
       case 'IntroduceFeeds': return Object.assign({}, message, {
         keys: message.keys ? message.keys.map(key => keyToBuffer(key)) : []
       });
+      case 'Request': return message;
       default: return {};
     }
   }
@@ -100,23 +101,19 @@ class Peer extends EventEmitter {
     });
   }
 
-  sendMessage({ subject, data: userData }) {
-    let data = userData;
+  request(message) {
+    const type = 'Request';
 
-    if (!Buffer.isBuffer(data)) {
-      if (typeof data === 'object') {
-        data = JSON.parse(data);
-      }
+    return this._emitTransaction({
+      type,
+      data: Peer._parseTransactionMessages(type, message)
+    });
+  }
 
-      data = Buffer.from(data);
-    }
-
+  sendEphemeralMessage(message) {
     this.feed.extension('party', Peer.codec.encode({
       type: 'EphemeralMessage',
-      message: {
-        subject,
-        data
-      }
+      message
     }));
   }
 
@@ -131,10 +128,13 @@ class Peer extends EventEmitter {
 
         switch (type) {
           case 'IntroduceFeeds':
-            await this._onTransaction({ type, message, method: 'remoteIntroduceFeeds' });
+            await this._onTransaction({ type, message, method: 'onIntroduceFeeds' });
+            break;
+          case 'Request':
+            await this._onTransaction({ type, message, method: 'onRequest' });
             break;
           case 'EphemeralMessage':
-            await rules.remoteMessage({ peer: this, message });
+            await rules.onEphemeralMessage({ peer: this, message });
             break;
           default:
             break;
@@ -151,7 +151,7 @@ class Peer extends EventEmitter {
     return new Promise((resolve, reject) => {
       this._transactionResolveReject(id, resolve, reject);
 
-      const message = Object.assign({ id }, data);
+      const message = Object.assign({ transaction: { id } }, data);
 
       debug(`--> ${type}`, message);
 
@@ -188,9 +188,11 @@ class Peer extends EventEmitter {
   }
 
   async _onTransaction({ type, message, method }) {
-    if (message.return) {
+    const { transaction } = message;
+
+    if (transaction && transaction.return) {
       // answer
-      const { resolve } = this.transactions.get(message.id);
+      const { resolve } = this.transactions.get(transaction.id);
       debug(`<-- ${type}`, message);
       return resolve && resolve(message);
     }
@@ -199,7 +201,10 @@ class Peer extends EventEmitter {
 
     const returnMessage = Peer._parseTransactionMessages(
       type,
-      Object.assign({ id: message.id, return: true }, data || {})
+      Object.assign({
+        transaction: { id: transaction.id, return: true }
+      },
+      data || {})
     );
 
     this.feed.extension('party', Peer.codec.encode({

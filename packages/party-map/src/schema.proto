@@ -9,13 +9,23 @@ message Party {
   bytes metadata = 5;
 }
 
-message IntroduceFeeds {
+message Transaction {
   required string id = 1;
   bool return = 2;
-  repeated bytes keys = 3;
+}
+
+message IntroduceFeeds {
+  required Transaction transaction = 1;
+  repeated bytes keys = 2;
+}
+
+message Request {
+  required Transaction transaction = 1;
+  string type = 3;
+  bytes value = 4;
 }
 
 message EphemeralMessage {
-  string subject = 1;
-  bytes data = 2;
+  string type = 1;
+  bytes value = 2;
 }

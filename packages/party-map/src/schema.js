@@ -17,7 +17,21 @@ var Party = exports.Party = {
   decode: null
 }
 
+var Transaction = exports.Transaction = {
+  buffer: true,
+  encodingLength: null,
+  encode: null,
+  decode: null
+}
+
 var IntroduceFeeds = exports.IntroduceFeeds = {
+  buffer: true,
+  encodingLength: null,
+  encode: null,
+  decode: null
+}
+
+var Request = exports.Request = {
   buffer: true,
   encodingLength: null,
   encode: null,
@@ -32,7 +46,9 @@ var EphemeralMessage = exports.EphemeralMessage = {
 }
 
 defineParty()
+defineTransaction()
 defineIntroduceFeeds()
+defineRequest()
 defineEphemeralMessage()
 
 function defineParty () {
@@ -152,16 +168,15 @@ function defineParty () {
   }
 }
 
-function defineIntroduceFeeds () {
+function defineTransaction () {
   var enc = [
     encodings.string,
-    encodings.bool,
-    encodings.bytes
+    encodings.bool
   ]
 
-  IntroduceFeeds.encodingLength = encodingLength
-  IntroduceFeeds.encode = encode
-  IntroduceFeeds.decode = decode
+  Transaction.encodingLength = encodingLength
+  Transaction.encode = encode
+  Transaction.decode = decode
 
   function encodingLength (obj) {
     var length = 0
@@ -171,13 +186,6 @@ function defineIntroduceFeeds () {
     if (defined(obj.return)) {
       var len = enc[1].encodingLength(obj.return)
       length += 1 + len
-    }
-    if (defined(obj.keys)) {
-      for (var i = 0; i < obj.keys.length; i++) {
-        if (!defined(obj.keys[i])) continue
-        var len = enc[2].encodingLength(obj.keys[i])
-        length += 1 + len
-      }
     }
     return length
   }
@@ -195,14 +203,6 @@ function defineIntroduceFeeds () {
       enc[1].encode(obj.return, buf, offset)
       offset += enc[1].encode.bytes
     }
-    if (defined(obj.keys)) {
-      for (var i = 0; i < obj.keys.length; i++) {
-        if (!defined(obj.keys[i])) continue
-        buf[offset++] = 26
-        enc[2].encode(obj.keys[i], buf, offset)
-        offset += enc[2].encode.bytes
-      }
-    }
     encode.bytes = offset - oldOffset
     return buf
   }
@@ -214,8 +214,7 @@ function defineIntroduceFeeds () {
     var oldOffset = offset
     var obj = {
       id: "",
-      return: false,
-      keys: []
+      return: false
     }
     var found0 = false
     while (true) {
@@ -237,8 +236,185 @@ function defineIntroduceFeeds () {
         obj.return = enc[1].decode(buf, offset)
         offset += enc[1].decode.bytes
         break
+        default:
+        offset = skip(prefix & 7, buf, offset)
+      }
+    }
+  }
+}
+
+function defineIntroduceFeeds () {
+  var enc = [
+    Transaction,
+    encodings.bytes
+  ]
+
+  IntroduceFeeds.encodingLength = encodingLength
+  IntroduceFeeds.encode = encode
+  IntroduceFeeds.decode = decode
+
+  function encodingLength (obj) {
+    var length = 0
+    if (!defined(obj.transaction)) throw new Error("transaction is required")
+    var len = enc[0].encodingLength(obj.transaction)
+    length += varint.encodingLength(len)
+    length += 1 + len
+    if (defined(obj.keys)) {
+      for (var i = 0; i < obj.keys.length; i++) {
+        if (!defined(obj.keys[i])) continue
+        var len = enc[1].encodingLength(obj.keys[i])
+        length += 1 + len
+      }
+    }
+    return length
+  }
+
+  function encode (obj, buf, offset) {
+    if (!offset) offset = 0
+    if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
+    var oldOffset = offset
+    if (!defined(obj.transaction)) throw new Error("transaction is required")
+    buf[offset++] = 10
+    varint.encode(enc[0].encodingLength(obj.transaction), buf, offset)
+    offset += varint.encode.bytes
+    enc[0].encode(obj.transaction, buf, offset)
+    offset += enc[0].encode.bytes
+    if (defined(obj.keys)) {
+      for (var i = 0; i < obj.keys.length; i++) {
+        if (!defined(obj.keys[i])) continue
+        buf[offset++] = 18
+        enc[1].encode(obj.keys[i], buf, offset)
+        offset += enc[1].encode.bytes
+      }
+    }
+    encode.bytes = offset - oldOffset
+    return buf
+  }
+
+  function decode (buf, offset, end) {
+    if (!offset) offset = 0
+    if (!end) end = buf.length
+    if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
+    var oldOffset = offset
+    var obj = {
+      transaction: null,
+      keys: []
+    }
+    var found0 = false
+    while (true) {
+      if (end <= offset) {
+        if (!found0) throw new Error("Decoded message is not valid")
+        decode.bytes = offset - oldOffset
+        return obj
+      }
+      var prefix = varint.decode(buf, offset)
+      offset += varint.decode.bytes
+      var tag = prefix >> 3
+      switch (tag) {
+        case 1:
+        var len = varint.decode(buf, offset)
+        offset += varint.decode.bytes
+        obj.transaction = enc[0].decode(buf, offset, offset + len)
+        offset += enc[0].decode.bytes
+        found0 = true
+        break
+        case 2:
+        obj.keys.push(enc[1].decode(buf, offset))
+        offset += enc[1].decode.bytes
+        break
+        default:
+        offset = skip(prefix & 7, buf, offset)
+      }
+    }
+  }
+}
+
+function defineRequest () {
+  var enc = [
+    Transaction,
+    encodings.string,
+    encodings.bytes
+  ]
+
+  Request.encodingLength = encodingLength
+  Request.encode = encode
+  Request.decode = decode
+
+  function encodingLength (obj) {
+    var length = 0
+    if (!defined(obj.transaction)) throw new Error("transaction is required")
+    var len = enc[0].encodingLength(obj.transaction)
+    length += varint.encodingLength(len)
+    length += 1 + len
+    if (defined(obj.type)) {
+      var len = enc[1].encodingLength(obj.type)
+      length += 1 + len
+    }
+    if (defined(obj.value)) {
+      var len = enc[2].encodingLength(obj.value)
+      length += 1 + len
+    }
+    return length
+  }
+
+  function encode (obj, buf, offset) {
+    if (!offset) offset = 0
+    if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
+    var oldOffset = offset
+    if (!defined(obj.transaction)) throw new Error("transaction is required")
+    buf[offset++] = 10
+    varint.encode(enc[0].encodingLength(obj.transaction), buf, offset)
+    offset += varint.encode.bytes
+    enc[0].encode(obj.transaction, buf, offset)
+    offset += enc[0].encode.bytes
+    if (defined(obj.type)) {
+      buf[offset++] = 26
+      enc[1].encode(obj.type, buf, offset)
+      offset += enc[1].encode.bytes
+    }
+    if (defined(obj.value)) {
+      buf[offset++] = 34
+      enc[2].encode(obj.value, buf, offset)
+      offset += enc[2].encode.bytes
+    }
+    encode.bytes = offset - oldOffset
+    return buf
+  }
+
+  function decode (buf, offset, end) {
+    if (!offset) offset = 0
+    if (!end) end = buf.length
+    if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
+    var oldOffset = offset
+    var obj = {
+      transaction: null,
+      type: "",
+      value: null
+    }
+    var found0 = false
+    while (true) {
+      if (end <= offset) {
+        if (!found0) throw new Error("Decoded message is not valid")
+        decode.bytes = offset - oldOffset
+        return obj
+      }
+      var prefix = varint.decode(buf, offset)
+      offset += varint.decode.bytes
+      var tag = prefix >> 3
+      switch (tag) {
+        case 1:
+        var len = varint.decode(buf, offset)
+        offset += varint.decode.bytes
+        obj.transaction = enc[0].decode(buf, offset, offset + len)
+        offset += enc[0].decode.bytes
+        found0 = true
+        break
         case 3:
-        obj.keys.push(enc[2].decode(buf, offset))
+        obj.type = enc[1].decode(buf, offset)
+        offset += enc[1].decode.bytes
+        break
+        case 4:
+        obj.value = enc[2].decode(buf, offset)
         offset += enc[2].decode.bytes
         break
         default:
@@ -260,12 +436,12 @@ function defineEphemeralMessage () {
 
   function encodingLength (obj) {
     var length = 0
-    if (defined(obj.subject)) {
-      var len = enc[0].encodingLength(obj.subject)
+    if (defined(obj.type)) {
+      var len = enc[0].encodingLength(obj.type)
       length += 1 + len
     }
-    if (defined(obj.data)) {
-      var len = enc[1].encodingLength(obj.data)
+    if (defined(obj.value)) {
+      var len = enc[1].encodingLength(obj.value)
       length += 1 + len
     }
     return length
@@ -275,14 +451,14 @@ function defineEphemeralMessage () {
     if (!offset) offset = 0
     if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
     var oldOffset = offset
-    if (defined(obj.subject)) {
+    if (defined(obj.type)) {
       buf[offset++] = 10
-      enc[0].encode(obj.subject, buf, offset)
+      enc[0].encode(obj.type, buf, offset)
       offset += enc[0].encode.bytes
     }
-    if (defined(obj.data)) {
+    if (defined(obj.value)) {
       buf[offset++] = 18
-      enc[1].encode(obj.data, buf, offset)
+      enc[1].encode(obj.value, buf, offset)
       offset += enc[1].encode.bytes
     }
     encode.bytes = offset - oldOffset
@@ -295,8 +471,8 @@ function defineEphemeralMessage () {
     if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
     var oldOffset = offset
     var obj = {
-      subject: "",
-      data: null
+      type: "",
+      value: null
     }
     while (true) {
       if (end <= offset) {
@@ -308,11 +484,11 @@ function defineEphemeralMessage () {
       var tag = prefix >> 3
       switch (tag) {
         case 1:
-        obj.subject = enc[0].decode(buf, offset)
+        obj.type = enc[0].decode(buf, offset)
         offset += enc[0].decode.bytes
         break
         case 2:
-        obj.data = enc[1].decode(buf, offset)
+        obj.value = enc[1].decode(buf, offset)
         offset += enc[1].decode.bytes
         break
         default:

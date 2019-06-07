@@ -62,7 +62,7 @@ class Peer extends EventEmitter {
         peer.replicate(localFeed);
       },
 
-      remoteIntroduceFeeds: async ({ message, peer }) => {
+      onIntroduceFeeds: async ({ message, peer }) => {
         const { keys } = message;
 
         keys.forEach((key) => {
