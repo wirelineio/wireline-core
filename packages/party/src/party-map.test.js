@@ -91,13 +91,13 @@ class Peer extends EventEmitter {
   async connect(partyKey) {
     await this.feed('local').pReady();
 
-    await this._parties.setParty({
+    await this._parties.addParty({
       name: 'party',
       key: partyKey,
       rules: 'simple-party'
     });
 
-    return this._parties.replicate({ partyDiscoveryKey: crypto.discoveryKey(partyKey) });
+    return this._parties.replicate({ discoveryKey: crypto.discoveryKey(partyKey) });
   }
 }
 

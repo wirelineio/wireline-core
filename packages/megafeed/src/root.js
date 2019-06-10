@@ -17,6 +17,7 @@ module.exports = function createRoot(storage, rootKey, opts) {
   const pGet = pify(root.get.bind(root));
   const pDel = pify(root.del.bind(root));
   const pList = pify(root.list.bind(root));
+  root.pReady = pify(root.ready.bind(root));
   root.pClose = pify(root.feed.close.bind(root.feed));
 
   root.getFeedList = async ({ codec }) => {

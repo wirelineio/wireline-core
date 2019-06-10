@@ -94,6 +94,8 @@ class Megafeed extends EventEmitter {
     // everything is ready
     this._isReady = false;
 
+    this._defaultParty = null;
+
     this._initialize(feeds);
   }
 
@@ -177,16 +179,21 @@ class Megafeed extends EventEmitter {
     return this._parties.setRules(...args);
   }
 
-  async setParty(party) {
+  async addParty(party) {
     const newParty = party;
 
     if (!newParty.rules) {
       newParty.rules = 'megafeed:default';
     }
 
-    await this.ready();
+    await this._root.pReady();
 
-    return this._parties.setParty(newParty);
+    return this._parties.addParty(newParty);
+  }
+
+  async setParty(party) {
+    // Just for compatibility with the old megafeed version.
+    return this.addParty(party);
   }
 
   party(...args) {
@@ -203,9 +210,9 @@ class Megafeed extends EventEmitter {
     return this._parties.loadParties(pattern);
   }
 
-  replicate(partyDiscoveryKey, options = {}) {
+  replicate(options = {}) {
     // Compatibility with the old version of dsuite core (for now).
-    return this._parties.replicate(Object.assign({}, options, { partyDiscoveryKey }));
+    return this._parties.replicate(options);
   }
 
   /** * Megafeed ** */
@@ -285,7 +292,9 @@ class Megafeed extends EventEmitter {
     this._defineDefaultPartyRules();
 
     this._feeds.initFeeds(feeds)
-      .then(() => {
+      .then(() => this.addParty({ key: this.key }))
+      .then((party) => {
+        this._defaultParty = party;
         this._isReady = true;
         this.emit('ready');
       })

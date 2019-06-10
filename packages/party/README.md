@@ -58,7 +58,7 @@ const crypto = require('crypto');
 const ram = require('random-access-memory');
 const hypercore = require('hypercore');
 
-const { Party } = require('@wirelineio/party-map');
+const { Party } = require('@wirelineio/party');
 
 class Peer extends EventEmitter {
   constructor(partyKey) {
@@ -86,7 +86,7 @@ class Peer extends EventEmitter {
           // Replicate you feed
           await peer.replicate(this.local);
         },
-        remoteIntroduceFeeds: async ({ peer, message }) => {
+        onIntroduceFeeds: async ({ peer, message }) => {
           // Event handler to process the incoming messages
           const { keys } = message;
 
@@ -122,24 +122,31 @@ class Peer extends EventEmitter {
 
 const partyKey = crypto.randomBytes(32);
 
-const peerOne = new Peer(partyKey);
-const peerTwo = new Peer(partyKey);
+const alice = new Peer(partyKey);
+const max = new Peer(partyKey);
 
-const r1 = peerOne.replicate({ live: true });
-const r2 = peerTwo.replicate({ live: true });
+const r1 = alice.replicate({ live: true });
+const r2 = max.replicate({ live: true });
 
 setInterval(() => {
-  peerOne.sendMessage('hi from peerOne');
+  alice.sendMessage("Hi I'm Alice");
 }, 1000);
 
-peerTwo.on('message', console.log);
+max.on('message', console.log);
 
 pipeline(r1, r2, r1, (err) => {
-  console.log(err);
+  if (err) {
+    console.log(err);
+  }
 });
 ```
 
 ## API
+
+* Arguments with `!` are required, the rest are optional.
+* Arguments with `[]` are an Array of values.
+* Arguments with `|` means that could be any of the defined values.
+* Arguments with `=` defines a default value.
 
 ...
 
@@ -153,21 +160,16 @@ pipeline(r1, r2, r1, (err) => {
 1. In order to replicate a feed beetwen two peers, each peer needs to know the key of that feed.
 1. Hypercore Protocol provides a way to build `extension` messages on top of it.
 
-### Hypercore Constraints
-
-1. It's single writer.
-
 ### Issues/Questions
 
 1. What represent `the first feed key` in our solution?
 1. How we share the `the first feed key`?
 1. How we talk with other peers to send/receive feeds?
 1. How we decide `which feeds` we want to replicate?
-1. How we do a multi-writer solution using hypercore?
 
 ### Current solutions
 
-#### [Multifeed](https://github.com/kappa-db/multifeed) + [kappa-core](https://github.com/kappa-db/kappa-core)
+#### [Multifeed](https://github.com/kappa-db/multifeed)
 
 It's a module for management feeds (writer and reader) and replicate them.
 
@@ -177,21 +179,11 @@ When a connection (handshake successful) is established each multifeed `share th
 
 It's doesn't have a way to selects which feeds want to share or receive.
 
-Multifeed uses kappa to provide a `multi-writer` solution.
-
 #### [Hyperdb](https://github.com/mafintosh/hyperdb)
 
 It's a module that provides a key/value database on top multiple hypercores.
 
 The database starts with a local initial feed and it uses the key of that feed as `the first feed key`.
 
-The `multi-writer` of Hyperdb works creating a graph of authorized writable feeds. These feeds are the only who are authorized to
-write in the database.
-
 When a connection is established, hyperdb share the list of authorized feeds with the other peer. That's how Hyperdb selects
 which feeds want to share o receive.
-
-#### Our solution
-
-We took some ideas from how Hyperdb does a `selective replication feeds` by authorization and how multifeed + kappa `materialized` the
-data inside our `feeds`. See more about it in [Background](#Background).

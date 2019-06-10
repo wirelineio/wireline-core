@@ -13,6 +13,14 @@ const Peer = require('./peer');
 const Rules = require('./rules');
 
 class Party extends EventEmitter {
+  static _addPartyExtension(obj) {
+    if (!obj.extensions.includes('party')) {
+      obj.extensions.push('party');
+    }
+
+    return obj;
+  }
+
   constructor({ id = crypto.randomBytes(32), name, key, secretKey, rules, metadata = {} }) {
     super();
 
@@ -69,10 +77,6 @@ class Party extends EventEmitter {
       options
     );
 
-    if (!opts.extensions.includes('party')) {
-      opts.extensions.push('party');
-    }
-
     const add = async (discoveryKey) => {
       if (stream.destroyed) return null;
       if (discoveryKey.equals(party.discoveryKey)) {
@@ -93,7 +97,14 @@ class Party extends EventEmitter {
       }
     };
 
-    stream = opts.stream || protocol(opts);
+    if (opts.stream) {
+      const { stream: userStream } = opts;
+      stream = userStream;
+    } else {
+      stream = protocol(opts);
+    }
+
+    stream = Party._addPartyExtension(stream);
 
     stream.feed(party.key);
 

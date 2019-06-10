@@ -170,11 +170,11 @@ describe('testing replicate process', () => {
     };
 
     // Both peer needs to know the partyKey
-    await peerOne.setParty(partyData);
-    await peerTwo.setParty(partyData);
+    await peerOne.addParty(partyData);
+    await peerTwo.addParty(partyData);
 
-    const r1 = peerOne.replicate(partyKey);
-    const r2 = peerTwo.replicate(partyKey);
+    const r1 = peerOne.replicate({ discoveryKey: partyKey });
+    const r2 = peerTwo.replicate({ discoveryKey: partyKey });
 
     await feedOne.pAppend({ index: 0, value: 'hello from one' });
     await feedTwo.pAppend({ index: 1, value: 'hello from two' });
@@ -196,11 +196,11 @@ describe('testing replicate process', () => {
     };
 
     // Both peer needs to know the partyKey
-    await peerOne.setParty(partyData);
-    await peerTwo.setParty(partyData);
+    await peerOne.addParty(partyData);
+    await peerTwo.addParty(partyData);
 
-    const r1 = peerOne.replicate(partyKey, { live: true });
-    const r2 = peerTwo.replicate(partyKey, { live: true });
+    const r1 = peerOne.replicate({ discoveryKey: partyKey, live: true });
+    const r2 = peerTwo.replicate({ discoveryKey: partyKey, live: true });
     pify(pump)(r1, r2, r1);
 
     const messages = [];
@@ -241,11 +241,11 @@ describe('testing replicate process', () => {
     };
 
     // Both peer needs to know the partyKey
-    await peerOne.setParty(partyData);
-    await peerTwo.setParty(partyData);
+    await peerOne.addParty(partyData);
+    await peerTwo.addParty(partyData);
 
-    const r1 = peerOne.replicate(partyKey);
-    const r2 = peerTwo.replicate(partyKey);
+    const r1 = peerOne.replicate({ discoveryKey: partyKey });
+    const r2 = peerTwo.replicate({ discoveryKey: partyKey });
 
     const ilegalFeed = await peerTwo.addFeed({ name: 'ilegalFeed' });
 

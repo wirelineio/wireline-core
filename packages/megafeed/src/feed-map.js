@@ -4,6 +4,7 @@
 
 const { EventEmitter } = require('events');
 const hypercore = require('hypercore');
+const crypto = require('hypercore-crypto');
 const pify = require('pify');
 const debug = require('debug')('megafeed:feed-map');
 const codecProtobuf = require('@wirelineio/codec-protobuf');
@@ -232,17 +233,20 @@ class FeedMap extends EventEmitter {
   }
 
   async addFeed({
-    name = null, storage = null, key = null, ...opts
-  }) {
+    name = null, storage = null, key = null, ...userOpts
+  } = {}) {
+    const opts = userOpts;
     let feedName = name;
-    const hexKey = key && keyToHex(key);
+    let hexKey = key && keyToHex(key);
 
     if (!feedName) {
-      if (hexKey) {
+      if (!hexKey) {
+        const { publicKey, secretKey } = crypto.keyPair();
+        hexKey = keyToHex(publicKey);
         feedName = hexKey;
-      } else {
-        throw new Error('A feed name or public key is required to add a feed.');
+        opts.secretKey = secretKey;
       }
+      feedName = hexKey;
     }
 
     const feed = this.feeds(true).find((f) => {

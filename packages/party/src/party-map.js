@@ -63,7 +63,7 @@ class PartyMap extends EventEmitter {
     this._rules.set(newRules.name, new Rules(newRules));
   }
 
-  async setParty({ name, key, secretKey, rules, metadata }) {
+  async addParty({ name, key, secretKey, rules, metadata }) {
     let newRules = rules;
 
     if (typeof newRules === 'string') {
@@ -150,7 +150,7 @@ class PartyMap extends EventEmitter {
     }
   }
 
-  replicate({ partyDiscoveryKey, ...options } = {}) {
+  replicate({ discoveryKey: partyDiscoveryKey, ...options } = {}) {
     let party;
     let stream;
 
