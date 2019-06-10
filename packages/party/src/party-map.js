@@ -150,7 +150,7 @@ class PartyMap extends EventEmitter {
     }
   }
 
-  replicate({ discoveryKey: partyDiscoveryKey, ...options } = {}) {
+  replicate({ key: partyDiscoveryKey, ...options } = {}) {
     let party;
     let stream;
 

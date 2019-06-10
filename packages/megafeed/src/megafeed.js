@@ -12,7 +12,7 @@ const raf = require('random-access-file');
 const multi = require('multi-read-stream');
 const eos = require('end-of-stream');
 
-const { PartyMap } = require('@wirelineio/party');
+const { PartyMap, Party } = require('@wirelineio/party');
 const createRoot = require('./root');
 const FeedMap = require('./feed-map');
 
@@ -93,8 +93,6 @@ class Megafeed extends EventEmitter {
 
     // everything is ready
     this._isReady = false;
-
-    this._defaultParty = null;
 
     this._initialize(feeds);
   }
@@ -211,6 +209,16 @@ class Megafeed extends EventEmitter {
   }
 
   replicate(options = {}) {
+    if (options.key && !this._parties.party(options.key)) {
+      const party = new Party({
+        key: options.key,
+        rules: Object.assign({
+          findFeed: ({ discoveryKey }) => this.feedByDK(discoveryKey)
+        }, this._defineDefaultPartyRules())
+      });
+
+      return party.replicate(options);
+    }
     // Compatibility with the old version of dsuite core (for now).
     return this._parties.replicate(options);
   }
@@ -289,12 +297,10 @@ class Megafeed extends EventEmitter {
   }
 
   _initialize(feeds) {
-    this._defineDefaultPartyRules();
+    this._parties.setRules(this._defineDefaultPartyRules());
 
     this._feeds.initFeeds(feeds)
-      .then(() => this.addParty({ key: this.key }))
-      .then((party) => {
-        this._defaultParty = party;
+      .then(() => {
         this._isReady = true;
         this.emit('ready');
       })
@@ -305,7 +311,7 @@ class Megafeed extends EventEmitter {
   }
 
   _defineDefaultPartyRules() {
-    this._parties.setRules({
+    return {
       name: 'megafeed:default',
 
       handshake: async ({ peer }) => {
@@ -341,7 +347,7 @@ class Megafeed extends EventEmitter {
           keys.map(key => this.addFeed({ name: `party-feed/${keyToHex(partyKey)}/${keyToHex(key)}`, key }))
         );
       }
-    });
+    };
   }
 }
 

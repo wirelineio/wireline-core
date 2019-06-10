@@ -97,7 +97,7 @@ class Peer extends EventEmitter {
       rules: 'simple-party'
     });
 
-    return this._parties.replicate({ discoveryKey: crypto.discoveryKey(partyKey) });
+    return this._parties.replicate({ key: crypto.discoveryKey(partyKey) });
   }
 }
 

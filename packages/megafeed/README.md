@@ -8,11 +8,12 @@
 ## Features
 
 1. Create/Update/Delete feeds in a persisted key/value structure.
-  - It uses a [hypertrie](https://github.com/mafintosh/hypertrie) to keep all the feeds persisted.
+    - It uses a [hypertrie](https://github.com/mafintosh/hypertrie) to keep all the feeds persisted.
 1. Naming feeds.
 1. Search feeds by keys and/or name.
 1. Load feeds by demand using glob patterns.
 1. Support for different types of `feed like` structures: hypercore, hyperdrive, hyperdb.
+1. Selective replication of the feeds.
 
 ## Install
 
@@ -24,7 +25,6 @@ $ npm install @wirelineio/megafeed
 
 ```javascript
 const { pipeline } = require('stream');
-const crypto = require('crypto');
 const ram = require('random-access-memory');
 const megafeed = require('@wirelineio/megafeed');
 
@@ -43,11 +43,9 @@ max.on('append', feed => feed.head(console.log));
   await alice.ready();
   await max.ready();
 
-  await max.addParty({ key: alice.key });
-
   // replicate
-  const r1 = alice.replicate({ discoveryKey: alice.key, live: true });
-  const r2 = max.replicate({ live: true });
+  const r1 = alice.replicate({ key: alice.key, live: true });
+  const r2 = max.replicate({ key: alice.key, live: true });
   pipeline(r1, r2, r1, (err) => {
     if (err) {
       console.log(err);
@@ -102,11 +100,11 @@ Set a publicKey for the hypertrie feed.
 ```
 * `...hypercoreOptions`: Defines a default hypercore options to apply in the `addFeed` process.
 
-### `mega.ready(callback) -> Promise`
+### `await mega.ready(callback)`
 
 Execute a callback or resolve a promise when the megafeed instance is ready.
 
-### `mega.addFeed(options) -> Promise`
+### `await mega.addFeed(options) -> Feed`
 
 Add a new feed to mega.
 
@@ -116,14 +114,19 @@ Add a new feed to mega.
 * `name: string`: Define a semantic name for the feed.
 * `key: string|buffer`: Define a publicKey for the feed.
 * `type: string`: Type of constructor feed.
-* `load: false`: Defines if the feed needs to be loaded during the next megafeed initialization.
-* `persist: true`: Defines if the feed needs to be persisted in the [hypertrie](https://github.com/mafintosh/hypertrie) root.
+* `load: boolean = false`: Defines if the feed needs to be loaded during the next megafeed initialization.
+* `persist: boolean = true`: Defines if the feed needs to be persisted in the [hypertrie](https://github.com/mafintosh/hypertrie) root.
 * `storage: random-access-*`: Define a specific storage for the feed.
+* `silent: boolean = false`: Don't emit a `feed` event after create the feed.
 * `...hypercoreOptions`: Since a feed is an hypercore feed you can use the same options here.
 
 ### `mega.feed(name|key) -> Feed`
 
 Search a feed by the name, the public key and the discovery key.
+
+### `mega.feedByDK(discoveryKey) -> Feed`
+
+`Performant` search of a feed by their discoveryKey. Use it every time that you can.
 
 ### `mega.feeds(all = false) -> [Feed]`
 
@@ -132,6 +135,93 @@ Returns a list of the `loaded` feeds.
 #### `all`
 
 If is true it will return the entire list of feeds loaded and unloaded.
+
+### `mega.createReadStream(options) -> ReadableStream`
+
+Creates a ReadableStream to read the messages of the entire collection of the loaded feeds.
+
+#### `options`
+
+The options are the same that you find in: [hypercore.createReadStream](https://github.com/mafintosh/hypercore#var-stream--feedcreatereadstreamoptions)
+
+### `await mega.loadFeeds(pattern) -> [Feed]`
+
+Megafeed allows you to have unloaded feeds in your system and load them by demand using glob pattern.
+
+```javascript
+// Feeds in megafeed
+// [{ name: 'db/books' }, { name: 'db/movies' }, { name: 'db/users' }]
+
+// Load only books and movies
+const feeds = await mega.loadFeeds('db/{books,movies}');
+
+console.log(feeds.length === 2) // true
+```
+
+### `await mega.addParty(options) -> Party`
+
+Add a [party](https://github.com/wirelineio/wireline-core/tree/master/packages/party) where the megafeed instance
+is going to replicate their feeds.
+
+#### `options`
+
+* `key: string = crypto.randomBytes(32)`: A `publicKey` to identify the party and it would derivate a discoveryKey from there.
+* `name: string = partyKey`: An optional semantic name to identify the party.
+* `rules: Rules|string = 'megafeed:default'`: The handshake rules that the party is going to use. More info in: [@wirelineio/party](https://github.com/wirelineio/wireline-core/tree/master/packages/party)
+* `metadata: object|buffer`: Prop to store custom information about the party.
+
+#### PartyRule: `megafeed:default`
+
+Megafeed comes with a default party rules for your replicate process.
+
+The rules are simple:
+
+1. `share and replicate every feed in my megafeed.`
+1. `receive and replicate every feed from others`
+
+But if you want to do a selective replication of your feeds you can create your own rules or use the `metadata.filter`.
+
+In the next example we are replicating only the feeds with the name `db/books` and `db/movies`:
+
+```javascript
+const party = await mega.addParty({
+  metadata: {
+    filter: 'db/{books,movies}'
+  }
+})
+
+// pump(party.replicate(), ...)
+```
+
+### `mega.replicate(options)`
+
+Create a replication stream based for a specific party. You should pipe this to another megafeed instance.
+
+#### `options`
+
+* `key: string|buffer`: Key of the party that you want to replicate.
+    * You can use the `discoveryKey` here but in that case you should `add the party` in you megafeed by some mechanism invitation.
+* `...hypercoreReplicateOptions`: The rest of the options are the same that you use in [hypercore.replicate](https://github.com/mafintosh/hypercore#var-stream--feedreplicateoptions)
+
+### `mega.key`
+
+Gets the publicKey of the megafeed.
+
+### `mega.discoveryKey`
+
+Gets the discoveryKey of the megafeed.
+
+### `mega.secretKey`
+
+Gets the secretKey of the megafeed.
+
+### `mega.on('feed', feed => {})`
+
+Event emitted when a new feed was created.
+
+### `mega.on('append', feed => {})`
+
+Event emitted when a new message was appended in one of the feeds maintaining by megafeed.
 
 ## Background
 
