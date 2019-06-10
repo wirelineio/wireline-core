@@ -176,8 +176,8 @@ Megafeed comes with a default party rules for your replicate process.
 
 The rules are simple:
 
-1. `share and replicate every feed in my megafeed.`
-1. `receive and replicate every feed from others`
+1. `Share` and `replicate` every feed in your megafeed.
+1. `Receive` and `replicate` every feed from others.
 
 But if you want to do a selective replication of your feeds you can create your own rules or use the `metadata.filter`.
 
