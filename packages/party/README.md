@@ -1,14 +1,14 @@
-# Wireline PartyMap
+# Wireline Party
 
 [![CircleCI](https://circleci.com/gh/wirelineio/wireline-core.svg?style=svg&circle-token=93ede761391f88aa9fffd7fd9e6fe3b552e9cf9d)](https://circleci.com/gh/wirelineio/wireline-core)
-[![npm version](https://badge.fury.io/js/%40wirelineio%2Fparty-map.svg)](https://badge.fury.io/js/%40wirelineio%2Fparty-map)
+[![npm version](https://badge.fury.io/js/%40wirelineio%2Fparty.svg)](https://badge.fury.io/js/%40wirelineio%2Fparty)
 
-> Module for manage parties of feeds. A Party is an abstraction on top of the [hypercore-protocol](https://github.com/mafintosh/hypercore-protocol) to provide a way to replicate feeds following a set of rules.
+> Module for selective replication of feeds.
 
 ## Install
 
 ```
-$ npm install @wirelineio/party-map
+$ npm install @wirelineio/party
 ```
 
 ## How it works
@@ -18,6 +18,8 @@ $ npm install @wirelineio/party-map
 ### Party
 
 A `Party` is a `virtual space` in a network with a `set of authorized feeds` where `peers` can share and replicate.
+
+Works on top of the [hypercore-protocol](https://github.com/mafintosh/hypercore-protocol).
 
 It's identified by a `key`. You can use the `party.discoverKey` to find other peers in the network without leak the party key.
 

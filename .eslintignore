@@ -78,6 +78,6 @@ swagger-auto/
 truffle/
 
 packages/megafeed/src/schema.js
-packages/party-map/src/schema.js
+packages/party/src/schema.js
 packages/codec-protobuf/src/schema.js
 packages/codec-protobuf/src/schema-test.js

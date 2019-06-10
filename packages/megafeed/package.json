@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@wirelineio/codec-protobuf": "^0.1.13",
-    "@wirelineio/party-map": "^0.1.13",
+    "@wirelineio/party": "^0.1.13",
     "debug": "^4.1.1",
     "end-of-stream": "^1.4.1",
     "hypercore": "^6.24.0",

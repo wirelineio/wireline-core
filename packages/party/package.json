@@ -1,8 +1,8 @@
 {
-  "name": "@wirelineio/party-map",
+  "name": "@wirelineio/party",
   "version": "0.1.13",
-  "description": "Manage multiple parties of feeds.",
-  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/party-map#readme",
+  "description": "Module for selective replication of feeds.",
+  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/party#readme",
   "bugs": {
     "url": "https://github.com/wirelineio/wireline-core/issues"
   },
