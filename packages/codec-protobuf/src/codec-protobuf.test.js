@@ -1,13 +1,11 @@
-const protobuf = require('protobufjs');
-
 const codecProtobuf = require('./codec-protobuf');
 
-const schema = require('./test.json');
+const schema = require('./schema-test.js');
 
 test('encode/decode message', () => {
-  expect.assertions(2);
+  expect.assertions(3);
 
-  const codec = codecProtobuf(protobuf.Root.fromJSON(schema));
+  const codec = codecProtobuf(schema);
 
   const message = { subject: 'hi', body: Buffer.from('how are you?') };
 
@@ -18,4 +16,5 @@ test('encode/decode message', () => {
   const messageDecoded = codec.decode(buffer);
 
   expect(messageDecoded).toEqual(message);
+  expect(Buffer.isBuffer(messageDecoded.body)).toBe(true);
 });

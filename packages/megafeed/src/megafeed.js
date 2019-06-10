@@ -12,13 +12,14 @@ const raf = require('random-access-file');
 const multi = require('multi-read-stream');
 const eos = require('end-of-stream');
 
+const { PartyMap } = require('@wirelineio/party');
 const createRoot = require('./root');
 const FeedMap = require('./feed-map');
-const PartyMap = require('./party-map');
 
 // utils
-const { callbackPromise, resolveCallback } = require('./utils/promise-help');
+const { callbackPromise } = require('./utils/promise-help');
 const { getDiscoveryKey, keyToBuffer, keyToHex } = require('./utils/keys');
+const { buildPartyFeedFilter } = require('./utils/glob');
 
 class Megafeed extends EventEmitter {
   static keyPair(seed) {
@@ -75,15 +76,20 @@ class Megafeed extends EventEmitter {
       };
     };
 
-    // we save all our personal information like the feed list in a private feed
+    // We save all our personal information like the feed list in a private feed
     this._root = createRoot(this._storage('root', storage), rootKey, opts);
 
-    // feeds manager instance
+    // Feeds manager instance
     this._feeds = new FeedMap({ storage: this._storage, opts, root: this._root });
-    this._feeds.bindEvents(this);
+    ['append', 'download', 'feed:added', 'feed', 'feed:deleted'].forEach((event) => {
+      this._feeds.on(event, (...args) => this.emit(event, ...args));
+    });
 
+    // Parties manager instance
     this._parties = new PartyMap(this);
-    this._parties.bindEvents(this);
+    ['party', 'peer-add', 'peer-remove'].forEach((event) => {
+      this._parties.on(event, (...args) => this.emit(event, ...args));
+    });
 
     // everything is ready
     this._isReady = false;
@@ -121,52 +127,40 @@ class Megafeed extends EventEmitter {
     return this._feeds.feeds(...args);
   }
 
-  addFeed(options, cb = callbackPromise()) {
-    this.ready(() => {
-      resolveCallback(this._feeds.addFeed(options), cb);
-    });
+  async addFeed(options) {
+    await this.ready();
 
-    return cb.promise;
+    return this._feeds.addFeed(options);
   }
 
-  delFeed(key, cb = callbackPromise()) {
-    this.ready(() => {
-      resolveCallback(this._feeds.delFeed(key), cb);
-    });
+  async delFeed(key) {
+    await this.ready();
 
-    return cb.promise;
+    return this._feeds.delFeed(key);
   }
 
-  updateFeed(key, transform, cb = callbackPromise()) {
-    this.ready(() => {
-      resolveCallback(this._feeds.updateFeed(key, transform), cb);
-    });
+  async updateFeed(key, transform) {
+    await this.ready();
 
-    return cb.promise;
+    return this._feeds.updateFeed(key, transform);
   }
 
-  loadFeeds(pattern, options, cb = callbackPromise()) {
-    this.ready(() => {
-      resolveCallback(this._feeds.loadFeeds(pattern, options), cb);
-    });
+  async loadFeeds(pattern, options) {
+    await this.ready();
 
-    return cb.promise;
+    return this._feeds.loadFeeds(pattern, options);
   }
 
-  persistFeed(feed, options, cb = callbackPromise()) {
-    this.ready(() => {
-      resolveCallback(this._feeds.persistFeed(feed, options), cb);
-    });
+  async persistFeed(feed, options) {
+    await this.ready();
 
-    return cb.promise;
+    return this._feeds.persistFeed(feed, options);
   }
 
-  closeFeed(key, cb = callbackPromise()) {
-    this.ready(() => {
-      resolveCallback(this._feeds.closeFeed(key), cb);
-    });
+  async closeFeed(key) {
+    await this.ready();
 
-    return cb.promise;
+    return this._feeds.closeFeed(key);
   }
 
   announceFeed(feed) {
@@ -183,18 +177,16 @@ class Megafeed extends EventEmitter {
     return this._parties.setRules(...args);
   }
 
-  setParty(party, cb = callbackPromise()) {
+  async setParty(party) {
     const newParty = party;
 
     if (!newParty.rules) {
       newParty.rules = 'megafeed:default';
     }
 
-    this.ready(() => {
-      resolveCallback(this._parties.setParty(newParty), cb);
-    });
+    await this.ready();
 
-    return cb.promise;
+    return this._parties.setParty(newParty);
   }
 
   party(...args) {
@@ -205,12 +197,10 @@ class Megafeed extends EventEmitter {
     return this._parties.list();
   }
 
-  loadParties(pattern, cb = callbackPromise()) {
-    this.ready(() => {
-      resolveCallback(this._parties.loadParties(pattern), cb);
-    });
+  async loadParties(pattern) {
+    await this.ready();
 
-    return cb.promise;
+    return this._parties.loadParties(pattern);
   }
 
   replicate(partyDiscoveryKey, options = {}) {
@@ -230,53 +220,44 @@ class Megafeed extends EventEmitter {
     return cb.promise;
   }
 
-  close(cb = callbackPromise()) {
+  async close() {
     const root = this._root;
 
-    this.ready(() => {
-      const promise = Promise.all(this.feeds().map(feed => feed.pClose()))
-        .then(() => root.pCloseFeed());
+    await this.ready();
 
-      resolveCallback(promise, cb);
-    });
+    await Promise.all(this.feeds().map(feed => feed.pClose()));
 
-    return cb.promise;
+    await root.pClose();
   }
 
-  destroy(cb = callbackPromise()) {
-    this.close((closeErr) => {
-      const warnings = [];
+  async destroy() {
+    const warnings = [];
 
-      if (closeErr) {
-        warnings.push(closeErr);
-      }
+    try {
+      await this.close();
+    } catch (err) {
+      warnings.push(err);
+    }
 
-      const pifyDestroy = s => pify(s.destroy.bind(s))()
-        .catch(destroyErr => warnings.push(destroyErr));
+    const pifyDestroy = s => pify(s.destroy.bind(s))()
+      .catch(destroyErr => warnings.push(destroyErr));
 
-      const destroyStorage = (feed) => {
-        const s = feed._storage;
-        return Promise.all([
-          pifyDestroy(s.bitfield),
-          pifyDestroy(s.tree),
-          pifyDestroy(s.data),
-          pifyDestroy(s.key),
-          pifyDestroy(s.secretKey),
-          pifyDestroy(s.signatures),
-        ]);
-      };
-
-      const promise = Promise.all([
-        destroyStorage(this._root.feed),
-        ...this.feeds(true)
-          .filter(f => f.closed)
-          .map(f => destroyStorage(f)),
+    const destroyStorage = (feed) => {
+      const s = feed._storage;
+      return Promise.all([
+        pifyDestroy(s.bitfield),
+        pifyDestroy(s.tree),
+        pifyDestroy(s.data),
+        pifyDestroy(s.key),
+        pifyDestroy(s.secretKey),
+        pifyDestroy(s.signatures),
       ]);
+    };
 
-      resolveCallback(promise, cb);
-    });
-
-    return cb.promise;
+    await Promise.all([
+      destroyStorage(this._root.feed),
+      ...this.feeds(true).filter(f => f.closed).map(f => destroyStorage(f)),
+    ]);
   }
 
   createReadStream(opts = {}) {
@@ -303,15 +284,15 @@ class Megafeed extends EventEmitter {
   _initialize(feeds) {
     this._defineDefaultPartyRules();
 
-    resolveCallback(this._feeds.initFeeds(feeds), (err) => {
-      if (err) {
+    this._feeds.initFeeds(feeds)
+      .then(() => {
+        this._isReady = true;
+        this.emit('ready');
+      })
+      .catch((err) => {
         this.emit('ready', err);
         this.emit('error', err);
-        return;
-      }
-      this._isReady = true;
-      this.emit('ready');
-    });
+      });
   }
 
   _defineDefaultPartyRules() {
@@ -319,7 +300,11 @@ class Megafeed extends EventEmitter {
       name: 'megafeed:default',
 
       handshake: async ({ peer }) => {
-        const feeds = this.feeds();
+        const { party } = peer;
+
+        const filterFeeds = buildPartyFeedFilter(party);
+
+        const feeds = this.feeds().filter(filterFeeds);
 
         await peer.introduceFeeds({
           keys: feeds.map(feed => feed.key)
@@ -328,6 +313,10 @@ class Megafeed extends EventEmitter {
         feeds.forEach(feed => peer.replicate(feed));
 
         this.on('feed', async (feed) => {
+          if (!filterFeeds(feed)) {
+            return;
+          }
+
           await peer.introduceFeeds({
             keys: [feed.key]
           });
@@ -335,11 +324,12 @@ class Megafeed extends EventEmitter {
         });
       },
 
-      remoteIntroduceFeeds: async ({ message }) => {
+      onIntroduceFeeds: async ({ message, peer }) => {
+        const { key: partyKey } = peer.party;
         const { keys } = message;
 
         return Promise.all(
-          keys.map(key => this.addFeed({ key }))
+          keys.map(key => this.addFeed({ name: `party-feed/${keyToHex(partyKey)}/${keyToHex(key)}`, key }))
         );
       }
     });
@@ -348,4 +338,3 @@ class Megafeed extends EventEmitter {
 
 module.exports = (...args) => new Megafeed(...args);
 module.exports.Megafeed = Megafeed;
-module.exports.PartyMap = PartyMap;

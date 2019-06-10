@@ -4,36 +4,28 @@
 
 const pify = require('pify');
 const hypertrie = require('hypertrie');
-const protobuf = require('protobufjs');
-const codecProtobuf = require('@wirelineio/codec-protobuf');
 
 // utils
 const { keyToHex } = require('./utils/keys');
 
-const schema = require('./schema.json');
-
 module.exports = function createRoot(storage, rootKey, opts) {
   const root = hypertrie(storage, rootKey, Object.assign({}, opts, {
-    valueEncoding: codecProtobuf(protobuf.Root.fromJSON(schema), {
-      packageName: 'megafeed'
-    }),
+    valueEncoding: undefined
   }));
 
-  root.pPut = pify(root.put.bind(root));
-  root.pGet = pify(root.get.bind(root));
-  root.pDel = pify(root.del.bind(root));
-  root.pList = pify(root.list.bind(root));
-  root.pCloseFeed = pify(root.feed.close.bind(root.feed));
+  const pPut = pify(root.put.bind(root));
+  const pGet = pify(root.get.bind(root));
+  const pDel = pify(root.del.bind(root));
+  const pList = pify(root.list.bind(root));
+  root.pClose = pify(root.feed.close.bind(root.feed));
 
-  root.getFeedList = () => root.pList('feed/');
-  root.getFeed = key => root.pGet(`feed/${keyToHex(key)}`);
-  root.putFeed = feed => root.pPut(`feed/${keyToHex(feed.key)}`, { type: 'Feed', message: feed });
-  root.delFeed = key => root.pDel(`feed/${keyToHex(key)}`);
-
-  root.getPartyList = () => root.pList('party/');
-  root.getParty = key => root.pGet(`party/${keyToHex(key)}`);
-  root.putParty = party => root.pPut(`party/${keyToHex(party.name)}`, { type: 'Party', message: party });
-  root.delParty = key => root.pDel(`party/${keyToHex(key)}`);
+  root.getFeedList = async ({ codec }) => {
+    const list = await pList('feed/');
+    return list.map(({ value }) => codec.decode(value));
+  };
+  root.getFeed = (key, { codec }) => pGet(`feed/${keyToHex(key)}`, { valueEncoding: codec });
+  root.putFeed = (feed, { encode }) => pPut(`feed/${keyToHex(feed.key)}`, encode(feed));
+  root.delFeed = key => pDel(`feed/${keyToHex(key)}`);
 
   return root;
 };

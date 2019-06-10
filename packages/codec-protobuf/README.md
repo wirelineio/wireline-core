@@ -1,94 +1,52 @@
-# Wireline Megafeed
+# Wireline Codec Protobuf
 
 [![CircleCI](https://circleci.com/gh/wirelineio/wireline-core.svg?style=svg&circle-token=93ede761391f88aa9fffd7fd9e6fe3b552e9cf9d)](https://circleci.com/gh/wirelineio/wireline-core)
-[![npm version](https://badge.fury.io/js/%40wirelineio%2Fmegafeed.svg)](https://badge.fury.io/js/%40wirelineio%2Fmegafeed)
+[![npm version](https://badge.fury.io/js/%40wirelineio%2Fcodec-protobuf.svg)](https://badge.fury.io/js/%40wirelineio%2Fcodec-protobuf)
 
-Megafeed is a module that manages multiple hypercore feeds.
+> Codec for protobuf to use in libraries that follows the valueEncoding API of leveldb, like hypercore.
 
-It uses a [hypertrie](https://github.com/mafintosh/hypertrie) to keep all the feeds persisted.
+## Requirement
+
+CodecProtobuf only works with [protocol-buffers](https://github.com/mafintosh/protocol-buffers) since it's
+the only module that allows you to encode/decode type `bytes` to Buffer giving you the benefit of building universal apps working in Node
+and the Browser. (Most of the current bundle tooling for the Browser implements Buffer).
 
 ## Install
 
 ```
-$ npm install @wirelineio/megafeed
+$ npm install @wirelineio/codec-protobuf protocol-buffers
 ```
 
-## Getting Started
+## Usage
+
+```protobuf
+syntax = "proto3";
+
+message Task {
+  required string id = 1;
+  string value = 2;
+}
+```
 
 ```javascript
-const megafeed = require('@wirelineio/megafeed');
+import protobuf from 'protocol-buffers';
+import hypercore from 'hypercore';
+import codecProtobuf from '@wirelineio/codec-protobuf';
 
-const mega = megafeed('./db', key, {
-  feeds: [
-    { name: 'feedOne' },
-    { name: 'feedTwo' },
-    { key: remoteKey }
-  ],
-  valueEncoding: 'json'
+const root = protobuf(fs.readFileSync('schema.proto'))
+
+const codec = codecProtobuf(root);
+
+const obj = { type: 'Task', message: { id: 'task-0', value: 'test' } };
+
+const buffer = codec.encode(obj);
+
+codec.decode(buffer); // { id: 'task-0', value: 'test' }
+
+// It's compatible with the valueEncoding option of hypercore
+const feed = hypercore('./log', { valueEncoding: codec });
+
+feed.append(obj, () => {
+  feed.head(console.log) // { id: 'task-0', value: 'test' }
 });
-
-mega.addFeed({ name: 'feedThree' }, (err, feedThree) => {
-  const feedOne = mega.feed('feedOne');
-
-  feedOne.append({ message: 'hi' }, (err, seq) => {
-    feedOne.get(seq, console.log);
-  });
-
-  feedThree.append({ message: 'hola' }, (err, seq) => {
-    feedThree.get(seq, console.log);
-  });
-})
 ```
-
-## API
-
-* Arguments with `!` are required, the rest are optional.
-* Arguments with `[]` are an Array of values.
-* Arguments with `|` means that could be any of the defined values.
-* Arguments with `=` defines a default value.
-
-### `const mega = megafeed(storage!, key, options)`
-
-Create a megafeed instance.
-
-#### `storage!`
-
-Set a default storage for the hypertrie and the rest of the feeds.
-
-#### `key`
-
-Set a publicKey for the hypertrie feed.
-
-#### `options`
-* `feeds: [options]`: Defines an initial list of feeds to create or load. The options are the same that you define with the method `addFeed`.
-* `...hypercoreOptions`: Defines a default hypercore options to apply in the `addFeed` process.
-
-### `mega.ready(callback) -> Promise`
-
-Execute a callback or resolve a promise when the megafeed instance load all the necessary feeds.
-
-### `mega.addFeed(options!, callback) -> Promise`
-
-Add a new feed to mega.
-
-**If the feed already exists but is not loaded it will load the feed instead of create a new one.**
-
-#### `options`
-* `name: string`: Define a semantic name for the feed.
-* `key: string|buffer`: Define a publicKey for the feed.
-* `load: false`: Defines if the feed needs to be loaded during the next megafeed initialization.
-* `persist: true`: Defines if the feed needs to be persisted in the [hypertrie](https://github.com/mafintosh/hypertrie) root.
-* `storage: random-access-*`: Define a specific storage for the feed.
-* `...hypercoreOptions`: Since a feed is an hypercore feed you can use the same options here.
-
-### `mega.feed(name|key) -> Feed`
-
-Search a feed by the name, the public key and the discovery key.
-
-### `mega.feeds(all = false) -> [Feed]`
-
-Returns a list the `loaded` feeds.
-
-#### `all`
-
-If is true it will return the entire list of feeds loaded and unloaded.

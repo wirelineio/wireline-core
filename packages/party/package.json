@@ -1,8 +1,8 @@
 {
-  "name": "@wirelineio/megafeed",
+  "name": "@wirelineio/party",
   "version": "0.1.13",
-  "description": "Manage multiple hypercore feeds.",
-  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/megafeed#readme",
+  "description": "Module for selective replication of feeds.",
+  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/party#readme",
   "bugs": {
     "url": "https://github.com/wirelineio/wireline-core/issues"
   },
@@ -19,26 +19,21 @@
   },
   "dependencies": {
     "@wirelineio/codec-protobuf": "^0.1.13",
-    "@wirelineio/party": "^0.1.13",
     "debug": "^4.1.1",
     "end-of-stream": "^1.4.1",
-    "hypercore": "^6.24.0",
     "hypercore-crypto": "^1.0.0",
-    "hypertrie": "^3.4.0",
+    "hypercore-protocol": "^6.9.0",
     "micromatch": "^3.1.10",
-    "multi-read-stream": "^2.0.0",
-    "mutexify": "^1.2.0",
     "pify": "^4.0.1",
     "protocol-buffers-encodings": "^1.1.0",
-    "random-access-file": "^2.1.0"
+    "random-access-memory": "^3.1.1"
   },
   "devDependencies": {
+    "hypercore": "^6.24.0",
     "jest": "^24.5.0",
     "protocol-buffers": "^4.1.0",
     "pump": "^3.0.0",
-    "random-access-memory": "^3.1.1",
-    "stream-to-promise": "^2.2.0",
-    "tempy": "^0.2.1"
+    "random-access-memory": "^3.1.1"
   },
   "publishConfig": {
     "access": "public"

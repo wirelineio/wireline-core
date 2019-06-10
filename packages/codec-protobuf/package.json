@@ -14,15 +14,16 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint **/*.js --ignore-path ../../.eslintignore",
-    "protobuf": "pbjs -t json src/schema.proto -o src/schema.json",
-    "protobuf-test": "pbjs -t json src/test.proto -o src/test.json",
+    "protobuf": "protocol-buffers src/schema.proto -o src/schema.js",
+    "protobuf-test": "protocol-buffers src/schema-test.proto -o src/schema-test.js",
     "test": "jest --verbose"
   },
   "dependencies": {
-    "protobufjs": "^6.8.8"
+    "protocol-buffers-encodings": "^1.1.0"
   },
   "devDependencies": {
-    "jest": "^24.5.0"
+    "jest": "^24.5.0",
+    "protocol-buffers": "^4.1.0"
   },
   "publishConfig": {
     "access": "public"

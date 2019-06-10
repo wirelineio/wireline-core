@@ -6,16 +6,23 @@ const hypercore = require('hypercore');
 const ram = require('random-access-memory');
 const crypto = require('hypercore-crypto');
 const pump = require('pump');
+const pify = require('pify');
 const { EventEmitter } = require('events');
 
-const { feedPromisify } = require('./feed-map');
-const { PartyMap } = require('./megafeed');
+const PartyMap = require('./party-map');
 
-const rootMockup = () => ({
+const feedPromisify = (feed) => {
+  const newFeed = feed;
+  ['ready', 'append', 'close', 'get', 'head'].forEach((prop) => {
+    if (feed[prop]) {
+      newFeed[`p${prop[0].toUpperCase() + prop.slice(1)}`] = pify(feed[prop].bind(feed));
+    }
+  });
+  return newFeed;
+};
+
+const storageMockup = () => ({
   _parties: new Map(),
-  feed: {
-    id: crypto.randomBytes(32)
-  },
   async getPartyList() {
     return Array.from(this._parties.values());
   },
@@ -33,8 +40,7 @@ class Peer extends EventEmitter {
     this.addFeed('local', ram, { valueEncoding: 'utf-8' });
 
     this._parties = new PartyMap({
-      root: rootMockup(),
-      findFeed: dk => this.feeds.find(feed => feed.discoveryKey.toString('hex') === dk)
+      storage: storageMockup()
     });
 
     this._parties.setRules({
@@ -43,6 +49,8 @@ class Peer extends EventEmitter {
       replicateOptions: {
         expectedFeeds: 2
       },
+
+      findFeed: ({ discoveryKey }) => this.feeds.find(feed => feed.discoveryKey.toString('hex') === discoveryKey),
 
       handshake: async ({ peer }) => {
         const localFeed = this.feed('local');
@@ -54,7 +62,7 @@ class Peer extends EventEmitter {
         peer.replicate(localFeed);
       },
 
-      remoteIntroduceFeeds: async ({ message, peer }) => {
+      onIntroduceFeeds: async ({ message, peer }) => {
         const { keys } = message;
 
         keys.forEach((key) => {

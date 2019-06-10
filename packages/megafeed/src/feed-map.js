@@ -4,15 +4,28 @@
 
 const { EventEmitter } = require('events');
 const hypercore = require('hypercore');
-const mm = require('micromatch');
 const pify = require('pify');
 const debug = require('debug')('megafeed:feed-map');
+const codecProtobuf = require('@wirelineio/codec-protobuf');
 
 // utils
 const { keyToHex, getDiscoveryKey, keyToBuffer } = require('./utils/keys');
 const Locker = require('./utils/locker');
+const { filterFeedByPattern } = require('./utils/glob');
+
+const schema = require('./schema.js');
+
+const codec = codecProtobuf(schema);
 
 class FeedMap extends EventEmitter {
+  static get codec() {
+    return codec;
+  }
+
+  static encodeFeed(message) {
+    return codec.encode({ type: 'Feed', message });
+  }
+
   static optsToRoot(feed, opts) {
     return {
       name: feed.name,
@@ -74,11 +87,8 @@ class FeedMap extends EventEmitter {
   async initFeeds(initFeeds = []) {
     const root = this._root;
 
-    const persistedFeeds = (await root.getFeedList()).map((msg) => {
-      const { value } = msg;
-      value.persist = false;
-      return value;
-    });
+    const persistedFeeds = (await root.getFeedList({ codec }))
+      .map(value => Object.assign({}, value, { persist: false }));
 
     const feeds = persistedFeeds
       .concat(
@@ -291,7 +301,7 @@ class FeedMap extends EventEmitter {
     const root = this._root;
 
     try {
-      const feed = await root.getFeed(key);
+      const feed = await root.getFeed(key, { codec });
 
       if (!feed) {
         return null;
@@ -299,7 +309,7 @@ class FeedMap extends EventEmitter {
 
       const update = transform(feed.value);
 
-      await root.putFeed(update);
+      await root.putFeed(update, { encode: FeedMap.encodeFeed });
 
       return null;
     } catch (err) {
@@ -317,17 +327,7 @@ class FeedMap extends EventEmitter {
       pattern = keyToHex(pattern);
     }
 
-    const feeds = Array.from(this._feeds.values()).filter((f) => {
-      const list = [f.name, keyToHex(f.key), keyToHex(getDiscoveryKey(f.key))].filter(Boolean);
-
-      if (f.secretKey) {
-        list.push(keyToHex(f.secretKey));
-      }
-
-      const matches = mm(list, pattern);
-
-      return matches.length > 0;
-    });
+    const feeds = Array.from(this._feeds.values()).filter(filterFeedByPattern(pattern));
 
     try {
       const result = await Promise.all(
@@ -355,7 +355,7 @@ class FeedMap extends EventEmitter {
     const opts = Object.assign({}, options, { persist: true });
 
     try {
-      await root.putFeed(FeedMap.optsToRoot(feed, opts));
+      await root.putFeed(FeedMap.optsToRoot(feed, opts), { encode: FeedMap.encodeFeed });
       this._feeds.set(discoveryKey, feed);
       return feed;
     } catch (err) {
@@ -376,12 +376,6 @@ class FeedMap extends EventEmitter {
     }
 
     return null;
-  }
-
-  bindEvents(mega) {
-    ['append', 'download', 'feed:added', 'feed', 'feed:deleted'].forEach((event) => {
-      this.on(event, (...args) => mega.emit(event, ...args));
-    });
   }
 }
 
