@@ -13,6 +13,8 @@ $ npm install @wirelineio/party-map
 
 ## How it works
 
+![parties](https://github.com/wirelineio/wireline-core/raw/master/assets/parties.png)
+
 ### Party
 
 A `Party` is a `virtual space` in a network with a `set of authorized feeds` where `peers` can share and replicate.
