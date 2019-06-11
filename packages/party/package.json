@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/party",
-  "version": "0.1.13",
+  "version": "0.1.14-alpha.0",
   "description": "Module for selective replication of feeds.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/party#readme",
   "bugs": {
@@ -18,7 +18,7 @@
     "test": "jest --verbose"
   },
   "dependencies": {
-    "@wirelineio/codec-protobuf": "^0.1.13",
+    "@wirelineio/codec-protobuf": "^0.1.14-alpha.0",
     "debug": "^4.1.1",
     "end-of-stream": "^1.4.1",
     "hypercore-crypto": "^1.0.0",
