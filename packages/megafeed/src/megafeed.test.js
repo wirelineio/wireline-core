@@ -270,3 +270,40 @@ describe('testing replicate process', () => {
     ]);
   });
 });
+
+describe('iterate over feeds and messages', () => {
+  beforeEach(async () => {
+    const mega = megafeed(ram, { valueEncoding: 'utf-8' });
+
+    let feed = await mega.addFeed({ name: 'feed/0' });
+    await feed.pAppend('Message from feed/0');
+    feed = await mega.addFeed({ name: 'feed/1' });
+    await feed.pAppend('Message from feed/1');
+
+    this.testingElements = { mega };
+  });
+
+  test('createReadStream (filter=[feed/0])', async () => {
+    const { mega } = this.testingElements;
+
+    const messages = await streamToPromise(mega.createReadStream({ filter: 'feed/0' }));
+
+    expect(messages).toEqual(['Message from feed/0']);
+  });
+
+  test('watch (filter=[feed/1])', (done) => {
+    const { mega } = this.testingElements;
+    const messages = [];
+
+    mega.watch({ filter: 'feed/1' }, (message) => {
+      messages.push(message);
+      if (messages.length === 2) {
+        expect(messages).toEqual(['Message from feed/1', 'Message 2 from feed/1']);
+        done();
+      }
+    });
+
+    mega.feed('feed/1').append('Message 2 from feed/1');
+  });
+
+});

@@ -142,7 +142,25 @@ Creates a ReadableStream to read the messages of the entire collection of the lo
 
 #### `options`
 
-The options are the same that you find in: [hypercore.createReadStream](https://github.com/mafintosh/hypercore#var-stream--feedcreatereadstreamoptions)
+* `filter: glob`: Glob pattern to filter messages from specific feeds.
+*  `...optionsHypercore`: [hypercore.createReadStream](https://github.com/mafintosh/hypercore#var-stream--feedcreatereadstreamoptions)
+
+### `mega.watch(options, callback) -> DisposeFunction`
+
+Watch for new messages in megafeed.
+
+#### `options`
+
+* `filter: glob`: Glob pattern to filter messages from specific feeds.
+*  `...optionsHypercore`: [hypercore.createReadStream](https://github.com/mafintosh/hypercore#var-stream--feedcreatereadstreamoptions)
+
+#### `callback: function`
+
+Function to iterate over the messages.
+
+#### `DisposeFunction`
+
+Function to destroy the current watcher.
 
 ### `await mega.loadFeeds(pattern) -> [Feed]`
 

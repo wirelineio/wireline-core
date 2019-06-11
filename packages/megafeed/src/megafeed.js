@@ -11,6 +11,8 @@ const crypto = require('hypercore-crypto');
 const raf = require('random-access-file');
 const multi = require('multi-read-stream');
 const eos = require('end-of-stream');
+const through = require('through2');
+const pump = require('pump');
 
 const { PartyMap, Party } = require('@wirelineio/party');
 const createRoot = require('./root');
@@ -19,7 +21,7 @@ const FeedMap = require('./feed-map');
 // utils
 const { callbackPromise } = require('./utils/promise-help');
 const { getDiscoveryKey, keyToBuffer, keyToHex } = require('./utils/keys');
-const { buildPartyFeedFilter } = require('./utils/glob');
+const { buildPartyFeedFilter, filterFeedByPattern } = require('./utils/glob');
 
 class Megafeed extends EventEmitter {
   static keyPair(seed) {
@@ -275,10 +277,52 @@ class Megafeed extends EventEmitter {
     ]);
   }
 
+  watch(opts, cb) {
+    let options = opts;
+    let onMessage = cb;
+
+    if (typeof options === 'function') {
+      onMessage = options;
+      options = {};
+    }
+
+    const stream = this.createReadStream(Object.assign({}, options, { live: true }));
+
+    pump(stream, through.obj((data, _, next) => {
+      try {
+        const result = onMessage(data);
+        if (result && result.then) {
+          result
+            .then(() => {
+              next(null, data);
+            })
+            .catch((err) => {
+              next(err);
+            });
+        } else {
+          next(null, data);
+        }
+      } catch (err) {
+        next(err);
+      }
+    }));
+
+    return () => stream.destroy();
+  }
+
   createReadStream(opts = {}) {
     const streams = [];
 
-    this.feeds().forEach((feed) => {
+    let feeds = this.feeds();
+
+    let filter = null;
+
+    if (opts.filter) {
+      filter = filterFeedByPattern(opts.filter);
+      feeds = feeds.filter(filter);
+    }
+
+    feeds.forEach((feed) => {
       streams.push(feed.createReadStream(opts));
     });
 
@@ -286,6 +330,10 @@ class Megafeed extends EventEmitter {
 
     const onFeed = (feed) => {
       feed.ready(() => {
+        if (filter && !filter(feed)) {
+          return;
+        }
+
         multiReader.add(feed.createReadStream(opts));
       });
     };
