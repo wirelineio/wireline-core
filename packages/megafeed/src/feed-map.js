@@ -54,13 +54,19 @@ class FeedMap extends EventEmitter {
     return feed.loaded && !feed.closed;
   }
 
-  static feedPromisify(feed) {
+  static addNewFeedMethods(feed) {
     const newFeed = feed;
+
+    // Promise APY p*
     ['ready', 'append', 'close', 'get', 'head'].forEach((prop) => {
       if (feed[prop]) {
         newFeed[`p${prop[0].toUpperCase() + prop.slice(1)}`] = pify(feed[prop].bind(feed));
       }
     });
+
+    // Match glob pattern function
+    newFeed.match = filterFeedByPattern(newFeed);
+
     return newFeed;
   }
 
@@ -182,7 +188,7 @@ class FeedMap extends EventEmitter {
 
       let feed = createFeed(this._storage(name, storage), key, FeedMap.optsToHypercore(opts));
 
-      feed = FeedMap.feedPromisify(feed);
+      feed = FeedMap.addNewFeedMethods(feed);
 
       feed.setMaxListeners(256);
 
@@ -331,7 +337,7 @@ class FeedMap extends EventEmitter {
       pattern = keyToHex(pattern);
     }
 
-    const feeds = Array.from(this._feeds.values()).filter(filterFeedByPattern(pattern));
+    const feeds = Array.from(this._feeds.values()).filter(feed => feed.match(pattern));
 
     try {
       const result = await Promise.all(

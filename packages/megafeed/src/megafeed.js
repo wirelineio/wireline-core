@@ -21,7 +21,7 @@ const FeedMap = require('./feed-map');
 // utils
 const { callbackPromise } = require('./utils/promise-help');
 const { getDiscoveryKey, keyToBuffer, keyToHex } = require('./utils/keys');
-const { buildPartyFeedFilter, filterFeedByPattern } = require('./utils/glob');
+const { parsePartyPattern } = require('./utils/glob');
 
 class Megafeed extends EventEmitter {
   static keyPair(seed) {
@@ -315,11 +315,10 @@ class Megafeed extends EventEmitter {
 
     let feeds = this.feeds();
 
-    let filter = null;
+    const { filter } = opts;
 
-    if (opts.filter) {
-      filter = filterFeedByPattern(opts.filter);
-      feeds = feeds.filter(filter);
+    if (filter) {
+      feeds = feeds.filter(feed => feed.match(filter));
     }
 
     feeds.forEach((feed) => {
@@ -330,7 +329,7 @@ class Megafeed extends EventEmitter {
 
     const onFeed = (feed) => {
       feed.ready(() => {
-        if (filter && !filter(feed)) {
+        if (filter && !feed.match(filter)) {
           return;
         }
 
@@ -365,9 +364,9 @@ class Megafeed extends EventEmitter {
       handshake: async ({ peer }) => {
         const { party } = peer;
 
-        const filterFeeds = buildPartyFeedFilter(party);
+        const pattern = parsePartyPattern(party);
 
-        const feeds = this.feeds().filter(filterFeeds);
+        const feeds = this.feeds().filter(feed => feed.match(pattern));
 
         await peer.introduceFeeds({
           keys: feeds.map(feed => feed.key)
@@ -376,7 +375,7 @@ class Megafeed extends EventEmitter {
         feeds.forEach(feed => peer.replicate(feed));
 
         this.on('feed', async (feed) => {
-          if (!filterFeeds(feed)) {
+          if (!feed.match(pattern)) {
             return;
           }
 

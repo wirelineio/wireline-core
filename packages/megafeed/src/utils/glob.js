@@ -10,7 +10,7 @@ const parseMetadata = (metadata) => {
   }
 };
 
-const filterFeedByPattern = pattern => (feed) => {
+const filterFeedByPattern = feed => (pattern) => {
   const list = [feed.name, keyToHex(feed.key), keyToHex(getDiscoveryKey(feed.key))].filter(Boolean);
 
   if (feed.secretKey) {
@@ -22,12 +22,12 @@ const filterFeedByPattern = pattern => (feed) => {
   return matches.length > 0;
 };
 
-const buildPartyFeedFilter = (party) => {
+const parsePartyPattern = (party) => {
   const metadata = parseMetadata(party.metadata);
 
   const pattern = metadata && metadata.filter ? metadata.filter : '*';
 
-  return filterFeedByPattern(pattern);
+  return pattern;
 };
 
-module.exports = { filterFeedByPattern, buildPartyFeedFilter };
+module.exports = { filterFeedByPattern, parsePartyPattern };
