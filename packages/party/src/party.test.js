@@ -51,8 +51,8 @@ test('party handshake', (done) => {
   const r1 = peerOne.replicate({ expectedFeeds: 1 });
   const r2 = peerTwo.replicate({ expectedFeeds: 1 });
 
-  r1.on('handshake', () => {
-    expect(r1.party).toBe(peerOne);
+  r1.on('party-handshake', (peer) => {
+    expect(peer.party).toBe(peerOne);
   });
 
   pump(r1, r2, r1);
