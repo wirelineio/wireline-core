@@ -4,7 +4,7 @@ const pump = require('pump');
 const Party = require('./party');
 
 test('party handshake', (done) => {
-  expect.assertions(8);
+  expect.assertions(9);
 
   const partyKey = crypto.randomBytes(32);
 
@@ -50,6 +50,10 @@ test('party handshake', (done) => {
 
   const r1 = peerOne.replicate({ expectedFeeds: 1 });
   const r2 = peerTwo.replicate({ expectedFeeds: 1 });
+
+  r1.on('handshake', () => {
+    expect(r1.party).toBe(peerOne);
+  });
 
   pump(r1, r2, r1);
 });

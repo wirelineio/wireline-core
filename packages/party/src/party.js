@@ -115,6 +115,9 @@ class Party extends EventEmitter {
         throw new Error('The peer does not have support for the party extension.');
       }
 
+      // Party backforward data
+      stream.party = party;
+
       peer = this.addPeer({
         party, stream, opts,
       });
