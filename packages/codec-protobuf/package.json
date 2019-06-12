@@ -1,0 +1,31 @@
+{
+  "name": "@wirelineio/codec-protobuf",
+  "version": "0.1.14-alpha.5",
+  "description": "Value encoding for protobuf.",
+  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/codec-protobuf#readme",
+  "bugs": {
+    "url": "https://github.com/wirelineio/wireline-core/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wirelineio/wireline-core.git"
+  },
+  "license": "GPL-3.0",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint **/*.js --ignore-path ../../.eslintignore",
+    "protobuf": "protocol-buffers src/schema.proto -o src/schema.js",
+    "protobuf-test": "protocol-buffers src/schema-test.proto -o src/schema-test.js",
+    "test": "jest --verbose"
+  },
+  "dependencies": {
+    "protocol-buffers-encodings": "^1.1.0"
+  },
+  "devDependencies": {
+    "jest": "^24.5.0",
+    "protocol-buffers": "^4.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

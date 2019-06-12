@@ -31,13 +31,15 @@ function createServer({ io }) {
         return [conn[1], conn[2]];
       });
 
-    signalSwarm.channels.get(channelName).forEach((peerId) => {
-      // eslint-disable-next-line no-underscore-dangle
-      const socket = signalSwarm._sockets[peerId];
-      if (socket) {
-        socket.emit('simple-signal[info]', { channel: channelName, connections: result });
-      }
-    });
+    if (signalSwarm.channels.has(channelName)) {
+      signalSwarm.channels.get(channelName).forEach((peerId) => {
+        // eslint-disable-next-line no-underscore-dangle
+        const socket = signalSwarm._sockets[peerId];
+        if (socket) {
+          socket.emit('simple-signal[info]', { channel: channelName, connections: result });
+        }
+      });
+    }
 
     request.forward();
   });

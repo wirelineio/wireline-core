@@ -6,10 +6,17 @@ const tempy = require('tempy');
 const fs = require('fs');
 const path = require('path');
 const pify = require('pify');
+const pump = require('pump');
+const streamToPromise = require('stream-to-promise');
 
 const ram = require('random-access-memory');
+const crypto = require('hypercore-crypto');
 
 const megafeed = require('./megafeed');
+
+function sortByIndex(a, b) {
+  return a.index - b.index;
+}
 
 describe('config megafeed', () => {
   test('config with raf and valueEncoding utf-8', () => {
@@ -139,4 +146,164 @@ describe('destroy megafeed storage', () => {
     await expect(access(path.join(this.dir, 'root', 'tree'), fs.F_OK)).rejects.toThrow('ENOENT');
     await expect(access(path.join(this.dir, 'documentOne', 'tree'), fs.F_OK)).rejects.toThrow('ENOENT');
   });
+});
+
+describe('testing replicate process', () => {
+  beforeEach(async () => {
+    const partyKey = crypto.randomBytes(32);
+
+    const peerOne = megafeed(ram, { valueEncoding: 'json' });
+    const peerTwo = megafeed(ram, { valueEncoding: 'json' });
+
+    const feedOne = await peerOne.addFeed({ name: 'local' });
+    const feedTwo = await peerTwo.addFeed({ name: 'local' });
+
+    this.testingElements = { partyKey, peerOne, peerTwo, feedOne, feedTwo };
+  });
+
+  test('replicate using party default rules (live=false)', async () => {
+    const { partyKey, peerOne, peerTwo, feedOne, feedTwo } = this.testingElements;
+
+    const partyData = {
+      name: 'test',
+      key: partyKey
+    };
+
+    // Both peer needs to know the partyKey
+    await peerOne.addParty(partyData);
+    await peerTwo.addParty(partyData);
+
+    const r1 = peerOne.replicate({ key: partyKey });
+    const r2 = peerTwo.replicate({ key: partyKey });
+
+    await feedOne.pAppend({ index: 0, value: 'hello from one' });
+    await feedTwo.pAppend({ index: 1, value: 'hello from two' });
+
+    await pify(pump)(r1, r2, r1);
+
+    const resultOne = await streamToPromise(peerOne.createReadStream());
+    const resultTwo = await streamToPromise(peerTwo.createReadStream());
+
+    expect(resultOne.sort(sortByIndex)).toEqual(resultTwo.sort(sortByIndex));
+  });
+
+  test('replicate using party default rules (live=true)', async (done) => {
+    const { partyKey, peerOne, peerTwo, feedOne, feedTwo } = this.testingElements;
+
+    const partyData = {
+      name: 'test',
+      key: partyKey
+    };
+
+    // Both peer needs to know the partyKey
+    await peerOne.addParty(partyData);
+    await peerTwo.addParty(partyData);
+
+    const r1 = peerOne.replicate({ key: partyKey, live: true });
+    const r2 = peerTwo.replicate({ key: partyKey, live: true });
+    pify(pump)(r1, r2, r1);
+
+    const messages = [];
+    peerOne.on('append', (feed) => {
+      feed.head((err, message) => {
+        messages.push(message);
+        if (messages.length === 3) {
+          expect(messages.sort(sortByIndex)).toEqual([
+            { index: 0, value: 'hello from one' },
+            { index: 1, value: 'hello from two' },
+            { index: 2, value: 'hello from three' }
+          ]);
+          done();
+        }
+      });
+    });
+
+    await feedOne.pAppend({ index: 0, value: 'hello from one' });
+    await feedTwo.pAppend({ index: 1, value: 'hello from two' });
+
+    // Test what happen if you add a new feed after the replication process started
+    const feedThree = await peerTwo.addFeed({ name: 'localThree' });
+    await feedThree.pAppend({ index: 2, value: 'hello from three' });
+  });
+
+  test('replicate using party default rules (live=false, filter=["local", "party-feed/current"])', async () => {
+    const { partyKey, peerOne, peerTwo, feedOne, feedTwo } = this.testingElements;
+
+    const partyData = {
+      name: 'test',
+      key: partyKey,
+      metadata: {
+        filter: [
+          'local',
+          `party-feed/${partyKey.toString('hex')}/**`
+        ]
+      }
+    };
+
+    // Both peer needs to know the partyKey
+    await peerOne.addParty(partyData);
+    await peerTwo.addParty(partyData);
+
+    const r1 = peerOne.replicate({ key: partyKey });
+    const r2 = peerTwo.replicate({ key: partyKey });
+
+    const ilegalFeed = await peerTwo.addFeed({ name: 'ilegalFeed' });
+
+    await feedOne.pAppend({ index: 0, value: 'hello from one' });
+    await feedTwo.pAppend({ index: 1, value: 'hello from two' });
+    await ilegalFeed.pAppend({ index: 2, value: 'hello from ilegalFeed' });
+
+    await pify(pump)(r1, r2, r1);
+
+    const resultOne = await streamToPromise(peerOne.createReadStream());
+    const resultTwo = await streamToPromise(peerTwo.createReadStream());
+
+    expect(resultOne.sort(sortByIndex)).toEqual([
+      { index: 0, value: 'hello from one' },
+      { index: 1, value: 'hello from two' }
+    ]);
+
+    expect(resultTwo.sort(sortByIndex)).toEqual([
+      { index: 0, value: 'hello from one' },
+      { index: 1, value: 'hello from two' },
+      { index: 2, value: 'hello from ilegalFeed' }
+    ]);
+  });
+});
+
+describe('iterate over feeds and messages', () => {
+  beforeEach(async () => {
+    const mega = megafeed(ram, { valueEncoding: 'utf-8' });
+
+    let feed = await mega.addFeed({ name: 'feed/0' });
+    await feed.pAppend('Message from feed/0');
+    feed = await mega.addFeed({ name: 'feed/1' });
+    await feed.pAppend('Message from feed/1');
+
+    this.testingElements = { mega };
+  });
+
+  test('createReadStream (filter=[feed/0])', async () => {
+    const { mega } = this.testingElements;
+
+    const messages = await streamToPromise(mega.createReadStream({ filter: 'feed/0' }));
+
+    expect(messages).toEqual(['Message from feed/0']);
+  });
+
+  test('watch (filter=[feed/1])', (done) => {
+    const { mega } = this.testingElements;
+    const messages = [];
+
+    mega.watch({ filter: 'feed/1' }, (message) => {
+      messages.push(message);
+      if (messages.length === 2) {
+        expect(messages).toEqual(['Message from feed/1', 'Message 2 from feed/1']);
+        done();
+      }
+    });
+
+    mega.feed('feed/1').append('Message 2 from feed/1');
+  });
+
 });

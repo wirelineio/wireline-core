@@ -10,13 +10,6 @@ var encodings = require('protocol-buffers-encodings')
 var varint = encodings.varint
 var skip = encodings.skip
 
-var Party = exports.Party = {
-  buffer: true,
-  encodingLength: null,
-  encode: null,
-  decode: null
-}
-
 var Feed = exports.Feed = {
   buffer: true,
   encodingLength: null,
@@ -24,142 +17,7 @@ var Feed = exports.Feed = {
   decode: null
 }
 
-var IntroduceFeeds = exports.IntroduceFeeds = {
-  buffer: true,
-  encodingLength: null,
-  encode: null,
-  decode: null
-}
-
-var EphemeralMessage = exports.EphemeralMessage = {
-  buffer: true,
-  encodingLength: null,
-  encode: null,
-  decode: null
-}
-
-defineParty()
 defineFeed()
-defineIntroduceFeeds()
-defineEphemeralMessage()
-
-function defineParty () {
-  var enc = [
-    encodings.string,
-    encodings.bytes,
-    encodings.bool
-  ]
-
-  Party.encodingLength = encodingLength
-  Party.encode = encode
-  Party.decode = decode
-
-  function encodingLength (obj) {
-    var length = 0
-    if (!defined(obj.name)) throw new Error("name is required")
-    var len = enc[0].encodingLength(obj.name)
-    length += 1 + len
-    if (!defined(obj.key)) throw new Error("key is required")
-    var len = enc[1].encodingLength(obj.key)
-    length += 1 + len
-    if (!defined(obj.rules)) throw new Error("rules is required")
-    var len = enc[0].encodingLength(obj.rules)
-    length += 1 + len
-    if (defined(obj.isFeed)) {
-      var len = enc[2].encodingLength(obj.isFeed)
-      length += 1 + len
-    }
-    if (defined(obj.metadata)) {
-      var len = enc[1].encodingLength(obj.metadata)
-      length += 1 + len
-    }
-    return length
-  }
-
-  function encode (obj, buf, offset) {
-    if (!offset) offset = 0
-    if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
-    var oldOffset = offset
-    if (!defined(obj.name)) throw new Error("name is required")
-    buf[offset++] = 10
-    enc[0].encode(obj.name, buf, offset)
-    offset += enc[0].encode.bytes
-    if (!defined(obj.key)) throw new Error("key is required")
-    buf[offset++] = 18
-    enc[1].encode(obj.key, buf, offset)
-    offset += enc[1].encode.bytes
-    if (!defined(obj.rules)) throw new Error("rules is required")
-    buf[offset++] = 26
-    enc[0].encode(obj.rules, buf, offset)
-    offset += enc[0].encode.bytes
-    if (defined(obj.isFeed)) {
-      buf[offset++] = 32
-      enc[2].encode(obj.isFeed, buf, offset)
-      offset += enc[2].encode.bytes
-    }
-    if (defined(obj.metadata)) {
-      buf[offset++] = 42
-      enc[1].encode(obj.metadata, buf, offset)
-      offset += enc[1].encode.bytes
-    }
-    encode.bytes = offset - oldOffset
-    return buf
-  }
-
-  function decode (buf, offset, end) {
-    if (!offset) offset = 0
-    if (!end) end = buf.length
-    if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
-    var oldOffset = offset
-    var obj = {
-      name: "",
-      key: null,
-      rules: "",
-      isFeed: false,
-      metadata: null
-    }
-    var found0 = false
-    var found1 = false
-    var found2 = false
-    while (true) {
-      if (end <= offset) {
-        if (!found0 || !found1 || !found2) throw new Error("Decoded message is not valid")
-        decode.bytes = offset - oldOffset
-        return obj
-      }
-      var prefix = varint.decode(buf, offset)
-      offset += varint.decode.bytes
-      var tag = prefix >> 3
-      switch (tag) {
-        case 1:
-        obj.name = enc[0].decode(buf, offset)
-        offset += enc[0].decode.bytes
-        found0 = true
-        break
-        case 2:
-        obj.key = enc[1].decode(buf, offset)
-        offset += enc[1].decode.bytes
-        found1 = true
-        break
-        case 3:
-        obj.rules = enc[0].decode(buf, offset)
-        offset += enc[0].decode.bytes
-        found2 = true
-        break
-        case 4:
-        obj.isFeed = enc[2].decode(buf, offset)
-        offset += enc[2].decode.bytes
-        break
-        case 5:
-        obj.metadata = enc[1].decode(buf, offset)
-        offset += enc[1].decode.bytes
-        break
-        default:
-        offset = skip(prefix & 7, buf, offset)
-      }
-    }
-  }
-}
 
 function defineFeed () {
   var enc = [
@@ -198,6 +56,10 @@ function defineFeed () {
     }
     if (defined(obj.metadata)) {
       var len = enc[1].encodingLength(obj.metadata)
+      length += 1 + len
+    }
+    if (defined(obj.type)) {
+      var len = enc[0].encodingLength(obj.type)
       length += 1 + len
     }
     return length
@@ -240,6 +102,11 @@ function defineFeed () {
       enc[1].encode(obj.metadata, buf, offset)
       offset += enc[1].encode.bytes
     }
+    if (defined(obj.type)) {
+      buf[offset++] = 66
+      enc[0].encode(obj.type, buf, offset)
+      offset += enc[0].encode.bytes
+    }
     encode.bytes = offset - oldOffset
     return buf
   }
@@ -256,7 +123,8 @@ function defineFeed () {
       load: false,
       persist: false,
       valueEncoding: "",
-      metadata: null
+      metadata: null,
+      type: ""
     }
     var found0 = false
     var found1 = false
@@ -300,175 +168,9 @@ function defineFeed () {
         obj.metadata = enc[1].decode(buf, offset)
         offset += enc[1].decode.bytes
         break
-        default:
-        offset = skip(prefix & 7, buf, offset)
-      }
-    }
-  }
-}
-
-function defineIntroduceFeeds () {
-  var enc = [
-    encodings.string,
-    encodings.bytes
-  ]
-
-  IntroduceFeeds.encodingLength = encodingLength
-  IntroduceFeeds.encode = encode
-  IntroduceFeeds.decode = decode
-
-  function encodingLength (obj) {
-    var length = 0
-    if (!defined(obj.id)) throw new Error("id is required")
-    var len = enc[0].encodingLength(obj.id)
-    length += 1 + len
-    if (defined(obj.keys)) {
-      for (var i = 0; i < obj.keys.length; i++) {
-        if (!defined(obj.keys[i])) continue
-        var len = enc[1].encodingLength(obj.keys[i])
-        length += 1 + len
-      }
-    }
-    return length
-  }
-
-  function encode (obj, buf, offset) {
-    if (!offset) offset = 0
-    if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
-    var oldOffset = offset
-    if (!defined(obj.id)) throw new Error("id is required")
-    buf[offset++] = 10
-    enc[0].encode(obj.id, buf, offset)
-    offset += enc[0].encode.bytes
-    if (defined(obj.keys)) {
-      for (var i = 0; i < obj.keys.length; i++) {
-        if (!defined(obj.keys[i])) continue
-        buf[offset++] = 18
-        enc[1].encode(obj.keys[i], buf, offset)
-        offset += enc[1].encode.bytes
-      }
-    }
-    encode.bytes = offset - oldOffset
-    return buf
-  }
-
-  function decode (buf, offset, end) {
-    if (!offset) offset = 0
-    if (!end) end = buf.length
-    if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
-    var oldOffset = offset
-    var obj = {
-      id: "",
-      keys: []
-    }
-    var found0 = false
-    while (true) {
-      if (end <= offset) {
-        if (!found0) throw new Error("Decoded message is not valid")
-        decode.bytes = offset - oldOffset
-        return obj
-      }
-      var prefix = varint.decode(buf, offset)
-      offset += varint.decode.bytes
-      var tag = prefix >> 3
-      switch (tag) {
-        case 1:
-        obj.id = enc[0].decode(buf, offset)
+        case 8:
+        obj.type = enc[0].decode(buf, offset)
         offset += enc[0].decode.bytes
-        found0 = true
-        break
-        case 2:
-        obj.keys.push(enc[1].decode(buf, offset))
-        offset += enc[1].decode.bytes
-        break
-        default:
-        offset = skip(prefix & 7, buf, offset)
-      }
-    }
-  }
-}
-
-function defineEphemeralMessage () {
-  var enc = [
-    encodings.string,
-    encodings.bytes
-  ]
-
-  EphemeralMessage.encodingLength = encodingLength
-  EphemeralMessage.encode = encode
-  EphemeralMessage.decode = decode
-
-  function encodingLength (obj) {
-    var length = 0
-    if (!defined(obj.id)) throw new Error("id is required")
-    var len = enc[0].encodingLength(obj.id)
-    length += 1 + len
-    if (!defined(obj.subject)) throw new Error("subject is required")
-    var len = enc[0].encodingLength(obj.subject)
-    length += 1 + len
-    if (!defined(obj.data)) throw new Error("data is required")
-    var len = enc[1].encodingLength(obj.data)
-    length += 1 + len
-    return length
-  }
-
-  function encode (obj, buf, offset) {
-    if (!offset) offset = 0
-    if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
-    var oldOffset = offset
-    if (!defined(obj.id)) throw new Error("id is required")
-    buf[offset++] = 10
-    enc[0].encode(obj.id, buf, offset)
-    offset += enc[0].encode.bytes
-    if (!defined(obj.subject)) throw new Error("subject is required")
-    buf[offset++] = 18
-    enc[0].encode(obj.subject, buf, offset)
-    offset += enc[0].encode.bytes
-    if (!defined(obj.data)) throw new Error("data is required")
-    buf[offset++] = 26
-    enc[1].encode(obj.data, buf, offset)
-    offset += enc[1].encode.bytes
-    encode.bytes = offset - oldOffset
-    return buf
-  }
-
-  function decode (buf, offset, end) {
-    if (!offset) offset = 0
-    if (!end) end = buf.length
-    if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
-    var oldOffset = offset
-    var obj = {
-      id: "",
-      subject: "",
-      data: null
-    }
-    var found0 = false
-    var found1 = false
-    var found2 = false
-    while (true) {
-      if (end <= offset) {
-        if (!found0 || !found1 || !found2) throw new Error("Decoded message is not valid")
-        decode.bytes = offset - oldOffset
-        return obj
-      }
-      var prefix = varint.decode(buf, offset)
-      offset += varint.decode.bytes
-      var tag = prefix >> 3
-      switch (tag) {
-        case 1:
-        obj.id = enc[0].decode(buf, offset)
-        offset += enc[0].decode.bytes
-        found0 = true
-        break
-        case 2:
-        obj.subject = enc[0].decode(buf, offset)
-        offset += enc[0].decode.bytes
-        found1 = true
-        break
-        case 3:
-        obj.data = enc[1].decode(buf, offset)
-        offset += enc[1].decode.bytes
-        found2 = true
         break
         default:
         offset = skip(prefix & 7, buf, offset)

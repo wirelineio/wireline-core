@@ -1,12 +1,5 @@
 syntax = "proto3";
-
-message Party {
-  required string name = 1;
-  required bytes key = 2;
-  required string rules = 3;
-  bool isFeed = 4;
-  bytes metadata = 5;
-}
+package megafeed;
 
 message Feed {
   required string name = 1;
@@ -16,15 +9,5 @@ message Feed {
   bool persist = 5;
   string valueEncoding = 6;
   bytes metadata = 7;
-}
-
-message IntroduceFeeds {
-  required string id = 1;
-  repeated bytes keys = 2;
-}
-
-message EphemeralMessage {
-  required string id = 1;
-  required string subject = 2;
-  required bytes data = 3;
+  string type = 8;
 }
