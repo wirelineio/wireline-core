@@ -20,6 +20,7 @@ const { callbackPromise, resolveCallback } = require('./utils/promise-help');
 const { getDiscoveryKey, keyToBuffer, keyToHex } = require('./utils/keys');
 
 class Megafeed extends EventEmitter {
+
   static keyPair(seed) {
     return crypto.keyPair(seed);
   }
