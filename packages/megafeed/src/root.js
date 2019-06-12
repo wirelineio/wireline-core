@@ -5,7 +5,6 @@
 const pify = require('pify');
 const hypertrie = require('hypertrie');
 
-// utils
 const { keyToHex } = require('./utils/keys');
 
 module.exports = function createRoot(storage, rootKey, opts) {
@@ -17,6 +16,9 @@ module.exports = function createRoot(storage, rootKey, opts) {
   const pGet = pify(root.get.bind(root));
   const pDel = pify(root.del.bind(root));
   const pList = pify(root.list.bind(root));
+
+  // TODO(burdon): Why modify hypertrie?
+
   root.pReady = pify(root.ready.bind(root));
   root.pClose = pify(root.feed.close.bind(root.feed));
 

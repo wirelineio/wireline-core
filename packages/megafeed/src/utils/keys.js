@@ -4,6 +4,8 @@
 
 const crypto = require('hypercore-crypto');
 
+// TODO(burdon): Standardize utils (factor out with gravity).
+
 function keyToBuffer(key) {
   if (!key) {
     return key;
@@ -11,6 +13,8 @@ function keyToBuffer(key) {
 
   return Buffer.isBuffer(key) ? key : Buffer.from(key, 'hex');
 }
+
+// TODO(burdon): Standardize export?
 
 exports.keyToHex = (key) => {
   if (Buffer.isBuffer(key)) {
@@ -23,10 +27,11 @@ exports.keyToHex = (key) => {
 exports.getDiscoveryKey = key => crypto.discoveryKey(keyToBuffer(key));
 
 exports.parseToKeys = (key) => {
-  const bKey = keyToBuffer(key);
+  const keyBuffer = keyToBuffer(key);
+
   return {
-    publicKey: bKey,
-    discoveryKey: crypto.discoveryKey(bKey)
+    publicKey: keyBuffer,
+    discoveryKey: crypto.discoveryKey(keyBuffer)
   };
 };
 

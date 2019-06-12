@@ -1,8 +1,8 @@
 //
 // Copyright 2019 Wireline, Inc.
 //
-const { EventEmitter } = require('events');
 
+const { EventEmitter } = require('events');
 const crypto = require('hypercore-crypto');
 const protocol = require('hypercore-protocol');
 const eos = require('end-of-stream');
@@ -12,7 +12,11 @@ const { keyToHex, keyToBuffer, getDiscoveryKey } = require('./utils/keys');
 const Peer = require('./peer');
 const Rules = require('./rules');
 
+/**
+ *
+ */
 class Party extends EventEmitter {
+
   static _addPartyExtension(obj) {
     if (!obj.extensions.includes('party')) {
       obj.extensions.push('party');
@@ -21,8 +25,11 @@ class Party extends EventEmitter {
     return obj;
   }
 
+  // TODO(burdon): Destructure inside method.
   constructor({ id = crypto.randomBytes(32), name, key, secretKey, rules, metadata = {} }) {
     super();
+
+    // TODO(burdon): Private variables?
 
     if (!key) {
       const keys = crypto.keyPair();

@@ -6,7 +6,11 @@ const assert = require('assert');
 
 const pNoop = () => Promise.resolve(null);
 
+/**
+ *
+ */
 class Rules {
+
   constructor(handler) {
     assert(typeof handler.handshake === 'function', '`handshake` method is required.');
     assert(typeof handler.findFeed === 'function', '`findFeed` method is required.');

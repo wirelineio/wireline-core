@@ -4,7 +4,6 @@
 
 const pify = require('pify');
 
-// utils
 const { keyToHex } = require('./utils/keys');
 
 module.exports = function createStorage(root) {

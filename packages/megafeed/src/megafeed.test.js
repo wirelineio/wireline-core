@@ -21,7 +21,7 @@ function sortByIndex(a, b) {
 describe('config megafeed', () => {
   test('config with raf and valueEncoding utf-8', () => {
     const mf = megafeed(tempy.directory(), {
-      valueEncoding: 'utf-8',
+      valueEncoding: 'utf-8'
     });
 
     expect(mf._feeds._opts.valueEncoding).toBe('utf-8');
@@ -30,7 +30,7 @@ describe('config megafeed', () => {
 
   test('config with ram and valueEncoding json', () => {
     const mf = megafeed(ram, {
-      valueEncoding: 'json',
+      valueEncoding: 'json'
     });
 
     expect(mf._feeds._opts.valueEncoding).toBe('json');
@@ -240,7 +240,7 @@ describe('testing replicate process', () => {
       }
     };
 
-    // Both peer needs to know the partyKey
+    // Both peers needs to know the partyKey.
     await peerOne.addParty(partyData);
     await peerTwo.addParty(partyData);
 
@@ -305,5 +305,4 @@ describe('iterate over feeds and messages', () => {
 
     mega.feed('feed/1').append('Message 2 from feed/1');
   });
-
 });

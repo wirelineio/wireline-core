@@ -148,8 +148,6 @@ pipeline(r1, r2, r1, (err) => {
 * Arguments with `|` means that could be any of the defined values.
 * Arguments with `=` defines a default value.
 
-...
-
 ## Background
 
 ### Hypercore Protocol Feature/Constraints

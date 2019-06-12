@@ -23,9 +23,11 @@ const feedPromisify = (feed) => {
 
 const storageMockup = () => ({
   _parties: new Map(),
+
   async getPartyList() {
     return Array.from(this._parties.values());
   },
+
   async putParty(party) {
     return this._parties.set(party.name.toString('hex'), party);
   }

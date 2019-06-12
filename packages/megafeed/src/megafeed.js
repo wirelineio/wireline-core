@@ -15,15 +15,22 @@ const through = require('through2');
 const pump = require('pump');
 
 const { PartyMap, Party } = require('@wirelineio/party');
+
 const createRoot = require('./root');
 const FeedMap = require('./feed-map');
 
-// utils
 const { callbackPromise } = require('./utils/promise-help');
 const { getDiscoveryKey, keyToBuffer, keyToHex } = require('./utils/keys');
 const { parsePartyPattern } = require('./utils/glob');
 
+/**
+ *
+ */
 class Megafeed extends EventEmitter {
+
+  // TODO(burdon): Separate semantics of multiwriter FROM managing parties (i.e., multiple sets of feeds).
+
+  // TODO(burdon): Move utils to separate package (see gravity). Are these used?
 
   static keyPair(seed) {
     return crypto.keyPair(seed);
@@ -79,22 +86,25 @@ class Megafeed extends EventEmitter {
       };
     };
 
-    // We save all our personal information like the feed list in a private feed
+    // TODO(burdon): Factor out (MF shouldn't know about "personal" info).
+    // We save all our personal information like the feed list in a private feed.
     this._root = createRoot(this._storage('root', storage), rootKey, opts);
 
-    // Feeds manager instance
+    // Feeds manager instance.
     this._feeds = new FeedMap({ storage: this._storage, opts, root: this._root });
+    // TODO(burdon): Why?
     ['append', 'download', 'feed:added', 'feed', 'feed:deleted'].forEach((event) => {
       this._feeds.on(event, (...args) => this.emit(event, ...args));
     });
 
-    // Parties manager instance
+    // Parties manager instance.
     this._parties = new PartyMap(this);
+    // TODO(burdon): Why?
     ['party', 'peer-add', 'peer-remove'].forEach((event) => {
       this._parties.on(event, (...args) => this.emit(event, ...args));
     });
 
-    // everything is ready
+    // Everything is ready.
     this._isReady = false;
 
     this._initialize(feeds);
@@ -115,6 +125,9 @@ class Megafeed extends EventEmitter {
   get secretKey() {
     return this._root.feed.secretKey;
   }
+
+  // TODO(burdon): Factor out these separate interfaces.
+  // TODO(burdon): Why not just expose the map as a property?
 
   /** * Feeds API ** */
 
@@ -222,6 +235,7 @@ class Megafeed extends EventEmitter {
 
       return party.replicate(options);
     }
+
     // Compatibility with the old version of dsuite core (for now).
     return this._parties.replicate(options);
   }
@@ -268,13 +282,13 @@ class Megafeed extends EventEmitter {
         pifyDestroy(s.data),
         pifyDestroy(s.key),
         pifyDestroy(s.secretKey),
-        pifyDestroy(s.signatures),
+        pifyDestroy(s.signatures)
       ]);
     };
 
     await Promise.all([
       destroyStorage(this._root.feed),
-      ...this.feeds(true).filter(f => f.closed).map(f => destroyStorage(f)),
+      ...this.feeds(true).filter(f => f.closed).map(f => destroyStorage(f))
     ]);
   }
 
@@ -383,6 +397,7 @@ class Megafeed extends EventEmitter {
           await peer.introduceFeeds({
             keys: [feed.key]
           });
+
           peer.replicate(feed);
         });
       },
@@ -400,4 +415,5 @@ class Megafeed extends EventEmitter {
 }
 
 module.exports = (...args) => new Megafeed(...args);
+
 module.exports.Megafeed = Megafeed;

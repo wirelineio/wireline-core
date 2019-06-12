@@ -1,3 +1,7 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 const { SignalSwarmServer } = require('@geut/discovery-swarm-webrtc/server');
 
 function createServer({ io }) {

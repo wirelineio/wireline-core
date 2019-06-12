@@ -2,6 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+// TODO(burdon): Use pify?
 exports.callbackPromise = function callbackPromise() {
   let callback;
 

@@ -5,9 +5,12 @@
 const mutexify = require('mutexify');
 
 class Locker {
+
   constructor() {
     this._locks = new Map();
   }
+
+  // TODO(burdon): Why lock and pLock?
 
   lock(resource, cb) {
     if (typeof resource !== 'string') {

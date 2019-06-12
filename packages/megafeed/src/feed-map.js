@@ -7,18 +7,23 @@ const hypercore = require('hypercore');
 const crypto = require('hypercore-crypto');
 const pify = require('pify');
 const debug = require('debug')('megafeed:feed-map');
+
 const codecProtobuf = require('@wirelineio/codec-protobuf');
 
-// utils
 const { keyToHex, getDiscoveryKey, keyToBuffer } = require('./utils/keys');
 const Locker = require('./utils/locker');
 const { filterFeedByPattern } = require('./utils/glob');
 
 const schema = require('./schema.js');
 
+// TODO(burdon): Remove this module and use protobuf directly?
 const codec = codecProtobuf(schema);
 
+/**
+ *
+ */
 class FeedMap extends EventEmitter {
+
   static get codec() {
     return codec;
   }
@@ -54,6 +59,7 @@ class FeedMap extends EventEmitter {
     return feed.loaded && !feed.closed;
   }
 
+  // TODO(burdon): Remove (too much magic -- use pify).
   static addNewFeedMethods(feed) {
     const newFeed = feed;
 
@@ -64,7 +70,7 @@ class FeedMap extends EventEmitter {
       }
     });
 
-    // Match glob pattern function
+    // Match glob pattern function.
     newFeed.match = filterFeedByPattern(newFeed);
 
     return newFeed;
@@ -73,20 +79,21 @@ class FeedMap extends EventEmitter {
   constructor({ storage, opts = {}, root }) {
     super();
 
-    this._feeds = new Map();
-
     this._storage = storage;
 
     this._types = opts.types || {};
 
     this._opts = Object.assign({}, opts, {
-      // we purge the options to get a default options for every feed
+      // We purge the options to get default options for every feed.
       feeds: undefined,
       secretKey: undefined,
       types: undefined
     });
 
     this._root = root;
+
+    // TODO(burdon): _feedsByKey?
+    this._feeds = new Map();
 
     this._locker = new Locker();
   }
@@ -113,7 +120,7 @@ class FeedMap extends EventEmitter {
 
             persistedFeeds[idx] = Object.assign({}, persistedFeeds[idx], feed);
             return false;
-          }),
+          })
       )
       .map(feed => Object.assign({}, feed, { load: feed.load === undefined ? true : feed.load }));
 
@@ -133,7 +140,7 @@ class FeedMap extends EventEmitter {
         }
 
         return null;
-      }),
+      })
     );
   }
 
@@ -141,7 +148,6 @@ class FeedMap extends EventEmitter {
     const hexKey = keyToHex(key);
 
     const feed = this.feedByDK(hexKey, all);
-
     if (feed) {
       return feed;
     }
@@ -155,7 +161,6 @@ class FeedMap extends EventEmitter {
     const hexKey = keyToHex(key);
 
     const feed = this._feeds.get(hexKey);
-
     if (feed && !all && feed.loaded) {
       return feed;
     }
@@ -177,7 +182,7 @@ class FeedMap extends EventEmitter {
     const opts = Object.assign({}, this._opts, options);
 
     if (opts.persist === undefined) {
-      // by default persist the feed
+      // By default persist the feed.
       opts.persist = true;
     }
 
@@ -190,8 +195,10 @@ class FeedMap extends EventEmitter {
 
       feed = FeedMap.addNewFeedMethods(feed);
 
+      // TODO(burdon): ???
       feed.setMaxListeners(256);
 
+      // TODO(burdon): Extending hypercore? Wrap instead.
       feed.name = name;
       feed.loaded = true;
       feed.silent = opts.silent;
@@ -230,7 +237,7 @@ class FeedMap extends EventEmitter {
     }
 
     this.emit('feed:added', feed);
-    this.emit('feed', feed); // kappa support
+    this.emit('feed', feed); // TODO(burdon): Kappa support?
 
     /* eslint-disable */
     delete feed.silent;
@@ -238,9 +245,7 @@ class FeedMap extends EventEmitter {
     /* eslint-enable */
   }
 
-  async addFeed({
-    name = null, storage = null, key = null, ...userOpts
-  } = {}) {
+  async addFeed({ name = null, storage = null, key = null, ...userOpts } = {}) {
     const opts = userOpts;
     let feedName = name;
     let hexKey = key && keyToHex(key);
@@ -252,6 +257,7 @@ class FeedMap extends EventEmitter {
         feedName = hexKey;
         opts.secretKey = secretKey;
       }
+
       feedName = hexKey;
     }
 
@@ -260,11 +266,7 @@ class FeedMap extends EventEmitter {
         return true;
       }
 
-      if (f.name === feedName) {
-        return true;
-      }
-
-      return false;
+      return (f.name === feedName);
     });
 
     if (feed) {
@@ -340,7 +342,7 @@ class FeedMap extends EventEmitter {
     const feeds = Array.from(this._feeds.values()).filter(feed => feed.match(pattern));
 
     try {
-      const result = await Promise.all(
+      return await Promise.all(
         feeds.map((feed) => {
           if (feed.loaded) {
             return feed;
@@ -348,9 +350,8 @@ class FeedMap extends EventEmitter {
 
           const opts = Object.assign({}, feed, options);
           return this.openFeed(feed.name, opts.storage, feed.key, opts);
-        }),
+        })
       );
-      return result;
     } catch (err) {
       debug(err);
       throw err;
@@ -376,7 +377,6 @@ class FeedMap extends EventEmitter {
 
   async closeFeed(key) {
     const feed = this.feed(key);
-
     if (!feed) {
       return null;
     }

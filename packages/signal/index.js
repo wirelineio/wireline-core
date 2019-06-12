@@ -1,3 +1,7 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 const server = require('http').createServer();
 const io = require('socket.io')(server);
 

@@ -14,10 +14,13 @@ const Rules = require('./rules');
 const Party = require('./party');
 const codec = require('./codec');
 
-// utils
 const { keyToHex } = require('./utils/keys');
 
+/**
+ *
+ */
 class PartyMap extends EventEmitter {
+
   static get codec() {
     return codec;
   }
