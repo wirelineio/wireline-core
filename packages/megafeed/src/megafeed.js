@@ -391,7 +391,7 @@ class Megafeed extends EventEmitter {
         const { keys } = message;
 
         return Promise.all(
-          keys.map(key => this.addFeed({ name: `party-feed/${keyToHex(partyKey)}/${keyToHex(key)}`, key }))
+          keys.map(key => this.addFeed({ name: `feed/${keyToHex(partyKey)}/${keyToHex(key)}`, key }))
         );
       }
     };
