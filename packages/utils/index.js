@@ -2,7 +2,22 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-export * from './src/glob';
-export * from './src/keys';
-export * from './src/locker';
-export * from './src/promise-help';
+const glob = require('./src/glob');
+const keys = require('./src/keys');
+const locker = require('./src/locker');
+const promiseHelp = require('./src/promise-help');
+
+module.exports = {
+
+  filterFeedByPattern: glob.filterFeedByPattern,
+  parsePartyPattern: glob.parsePartyPattern,
+
+  keyToHex: keys.keyToHex,
+  getDiscoveryKey: keys.getDiscoveryKey,
+  parseToKeys: keys.parseToKeys,
+  keyToBuffer: keys.keyToBuffer,
+
+  Locker: locker,
+
+  callbackPromise: promiseHelp.callbackPromise
+};
