@@ -1,3 +1,7 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 const mm = require('micromatch');
 
 const { keyToHex, getDiscoveryKey } = require('./keys');
