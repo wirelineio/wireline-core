@@ -15,13 +15,16 @@ const through = require('through2');
 const pump = require('pump');
 
 const { PartyMap, Party } = require('@wirelineio/party');
+const {
+  callbackPromise,
+  getDiscoveryKey,
+  keyToBuffer,
+  keyToHex,
+  parsePartyPattern
+} = require('@wirelineio/utils');
+
 const createRoot = require('./root');
 const FeedMap = require('./feed-map');
-
-// utils
-const { callbackPromise } = require('./utils/promise-help');
-const { getDiscoveryKey, keyToBuffer, keyToHex } = require('./utils/keys');
-const { parsePartyPattern } = require('./utils/glob');
 
 class Megafeed extends EventEmitter {
   static keyPair(seed) {
