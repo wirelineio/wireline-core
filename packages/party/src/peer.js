@@ -4,12 +4,11 @@
 
 const { EventEmitter } = require('events');
 const crypto = require('crypto');
-
 const debug = require('debug')('party-map:peer');
 
-const codec = require('./codec');
+const { keyToBuffer } = require('@wirelineio/utils');
 
-const { keyToBuffer } = require('./utils/keys');
+const codec = require('./codec');
 
 /**
  * A Peer is a Node connected to the Swarm.

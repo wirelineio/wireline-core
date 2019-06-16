@@ -7,11 +7,16 @@ const hypercore = require('hypercore');
 const crypto = require('hypercore-crypto');
 const pify = require('pify');
 const debug = require('debug')('megafeed:feed-map');
+
 const codecProtobuf = require('@wirelineio/codec-protobuf');
 
-const { keyToHex, getDiscoveryKey, keyToBuffer } = require('./utils/keys');
-const Locker = require('./utils/locker');
-const { filterFeedByPattern } = require('./utils/glob');
+const {
+  keyToHex,
+  getDiscoveryKey,
+  keyToBuffer,
+  Locker,
+  filterFeedByPattern
+} = require('@wirelineio/utils');
 
 const schema = require('./schema.js');
 

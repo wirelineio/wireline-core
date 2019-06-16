@@ -4,6 +4,7 @@
 
 const crypto = require('hypercore-crypto');
 
+// TODO(burdon): This is a really bad pattern. Methods should expect a particular type and fail otherwise.
 function keyToBuffer(key) {
   if (!key) {
     return key;
@@ -12,6 +13,7 @@ function keyToBuffer(key) {
   return Buffer.isBuffer(key) ? key : Buffer.from(key, 'hex');
 }
 
+// TODO(burdon): This is a really bad pattern. Methods should expect a particular type and fail otherwise.
 exports.keyToHex = (key) => {
   if (Buffer.isBuffer(key)) {
     return key.toString('hex');
@@ -20,6 +22,7 @@ exports.keyToHex = (key) => {
   return key;
 };
 
+// TODO(burdon): Methods randomly expect buffer or strings; need to be consistent.
 exports.getDiscoveryKey = key => crypto.discoveryKey(keyToBuffer(key));
 
 exports.parseToKeys = (key) => {
@@ -30,4 +33,5 @@ exports.parseToKeys = (key) => {
   };
 };
 
+// TODO(burdon): Be consistent.
 exports.keyToBuffer = keyToBuffer;

@@ -2,6 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+// TODO(burdon): REMOVE. Why are we inventing more and more async utils?
 exports.callbackPromise = function callbackPromise() {
   let callback;
 

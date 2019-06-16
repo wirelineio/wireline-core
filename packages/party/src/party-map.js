@@ -9,13 +9,12 @@ const crypto = require('crypto');
 const mm = require('micromatch');
 const protocol = require('hypercore-protocol');
 
+const { keyToHex } = require('@wirelineio/utils');
+
 const createStorage = require('./storage');
 const Rules = require('./rules');
 const Party = require('./party');
 const codec = require('./codec');
-
-// utils
-const { keyToHex } = require('./utils/keys');
 
 class PartyMap extends EventEmitter {
   static get codec() {

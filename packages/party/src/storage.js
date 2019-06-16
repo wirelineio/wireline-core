@@ -4,8 +4,7 @@
 
 const pify = require('pify');
 
-// utils
-const { keyToHex } = require('./utils/keys');
+const { keyToHex } = require('@wirelineio/utils');
 
 module.exports = function createStorage(root) {
   const pPut = pify(root.put.bind(root));
