@@ -18,12 +18,16 @@ const { PartyMap, Party } = require('@wirelineio/party');
 const createRoot = require('./root');
 const FeedMap = require('./feed-map');
 
-// utils
 const { callbackPromise } = require('./utils/promise-help');
 const { getDiscoveryKey, keyToBuffer, keyToHex } = require('./utils/keys');
 const { parsePartyPattern } = require('./utils/glob');
 
+/**
+ * A Megafeed manages all feeds known to the current Node and collection of parties, which correspond
+ * to topics (identified by a discovery key).
+ */
 class Megafeed extends EventEmitter {
+
   static keyPair(seed) {
     return crypto.keyPair(seed);
   }
@@ -78,16 +82,16 @@ class Megafeed extends EventEmitter {
       };
     };
 
-    // We save all our personal information like the feed list in a private feed
+    // We save all our personal information like the feed list in a private feed.
     this._root = createRoot(this._storage('root', storage), rootKey, opts);
 
-    // Feeds manager instance
+    // Feeds manager instance.
     this._feeds = new FeedMap({ storage: this._storage, opts, root: this._root });
     ['append', 'download', 'feed:added', 'feed', 'feed:deleted'].forEach((event) => {
       this._feeds.on(event, (...args) => this.emit(event, ...args));
     });
 
-    // Parties manager instance
+    // Parties manager instance.
     this._parties = new PartyMap(this);
     ['party', 'peer-add', 'peer-remove'].forEach((event) => {
       this._parties.on(event, (...args) => this.emit(event, ...args));
@@ -382,6 +386,7 @@ class Megafeed extends EventEmitter {
           await peer.introduceFeeds({
             keys: [feed.key]
           });
+
           peer.replicate(feed);
         });
       },

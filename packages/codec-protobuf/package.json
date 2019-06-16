@@ -13,10 +13,11 @@
   "license": "GPL-3.0",
   "main": "index.js",
   "scripts": {
+    "build": "yarn run protobuf",
     "lint": "eslint **/*.js --ignore-path ../../.eslintignore",
     "protobuf": "protocol-buffers src/schema.proto -o src/schema.js",
-    "protobuf-test": "protocol-buffers src/schema-test.proto -o src/schema-test.js",
-    "test": "jest --verbose"
+    "protobuf-test": "protocol-buffers src/testing/example.proto -o src/testing/example.js",
+    "test": "yarn protobuf-test && jest --verbose"
   },
   "dependencies": {
     "protocol-buffers-encodings": "^1.1.0"

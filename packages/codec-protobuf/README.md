@@ -5,11 +5,17 @@
 
 > Codec for protobuf to use in libraries that follows the valueEncoding API of leveldb, like hypercore.
 
-## Requirement
+## Requirements
 
-CodecProtobuf only works with [protocol-buffers](https://github.com/mafintosh/protocol-buffers) since it's
-the only module that allows you to encode/decode type `bytes` to Buffer giving you the benefit of building universal apps working in Node
-and the Browser. (Most of the current bundle tooling for the Browser implements Buffer).
+CodecProtobuf only works with [protocol-buffers](https://github.com/mafintosh/protocol-buffers) since it allows
+you to encode/decode type `bytes` to Buffer giving you the benefit of building universal apps working in 
+Node and the Browser.
+
+Most of the current bundle tooling for the browser implements Buffer. By contrast, `protobufjs` uses `Buffer` objects 
+in NodeJS, but `uint8array` in the browser.
+
+TODO(burdon): File issue with protobufjs.
+
 
 ## Install
 
@@ -33,7 +39,7 @@ import protobuf from 'protocol-buffers';
 import hypercore from 'hypercore';
 import codecProtobuf from '@wirelineio/codec-protobuf';
 
-const root = protobuf(fs.readFileSync('schema.proto'))
+const root = protobuf(fs.readFileSync('schema.proto'));
 
 const codec = codecProtobuf(root);
 
@@ -43,7 +49,7 @@ const buffer = codec.encode(obj);
 
 codec.decode(buffer); // { id: 'task-0', value: 'test' }
 
-// It's compatible with the valueEncoding option of hypercore
+// It's compatible with the valueEncoding option of hypercore.
 const feed = hypercore('./log', { valueEncoding: codec });
 
 feed.append(obj, () => {

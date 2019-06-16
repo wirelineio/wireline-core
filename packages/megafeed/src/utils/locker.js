@@ -4,7 +4,11 @@
 
 const mutexify = require('mutexify');
 
+/**
+ * Locker implements a semaphore.
+ */
 class Locker {
+
   constructor() {
     this._locks = new Map();
   }

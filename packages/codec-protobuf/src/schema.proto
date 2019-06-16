@@ -1,4 +1,9 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 syntax = "proto3";
+
 package codecprotobuf;
 
 message AnyType {

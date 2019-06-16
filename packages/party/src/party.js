@@ -12,17 +12,16 @@ const { keyToHex, keyToBuffer, getDiscoveryKey } = require('./utils/keys');
 const Peer = require('./peer');
 const Rules = require('./rules');
 
+/**
+ * A Party manages a set of peers that are subscribed to the same topic.
+ * It controls the replicate of the associated hypercores based on configurable rules.
+ */
 class Party extends EventEmitter {
-  static _addPartyExtension(obj) {
-    if (!obj.extensions.includes('party')) {
-      obj.extensions.push('party');
-    }
 
-    return obj;
-  }
-
-  constructor({ id = crypto.randomBytes(32), name, key, secretKey, rules, metadata = {} }) {
+  constructor(options) {
     super();
+
+    const { id = crypto.randomBytes(32), name, key, secretKey, rules, metadata = {} } = options;
 
     if (!key) {
       const keys = crypto.keyPair();
@@ -38,8 +37,6 @@ class Party extends EventEmitter {
     this.id = id;
     this.name = name || keyToHex(this.key);
     this.metadata = metadata;
-
-    this.rules = null;
 
     this.setRules(rules);
 
@@ -58,45 +55,24 @@ class Party extends EventEmitter {
     }
 
     this.rules = new Rules(handler);
+    return this.rules;
   }
 
+  /**
+   * When a party joins the swarm it creates a hypercore-protocol stream.
+   *
+   * @returns {Protocol} Dat protocol stream object.
+   */
   replicate(options = {}) {
     if (!this.rules) {
       throw new Error('Party needs rules for replicate.');
     }
 
+    const { replicateOptions = {} } = this.rules;
+
+    const opts = Object.assign({ id: this.id, extensions: [] }, replicateOptions, options);
+
     let stream;
-    const party = this;
-    let peer;
-
-    const { replicateOptions = {} } = party.rules;
-
-    const opts = Object.assign(
-      { id: this.id, extensions: [] },
-      replicateOptions,
-      options
-    );
-
-    const add = async (discoveryKey) => {
-      if (stream.destroyed) return null;
-      if (discoveryKey.equals(party.discoveryKey)) {
-        return null;
-      }
-
-      try {
-        const feed = await party.rules.findFeed({ peer, discoveryKey });
-
-        if (feed && peer) {
-          peer.replicate(feed);
-        }
-      } catch (err) {
-        console.error('Error trying to replicate a feed', {
-          discoveryKey: keyToHex(discoveryKey),
-          error: err.message
-        });
-      }
-    };
-
     if (opts.stream) {
       const { stream: userStream } = opts;
       stream = userStream;
@@ -104,11 +80,14 @@ class Party extends EventEmitter {
       stream = protocol(opts);
     }
 
-    stream = Party._addPartyExtension(stream);
+    if (!stream.extensions.includes('party')) {
+      stream.extensions.push('party');
+    }
 
-    stream.feed(party.key);
+    stream.feed(this.key);
 
-    stream.on('feed', add);
+    // Created after handshake.
+    let peer;
 
     stream.once('handshake', async () => {
       if (!stream.remoteSupports('party')) {
@@ -116,17 +95,40 @@ class Party extends EventEmitter {
       }
 
       peer = this.addPeer({
-        party, stream, opts,
+        party: this, stream, opts,
       });
 
       try {
-        await party.rules.ready({ peer });
+        await this.rules.ready({ peer });
 
-        await party.rules.handshake({ peer });
+        await this.rules.handshake({ peer });
 
         stream.emit('party-handshake', peer);
       } catch (err) {
         console.error('handshake', err);
+      }
+    });
+
+    stream.on('feed', async (discoveryKey) => {
+      if (stream.destroyed) {
+        return null;
+      }
+
+      if (discoveryKey.equals(this.discoveryKey)) {
+        return null;
+      }
+
+      try {
+        const feed = await this.rules.findFeed({ peer, discoveryKey });
+        if (feed && peer) {
+          peer.replicate(feed);
+        }
+      } catch (err) {
+        // TODO(burdon): Silent failure?
+        console.error('Error trying to replicate a feed', {
+          discoveryKey: keyToHex(discoveryKey),
+          error: err.message
+        });
       }
     });
 

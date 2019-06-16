@@ -9,7 +9,6 @@ const pify = require('pify');
 const debug = require('debug')('megafeed:feed-map');
 const codecProtobuf = require('@wirelineio/codec-protobuf');
 
-// utils
 const { keyToHex, getDiscoveryKey, keyToBuffer } = require('./utils/keys');
 const Locker = require('./utils/locker');
 const { filterFeedByPattern } = require('./utils/glob');
@@ -18,7 +17,11 @@ const schema = require('./schema.js');
 
 const codec = codecProtobuf(schema);
 
+/**
+ * A FeedMap manages a collection of feeds mapped to discovery keys (topics).
+ */
 class FeedMap extends EventEmitter {
+
   static get codec() {
     return codec;
   }
@@ -73,21 +76,25 @@ class FeedMap extends EventEmitter {
   constructor({ storage, opts = {}, root }) {
     super();
 
-    this._feeds = new Map();
-
     this._storage = storage;
 
+    // TODO(burdon): ???
     this._types = opts.types || {};
 
     this._opts = Object.assign({}, opts, {
-      // we purge the options to get a default options for every feed
+      // Purge the options to get default options for every feed.
       feeds: undefined,
       secretKey: undefined,
       types: undefined
     });
 
+    // Root feed.
     this._root = root;
 
+    // Map of objects (some are feeds, others are placeholders) indexed by discovery key.
+    this._feeds = new Map();
+
+    // TODO(burdon): Use?
     this._locker = new Locker();
   }
 
@@ -238,13 +245,12 @@ class FeedMap extends EventEmitter {
     /* eslint-enable */
   }
 
-  async addFeed({
-    name = null, storage = null, key = null, ...userOpts
-  } = {}) {
+  async addFeed({ name = null, storage = null, key = null, ...userOpts } = {}) {
     const opts = userOpts;
-    let feedName = name;
+
     let hexKey = key && keyToHex(key);
 
+    let feedName = name;
     if (!feedName) {
       if (!hexKey) {
         const { publicKey, secretKey } = crypto.keyPair();
@@ -340,7 +346,7 @@ class FeedMap extends EventEmitter {
     const feeds = Array.from(this._feeds.values()).filter(feed => feed.match(pattern));
 
     try {
-      const result = await Promise.all(
+      return await Promise.all(
         feeds.map((feed) => {
           if (feed.loaded) {
             return feed;
@@ -350,7 +356,6 @@ class FeedMap extends EventEmitter {
           return this.openFeed(feed.name, opts.storage, feed.key, opts);
         }),
       );
-      return result;
     } catch (err) {
       debug(err);
       throw err;

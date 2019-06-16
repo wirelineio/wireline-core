@@ -9,10 +9,13 @@ const debug = require('debug')('party-map:peer');
 
 const codec = require('./codec');
 
-// utils
 const { keyToBuffer } = require('./utils/keys');
 
+/**
+ * A Peer is a Node connected to the Swarm.
+ */
 class Peer extends EventEmitter {
+
   static _parseTransactionMessages(type, message = {}) {
     switch (type) {
       case 'IntroduceFeeds': return Object.assign({}, message, {

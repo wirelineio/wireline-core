@@ -4,9 +4,12 @@
 
 const { AnyType } = require('./schema.js');
 
+// TODO(burdon): Does not support namespaces or multiple schema files.
+
 /**
- * encode / decode protobuffers
+ * Encode / decode protocol buffers into hypercore blocks.
  *
+ * TODO(burdon): What does this comment mean?
  * mapping {
  *   'Message1': 1,
  *   'Message2': 2
@@ -14,10 +17,8 @@ const { AnyType } = require('./schema.js');
  */
 function codecProtobuf(root) {
   return {
-    encode: function encodeProtobuf(obj) {
-      if (typeof obj !== 'object') {
-        throw new Error('CodecProtobuf: The encode message needs to be an object { type, message }.');
-      }
+    encode: (obj) => {
+      console.assert(typeof obj !== 'object');
 
       const { type, message } = obj;
 
@@ -28,13 +29,14 @@ function codecProtobuf(root) {
       return AnyType.encode({ type, value });
     },
 
-    decode: function decodeProtobuf(buffer, onlyMessage = true) {
+    decode: (buffer, onlyMessage = true) => {
       const { type, value } = AnyType.decode(buffer);
 
       const Message = root[type];
 
       const message = Message.decode(value);
 
+      // TODO(burdon): onlyMessage?
       if (onlyMessage) {
         return message;
       }
