@@ -45,6 +45,7 @@ class Party extends EventEmitter {
   }
 
   setRules(handler) {
+    // TODO(burdon): assert? Who are you writing this message to? No defensive programming.
     if (typeof handler === 'string') {
       console.warn(`Cannot set the rules ${handler} for party ${this.name}. It should be an object.`);
       return;
@@ -61,10 +62,12 @@ class Party extends EventEmitter {
 
   /**
    * When a party joins the swarm it creates a hypercore-protocol stream.
+   * TODO(burdon): HOW does it join the swarm?
    *
    * @returns {Protocol} Dat protocol stream object.
    */
   replicate(options = {}) {
+    // TODO(burdon): assert? Who are you writing this message to? No defensive programming.
     if (!this.rules) {
       throw new Error('Party needs rules for replicate.');
     }
@@ -73,13 +76,8 @@ class Party extends EventEmitter {
 
     const opts = Object.assign({ id: this.id, extensions: [] }, replicateOptions, options);
 
-    let stream;
-    if (opts.stream) {
-      const { stream: userStream } = opts;
-      stream = userStream;
-    } else {
-      stream = protocol(opts);
-    }
+    // TODO(burdon): Why would this be an option? Who would set this?
+    const stream = opts.stream || protocol(opts);
 
     if (!stream.extensions.includes('party')) {
       stream.extensions.push('party');
@@ -120,7 +118,10 @@ class Party extends EventEmitter {
       }
 
       try {
+        // TODO(burdon): Is this the stream feed (above)?
         const feed = await this.rules.findFeed({ peer, discoveryKey });
+
+        // TODO(burdon): What happens if feed or peer are null (and why would they be?)
         if (feed && peer) {
           peer.replicate(feed);
         }

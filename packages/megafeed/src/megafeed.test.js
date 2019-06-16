@@ -152,17 +152,17 @@ describe('testing replicate process', () => {
   beforeEach(async () => {
     const partyKey = crypto.randomBytes(32);
 
-    const peer1 = megafeed(ram, { valueEncoding: 'json' });
-    const peer2 = megafeed(ram, { valueEncoding: 'json' });
+    const megafeed1 = megafeed(ram, { valueEncoding: 'json' });
+    const megafeed2 = megafeed(ram, { valueEncoding: 'json' });
 
-    const feed1 = await peer1.addFeed({ name: 'local' });
-    const feed2 = await peer2.addFeed({ name: 'local' });
+    const feed1 = await megafeed1.addFeed({ name: 'local' });
+    const feed2 = await megafeed2.addFeed({ name: 'local' });
 
-    this.testingElements = { partyKey, peer1, peer2, feed1, feed2 };
+    this.testingElements = { partyKey, megafeed1, megafeed2, feed1, feed2 };
   });
 
   test('replicate using party default rules (live=false)', async () => {
-    const { partyKey, peer1, peer2, feed1, feed2 } = this.testingElements;
+    const { partyKey, megafeed1, megafeed2, feed1, feed2 } = this.testingElements;
 
     const partyData = {
       name: 'test',
@@ -170,25 +170,25 @@ describe('testing replicate process', () => {
     };
 
     // Both peer needs to know the partyKey
-    await peer1.addParty(partyData);
-    await peer2.addParty(partyData);
+    await megafeed1.addParty(partyData);
+    await megafeed2.addParty(partyData);
 
-    const stream1 = peer1.replicate({ key: partyKey });
-    const stream2 = peer2.replicate({ key: partyKey });
+    const stream1 = megafeed1.replicate({ key: partyKey });
+    const stream2 = megafeed2.replicate({ key: partyKey });
 
     await feed1.pAppend({ index: 0, value: 'hello from one' });
     await feed2.pAppend({ index: 1, value: 'hello from two' });
 
     await pify(pump)(stream1, stream2, stream1);
 
-    const result1 = await streamToPromise(peer1.createReadStream());
-    const result2 = await streamToPromise(peer2.createReadStream());
+    const result1 = await streamToPromise(megafeed1.createReadStream());
+    const result2 = await streamToPromise(megafeed2.createReadStream());
 
     expect(result1.sort(sortByIndex)).toEqual(result2.sort(sortByIndex));
   });
 
   test('replicate using party default rules (live=true)', async (done) => {
-    const { partyKey, peer1, peer2, feed1, feed2 } = this.testingElements;
+    const { partyKey, megafeed1, megafeed2, feed1, feed2 } = this.testingElements;
 
     const partyData = {
       name: 'test',
@@ -196,16 +196,16 @@ describe('testing replicate process', () => {
     };
 
     // Both peer needs to know the partyKey
-    await peer1.addParty(partyData);
-    await peer2.addParty(partyData);
+    await megafeed1.addParty(partyData);
+    await megafeed2.addParty(partyData);
 
-    const stream1 = peer1.replicate({ key: partyKey, live: true });
-    const stream2 = peer2.replicate({ key: partyKey, live: true });
+    const stream1 = megafeed1.replicate({ key: partyKey, live: true });
+    const stream2 = megafeed2.replicate({ key: partyKey, live: true });
 
     pify(pump)(stream1, stream2, stream1);
 
     const messages = [];
-    peer1.on('append', (feed) => {
+    megafeed1.on('append', (feed) => {
       feed.head((err, message) => {
         messages.push(message);
         if (messages.length === 3) {
@@ -224,12 +224,12 @@ describe('testing replicate process', () => {
     await feed2.pAppend({ index: 1, value: 'hello from two' });
 
     // Test what happen if you add a new feed after the replication process started
-    const feed3 = await peer2.addFeed({ name: 'localThree' });
+    const feed3 = await megafeed2.addFeed({ name: 'localThree' });
     await feed3.pAppend({ index: 2, value: 'hello from three' });
   });
 
   test('replicate using party default rules (live=false, filter=["local", "party-feed/current"])', async () => {
-    const { partyKey, peer1, peer2, feed1, feed2 } = this.testingElements;
+    const { partyKey, megafeed1, megafeed2, feed1, feed2 } = this.testingElements;
 
     const partyData = {
       name: 'test',
@@ -243,13 +243,13 @@ describe('testing replicate process', () => {
     };
 
     // Both peer needs to know the partyKey.
-    await peer1.addParty(partyData);
-    await peer2.addParty(partyData);
+    await megafeed1.addParty(partyData);
+    await megafeed2.addParty(partyData);
 
-    const stream1 = peer1.replicate({ key: partyKey });
-    const stream2 = peer2.replicate({ key: partyKey });
+    const stream1 = megafeed1.replicate({ key: partyKey });
+    const stream2 = megafeed2.replicate({ key: partyKey });
 
-    const ilegalFeed = await peer2.addFeed({ name: 'ilegalFeed' });
+    const ilegalFeed = await megafeed2.addFeed({ name: 'ilegalFeed' });
 
     await feed1.pAppend({ index: 0, value: 'hello from one' });
     await feed2.pAppend({ index: 1, value: 'hello from two' });
@@ -257,8 +257,8 @@ describe('testing replicate process', () => {
 
     await pify(pump)(stream1, stream2, stream1);
 
-    const result1 = await streamToPromise(peer1.createReadStream());
-    const result2 = await streamToPromise(peer2.createReadStream());
+    const result1 = await streamToPromise(megafeed1.createReadStream());
+    const result2 = await streamToPromise(megafeed2.createReadStream());
 
     expect(result1.sort(sortByIndex)).toEqual([
       { index: 0, value: 'hello from one' },

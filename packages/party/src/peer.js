@@ -29,10 +29,12 @@ class Peer extends EventEmitter {
     return codec;
   }
 
+  // TODO(burdon): Why is everything passed as on object? Including opts?
+  // TODO(burdon): Every class is connected to every other class.
   constructor({ partyMap, party, stream, opts = {} }) {
     super();
 
-    // we need to have access to the entire list of parties
+    // We need to have access to the entire list of parties.
     this.partyMap = partyMap;
 
     // party + party.rules
@@ -68,21 +70,24 @@ class Peer extends EventEmitter {
     return this.partyMap.guestFeedKeys(this.party.key);
   }
 
+  /**
+   * Starts replicating the given feed.
+   */
   async replicate(feed, opts = {}) {
     await new Promise(resolve => feed.ready(resolve));
 
+    // TODO(burdon): Silent failture?
     if (this.stream.destroyed) return null;
 
     const key = feed.key.toString('hex');
-
     if (this.replicating.includes(key)) {
       return false;
     }
 
     debug('replicate', { peerId: this.peerId.toString('hex'), replicate: feed.key.toString('hex') });
 
+    // TODO(burdon): What happens to the stream that is returned? Is this a hypercore (the options are non-standard).
     const replicateOptions = Object.assign({}, this.opts, opts);
-
     feed.replicate(replicateOptions);
 
     this.replicating.push(key);

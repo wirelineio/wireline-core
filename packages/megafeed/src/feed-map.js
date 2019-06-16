@@ -96,7 +96,7 @@ class FeedMap extends EventEmitter {
     // Root feed.
     this._root = root;
 
-    // Map of objects (some are feeds, others are placeholders) indexed by discovery key.
+    // TODO(burdon): Map of objects (some are feeds, others are placeholders) indexed by discovery key.
     this._feeds = new Map();
 
     // TODO(burdon): Use?

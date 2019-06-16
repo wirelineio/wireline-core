@@ -89,6 +89,8 @@ class Megafeed extends EventEmitter {
     // We save all our personal information like the feed list in a private feed.
     this._root = createRoot(this._storage('root', storage), rootKey, opts);
 
+    // TODO(burdon): Inconsisent (e.g., "feed:added" and "peer-add").
+
     // Feeds manager instance.
     this._feeds = new FeedMap({ storage: this._storage, opts, root: this._root });
     ['append', 'download', 'feed:added', 'feed', 'feed:deleted'].forEach((event) => {
@@ -218,18 +220,24 @@ class Megafeed extends EventEmitter {
     return this._parties.loadParties(pattern);
   }
 
+  /**
+   * Starts replicating the party.
+   */
   replicate(options = {}) {
-    if (options.key && !this._parties.party(options.key)) {
+    const { key } = options;
+    if (key && !this._parties.party(key)) {
       const party = new Party({
-        key: options.key,
+        key,
         rules: Object.assign({
           findFeed: ({ discoveryKey }) => this.feedByDK(discoveryKey)
         }, this._defineDefaultPartyRules())
       });
 
+      // Start replication.
       return party.replicate(options);
     }
-    // Compatibility with the old version of dsuite core (for now).
+
+    // TODO(burdon): Compatibility with the old version of dsuite core (for now).
     return this._parties.replicate(options);
   }
 
