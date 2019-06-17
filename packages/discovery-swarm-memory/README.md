@@ -34,8 +34,6 @@ Create a new swarm. Options include:
 }
 ```
 
-For full list of `opts` take a look at [discovery-channel](https://github.com/maxogden/discovery-channel)
-
 #### `sw.join(key, [opts], [cb])`
 
 Join a channel specified by `key` (usually a name, hash or id, must be a **Buffer** or a **string**). After joining will immediately search for peers advertising this key.
