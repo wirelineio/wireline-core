@@ -5,6 +5,7 @@
 import { EventEmitter } from 'events';
 import crypto from 'crypto';
 import { pipeline } from 'stream';
+
 import network from '@wirelineio/hyperswarm-network-memory';
 
 /**
