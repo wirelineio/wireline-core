@@ -67,6 +67,8 @@ class Socket extends Duplex {
       cb(null, data);
     }, 1);
   }
+
+  _read() {} // eslint-disable-line
 }
 
 export default Socket;
