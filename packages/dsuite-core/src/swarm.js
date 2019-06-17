@@ -40,8 +40,7 @@ module.exports = (dsuite, conf = {}) => {
     // Maximum number of peer candidates requested from the signaling server (but can have multiple in-coming).
     maxPeers: conf.maxPeers || process.env.SWARM_MAX_PEERS || (conf.isBot ? 64 : 2),
 
-    // TODO(burdon): Gets the repliaction stream.
-    stream: info => mega.replicate(info.channel, { live: true }),
+    stream: info => mega.replicate({ key: info.channel, live: true }),
 
     simplePeer: {
       // Node client (e.g., for bots).

@@ -26,23 +26,23 @@ module.exports = function setRules(dsuite) {
       }
 
       // If the peer is a user it sends a message with the partyKey.
-      peer.sendMessage({
-        subject: 'invite-to-party',
-        data: dsuite.currentPartyKey
+      peer.sendEphemeralMessage({
+        type: 'invite-to-party',
+        value: dsuite.currentPartyKey
       });
     },
 
-    async remoteMessage({ message, peer }) {
+    async onEphemeralMessage({ message: { type, value }, peer }) {
       if (conf.isBot) {
-        if (message.subject === 'invite-to-party') {
-          await dsuite.connectToParty({ key: message.data });
+        if (type === 'invite-to-party') {
+          await dsuite.connectToParty({ key: value });
 
-          peer.sendMessage({
-            subject: 'close',
-            data: ''
+          peer.sendEphemeralMessage({
+            type: 'close',
+            value: ''
           });
         }
-      } else if (message.subject === 'close') {
+      } else if (type === 'close') {
         dsuite.swarm.leave(Megafeed.discoveryKey(peer.partyKey));
       }
     }

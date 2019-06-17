@@ -1048,25 +1048,6 @@
     automerge "^0.10.0"
     uuid "^3.3.2"
 
-"@wirelineio/megafeed@^0.1.13":
-  version "0.1.13"
-  resolved "https://registry.yarnpkg.com/@wirelineio/megafeed/-/megafeed-0.1.13.tgz#04340b7000c4d2ad2c378cee62ddf94a2e53103b"
-  integrity sha512-FQbACIx571djmpRHisKdiqfob0Oe7pviHYMm1CzqKapG8rv+9MkpuBWEXI3WLXEaL46UIHK9XQSyCv38XPt1eQ==
-  dependencies:
-    debug "^4.1.1"
-    end-of-stream "^1.4.1"
-    hypercore "^6.24.0"
-    hypercore-crypto "^1.0.0"
-    hypercore-protocol "^6.9.0"
-    hypertrie "^3.4.0"
-    micromatch "^3.1.10"
-    mutexify "^1.2.0"
-    pify "^4.0.1"
-    protocol-buffers-encodings "^1.1.0"
-    pump "^3.0.0"
-    random-access-file "^2.1.0"
-    varint "^5.0.0"
-
 "@wirelineio/wire-inspect@^0.1.17":
   version "0.1.17"
   resolved "https://registry.yarnpkg.com/@wirelineio/wire-inspect/-/wire-inspect-0.1.17.tgz#24330c9d77dc628d20f667929ad7df1394e940a2"

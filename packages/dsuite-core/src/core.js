@@ -201,7 +201,7 @@ class DSuite extends EventEmitter {
     // We bind our control profile with the party that we are going to connect to.
     await this.core.api.participants.bindControlProfile({ partyKey });
 
-    return this.mega.setParty({
+    return this.mega.addParty({
       rules: 'dsuite:documents',
       key: Megafeed.keyToBuffer(key)
     });
@@ -212,7 +212,7 @@ class DSuite extends EventEmitter {
    * @param opts.key {Buffer} Bot PublicKey.
    */
   async connectToBot({ key }) {
-    return this.mega.setParty({
+    return this.mega.addParty({
       rules: 'dsuite:bot',
       key: Megafeed.keyToBuffer(key)
     });
@@ -307,7 +307,7 @@ class DSuite extends EventEmitter {
 
     await this.core.api.participants.bindControlProfile({ partyKey: Megafeed.keyToHex(partyKey) });
 
-    await this.mega.setParty({
+    await this.mega.addParty({
       rules: 'dsuite:documents',
       key: Megafeed.keyToBuffer(partyKey)
     });

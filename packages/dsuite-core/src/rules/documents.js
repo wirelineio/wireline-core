@@ -80,7 +80,7 @@ module.exports = function setRules(dsuite) {
       });
     },
 
-    async remoteIntroduceFeeds({ message, peer }) {
+    async onIntroduceFeeds({ message, peer }) {
       const partyKey = peer.party.key.toString('hex');
       const { keys } = message;
 
