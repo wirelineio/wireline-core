@@ -30,14 +30,14 @@ class FeedMap extends EventEmitter {
     return codec.encode({ type: 'Feed', message });
   }
 
-  static optsToRoot(feed, opts) {
+  static optsTorepository(feed, opts) {
     return {
       name: feed.name,
       key: keyToBuffer(opts.key || feed.key),
       secretKey: keyToBuffer(opts.secretKey || feed.secretKey),
       // should be loaded during the initialization
       load: opts.load,
-      // should be persisted in the root
+      // should be persisted in the repository
       persist: opts.persist,
       // hypercore opts derivated
       valueEncoding: opts.valueEncoding,
@@ -70,7 +70,7 @@ class FeedMap extends EventEmitter {
     return newFeed;
   }
 
-  constructor({ storage, opts = {}, root }) {
+  constructor({ storage, opts = {}, repository }) {
     super();
 
     this._feeds = new Map();
@@ -86,15 +86,15 @@ class FeedMap extends EventEmitter {
       types: undefined
     });
 
-    this._root = root;
+    this._repository = repository;
 
     this._locker = new Locker();
   }
 
   async initFeeds(initFeeds = []) {
-    const root = this._root;
+    const repository = this._repository;
 
-    const persistedFeeds = (await root.getFeedList({ codec }))
+    const persistedFeeds = (await repository.getList({ codec }))
       .map(value => Object.assign({}, value, { persist: false }));
 
     const feeds = persistedFeeds
@@ -276,7 +276,7 @@ class FeedMap extends EventEmitter {
   }
 
   async delFeed(key) {
-    const root = this._root;
+    const repository = this._repository;
 
     const feed = this.feed(key);
 
@@ -287,7 +287,7 @@ class FeedMap extends EventEmitter {
     const release = await this._locker.pLock(feed.name);
 
     try {
-      await root.delFeed(feed.key);
+      await repository.delFeed(feed.key);
       this._feeds.delete(keyToHex(getDiscoveryKey(feed.key)));
 
       this.emit('feed:deleted', feed);
@@ -303,10 +303,10 @@ class FeedMap extends EventEmitter {
   }
 
   async updateFeed(key, transform) {
-    const root = this._root;
+    const repository = this._repository;
 
     try {
-      const feed = await root.getFeed(key, { codec });
+      const feed = await repository.get(key, { codec });
 
       if (!feed) {
         return null;
@@ -314,7 +314,7 @@ class FeedMap extends EventEmitter {
 
       const update = transform(feed.value);
 
-      await root.putFeed(update, { encode: FeedMap.encodeFeed });
+      await repository.put(feed.name, update, { encode: FeedMap.encodeFeed });
 
       return null;
     } catch (err) {
@@ -352,14 +352,14 @@ class FeedMap extends EventEmitter {
   }
 
   async persistFeed(feed, options = {}) {
-    const root = this._root;
+    const repository = this._repository;
 
     const discoveryKey = keyToHex(feed.discoveryKey);
 
     const opts = Object.assign({}, options, { persist: true });
 
     try {
-      await root.putFeed(FeedMap.optsToRoot(feed, opts), { encode: FeedMap.encodeFeed });
+      await repository.put(FeedMap.optsTorepository(feed, opts), { encode: FeedMap.encodeFeed });
       this._feeds.set(discoveryKey, feed);
       return feed;
     } catch (err) {

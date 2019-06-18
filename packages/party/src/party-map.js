@@ -25,21 +25,24 @@ class PartyMap extends EventEmitter {
     return codec.encode({ type: 'Party', message: message.serialize() });
   }
 
-  constructor(opts = {}) {
+  /**
+   * 
+   * @param {Object} opts 
+   * @param {} opts.id
+   * @param {} opts.repository
+   * @param {} opts.ready
+   * @param {} opts.findFeed
+   */
+  constructor({ id, repository, ready, findFeed }) {
     super();
 
-    this.id = opts.id || crypto.randomBytes(32);
-
-    if (typeof opts === 'object' && opts.isMegafeed) {
-      this.storage = createStorage(opts._root);
-      this._megaReady = () => opts.ready();
-      this._megaFindFeed = ({ discoveryKey }) => opts.feedByDK(discoveryKey);
-    } else {
-      this.storage = opts.storage;
-    }
+    this.id = id || crypto.randomBytes(32);
+    
+    this._ready = ready;
+    this._findFeed = findFeed;
+    this._repository = repository;
 
     this._rules = new Map();
-
     this._parties = new Map();
   }
 
@@ -83,7 +86,7 @@ class PartyMap extends EventEmitter {
     });
 
     try {
-      await this.storage.putParty(party, { encode: PartyMap.encodeParty });
+      await this._repository.put(party.name, party, { encode: PartyMap.encodeParty });
 
       const discoveryKey = keyToHex(party.discoveryKey);
 
