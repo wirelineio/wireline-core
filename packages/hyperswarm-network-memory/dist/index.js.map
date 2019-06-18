@@ -1,1 +1,0 @@
-{"version":3,"sources":["../src/index.js"],"names":["args","Network"],"mappings":";;;;;;;AAIA;;;;AAJA;AACA;AACA;eAIe,CAAC,GAAGA,IAAJ,KAAa,IAAIC,gBAAJ,CAAY,GAAGD,IAAf,C","sourcesContent":["//\n// Copyright 2019 Wireline, Inc.\n//\n\nimport Network from './network';\n\nexport default (...args) => new Network(...args);\n"],"file":"index.js"}
