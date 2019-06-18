@@ -281,7 +281,7 @@ class FeedMap extends EventEmitter {
     return this.openFeed(feedName, storage, key, opts);
   }
 
-  async delFeed(key) {
+  async deleteFeed(key) {
     const repository = this._repository;
 
     const feed = this.feed(key);
@@ -293,7 +293,7 @@ class FeedMap extends EventEmitter {
     const release = await this._locker.pLock(feed.name);
 
     try {
-      await repository.delFeed(feed.key);
+      await repository.delete(feed.name);
       this._feeds.delete(keyToHex(getDiscoveryKey(feed.key)));
 
       this.emit('feed:deleted', feed);
@@ -366,7 +366,8 @@ class FeedMap extends EventEmitter {
     const opts = Object.assign({}, options, { persist: true });
 
     try {
-      await repository.put(FeedMap.optsTorepository(feed, opts), { encode: FeedMap.encodeFeed });
+      const formatFeed = FeedMap.optsTorepository(feed, opts);
+      await repository.put(formatFeed.name, formatFeed, { encode: FeedMap.encodeFeed });
       this._feeds.set(discoveryKey, feed);
       return feed;
     } catch (err) {

@@ -2,19 +2,56 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-module.exports = function createStorage(root, namespace) {
-  const pPut = pify(root.put.bind(root));
-  const pGet = pify(root.get.bind(root));
-  const pDel = pify(root.del.bind(root));
-  const pList = pify(root.list.bind(root));
+const pify = require('pify');
 
-  return {
-    getList: async ({ codec }) => {
-      const list = await pList(`${namespace}/`);
-      return list.map(({ value }) => codec.decode(value));
-    },
-    get: (key, { codec }) => pGet(`${namespace}/${keyToHex(key)}`, { valueEncoding: codec }),
-    put: (key, value, { encode }) => pPut(`${namespace}/${keyToHex(key)}`, encode(value)),
-    del: key => pDel(`${namespace}/${keyToHex(key)}`)
-  };
-};
+const { keyToHex } = require('./keys');
+
+/**
+ * Repository
+ *
+ * Class to persist a collection of items by the same namespace.
+ */
+class Repository {
+
+  /**
+   * constructor
+   *
+   * @param {Hypertrie} options.db DB to persist the data.
+   * @param {string} options.namespace Key to group the data.
+   * @returns {undefined}
+   */
+  constructor(options = {}) {
+    const { db, namespace } = options;
+
+    this._namespace = namespace;
+
+    this._dbReady = pify(db.ready.bind(db));
+    this._dbPut = pify(db.put.bind(db));
+    this._dbGet = pify(db.get.bind(db));
+    this._dbDelete = pify(db.del.bind(db));
+    this._dbList = pify(db.list.bind(db));
+  }
+
+  async ready() {
+    return this._dbReady();
+  }
+
+  async getList({ codec }) {
+    const list = await this._dbList(`${this._namespace}/`);
+    return list.map(({ value }) => codec.decode(value));
+  }
+
+  async get(key, { codec }) {
+    return this._dbGet(`${this._namespace}/${keyToHex(key)}`, { valueEncoding: codec });
+  }
+
+  async put(key, value, { encode }) {
+    return this._dbPut(`${this._namespace}/${keyToHex(key)}`, encode(value));
+  }
+
+  async delete(key) {
+    return this._dbDelete(`${this._namespace}/${keyToHex(key)}`);
+  }
+}
+
+module.exports = Repository;

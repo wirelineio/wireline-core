@@ -15,6 +15,11 @@ const pump = require('pump');
 const crypto = require('hypercore-crypto');
 
 const { Megafeed } = require('@wirelineio/megafeed');
+const {
+  keyToHex,
+  keyToBuffer,
+  getDiscoveryKey
+} = require('@wirelineio/utils');
 
 const swarm = require('./swarm');
 
@@ -158,8 +163,8 @@ class DSuite extends EventEmitter {
 
   // eslint-disable-next-line class-methods-use-this
   getPartyName(partyKey, feedKey) {
-    const partyKeyHex = Megafeed.keyToHex(partyKey);
-    const feedKeyHex = Megafeed.keyToHex(feedKey);
+    const partyKeyHex = keyToHex(partyKey);
+    const feedKeyHex = keyToHex(feedKey);
     return `party-feed/${partyKeyHex}/${feedKeyHex}`;
   }
 
@@ -183,7 +188,7 @@ class DSuite extends EventEmitter {
   getPartyKeyFromFeedKey(key) {
     const { mega } = this;
 
-    const feed = mega.feedByDK(Megafeed.discoveryKey(key));
+    const feed = mega.feedByDK(getDiscoveryKey(key));
 
     if (feed) {
       const args = feed.name.split('/');
@@ -194,7 +199,7 @@ class DSuite extends EventEmitter {
   }
 
   async connectToParty({ key }) {
-    const partyKey = Megafeed.keyToHex(key);
+    const partyKey = keyToHex(key);
 
     await this.createLocalPartyFeed(partyKey);
 
@@ -203,7 +208,7 @@ class DSuite extends EventEmitter {
 
     return this.mega.addParty({
       rules: 'dsuite:documents',
-      key: Megafeed.keyToBuffer(key)
+      key: keyToBuffer(key)
     });
   }
 
@@ -214,7 +219,7 @@ class DSuite extends EventEmitter {
   async connectToBot({ key }) {
     return this.mega.addParty({
       rules: 'dsuite:bot',
-      key: Megafeed.keyToBuffer(key)
+      key: keyToBuffer(key)
     });
   }
 
@@ -305,11 +310,11 @@ class DSuite extends EventEmitter {
         .map(message => feed.pAppend(message))
     );
 
-    await this.core.api.participants.bindControlProfile({ partyKey: Megafeed.keyToHex(partyKey) });
+    await this.core.api.participants.bindControlProfile({ partyKey: keyToHex(partyKey) });
 
     await this.mega.addParty({
       rules: 'dsuite:documents',
-      key: Megafeed.keyToBuffer(partyKey)
+      key: keyToBuffer(partyKey)
     });
 
     return partyKey;

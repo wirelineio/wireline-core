@@ -11,7 +11,6 @@ const protocol = require('hypercore-protocol');
 
 const { keyToHex } = require('@wirelineio/utils');
 
-const createStorage = require('./storage');
 const Rules = require('./rules');
 const Party = require('./party');
 const codec = require('./codec');
@@ -26,8 +25,8 @@ class PartyMap extends EventEmitter {
   }
 
   /**
-   * 
-   * @param {Object} opts 
+   *
+   * @param {Object} opts
    * @param {} opts.id
    * @param {} opts.repository
    * @param {} opts.ready
@@ -37,7 +36,7 @@ class PartyMap extends EventEmitter {
     super();
 
     this.id = id || crypto.randomBytes(32);
-    
+
     this._ready = ready;
     this._findFeed = findFeed;
     this._repository = repository;
@@ -59,8 +58,8 @@ class PartyMap extends EventEmitter {
 
     assert(typeof newRules.name === 'string' && newRules.name.length > 0, 'Name rule string is required.');
 
-    newRules.ready = newRules.ready || this._megaReady;
-    newRules.findFeed = newRules.findFeed || this._megaFindFeed;
+    newRules.ready = newRules.ready || this._ready;
+    newRules.findFeed = newRules.findFeed || this._findFeed;
 
     this._rules.set(newRules.name, new Rules(newRules));
   }

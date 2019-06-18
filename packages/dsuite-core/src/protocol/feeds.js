@@ -3,7 +3,8 @@
 //
 
 const varint = require('varint');
-const { Megafeed } = require('@wirelineio/megafeed');
+
+const { keyToBuffer } = require('@wirelineio/utils');
 
 // TODO(burdon): Remove '-feed'.
 const TYPES = {
@@ -19,7 +20,7 @@ const INVERTED_TYPES = Object.keys(TYPES).reduce(
 );
 
 exports.encodeFeedKey = function encodeFeedKey(type, feedKey) {
-  const feedBuffer = Megafeed.keyToBuffer(feedKey);
+  const feedBuffer = keyToBuffer(feedKey);
   const typeBuffer = varint.encode(TYPES[type], Buffer.alloc(1));
   return Buffer.concat([typeBuffer, feedBuffer], typeBuffer.length + feedBuffer.length);
 };

@@ -7,7 +7,7 @@ const path = require('path');
 const { EventEmitter } = require('events');
 
 const pify = require('pify');
-const crypto = require('hypercore-crypto');
+const hypertrie = require('hypertrie');
 const raf = require('random-access-file');
 const multi = require('multi-read-stream');
 const eos = require('end-of-stream');
@@ -17,21 +17,20 @@ const pump = require('pump');
 const { PartyMap, Party } = require('@wirelineio/party');
 const {
   callbackPromise,
-  getDiscoveryKey,
-  keyToBuffer,
   keyToHex,
+  keyToBuffer,
   parsePartyPattern,
   filterFeedByPattern,
-  createRepository
+  Repository,
+  bubblingEvents
 } = require('@wirelineio/utils');
 
-const createRoot = require('./root');
 const FeedMap = require('./feed-map');
 
 class Megafeed extends EventEmitter {
   /**
-   * 
-   * @param {RandomAccessStorage} storage 
+   *
+   * @param {RandomAccessStorage} storage
    * @param {Buffer} key
    * @param {Object} options
    * @param {Object[]} options.feeds
@@ -78,28 +77,24 @@ class Megafeed extends EventEmitter {
     // We save all our personal information like the feed list in a private feed
     this._db = hypertrie(storage, rootKey, { secretKey: opts.secretKey });
 
-    this._repository = createRepository(this._db, 'feeds');
-
     // Feeds manager instance
-    this._feeds = new FeedMap({ storage: this._storage, opts, repository: this._repository });
+    this._feeds = new FeedMap({
+      repository: new Repository({ db: this._db, namespace: 'feeds' }),
+      storage: this._storage,
+      opts
+    });
 
-    
     // Parties manager instance
     this._parties = new PartyMap({
+      repository: new Repository({ db: this._db, namespace: 'parties' }),
       id: this._db.feed.id,
-      repository: createRepository(this._db, 'parties'),
       ready: () => this.ready(),
       findFeed: ({ discoveryKey }) => this.feedByDK(discoveryKey)
     });
 
-    // Bubble events. 
-    // TODO(tinchoz49): create bubbleEvent in utils.
-    ['append', 'download', 'feed:added', 'feed', 'feed:deleted'].forEach((event) => {
-      this._feeds.on(event, (...args) => this.emit(event, ...args));
-    });
-    ['party', 'peer-add', 'peer-remove'].forEach((event) => {
-      this._parties.on(event, (...args) => this.emit(event, ...args));
-    });
+    // Bubble events.
+    bubblingEvents(this, this._feeds, ['append', 'download', 'feed:added', 'feed', 'feed:deleted']);
+    bubblingEvents(this, this._parties, ['party', 'peer-add', 'peer-remove']);
 
     // everything is ready
     this._isReady = false;
@@ -108,19 +103,19 @@ class Megafeed extends EventEmitter {
   }
 
   get id() {
-    return this._db.feed.id;
+    return this._db.id;
   }
 
   get key() {
-    return this._db.feed.key;
+    return this._db.key;
   }
 
   get discoveryKey() {
-    return this._db.feed.discoveryKey;
+    return this._db.discoveryKey;
   }
 
   get secretKey() {
-    return this._db.feed.secretKey;
+    return this._db.secretKey;
   }
 
   // eslint-disable-next-line
@@ -148,10 +143,10 @@ class Megafeed extends EventEmitter {
     return this._feeds.addFeed(options);
   }
 
-  async delFeed(key) {
+  async deleteFeed(key) {
     await this.ready();
 
-    return this._feeds.delFeed(key);
+    return this._feeds.deleteFeed(key);
   }
 
   async updateFeed(key, transform) {
@@ -198,8 +193,6 @@ class Megafeed extends EventEmitter {
     if (!newParty.rules) {
       newParty.rules = 'megafeed:default';
     }
-
-    await this._repository.pReady();
 
     return this._parties.addParty(newParty);
   }
@@ -251,16 +244,17 @@ class Megafeed extends EventEmitter {
   }
 
   async close() {
-    const root = this._repository;
+    const dbFeed = this._db.feed;
 
     await this.ready();
 
-    await Promise.all(this.feeds().map(feed => feed.pClose()));
+    await Promise.all(this.feeds().map(feed => pify(feed.close.bind(feed))()));
 
-    await root.pClose();
+    await pify(dbFeed.close.bind(dbFeed))();
   }
 
   async destroy() {
+    const dbFeed = this._db.feed;
     const warnings = [];
 
     try {
@@ -285,7 +279,7 @@ class Megafeed extends EventEmitter {
     };
 
     await Promise.all([
-      destroyStorage(this._repository.feed),
+      destroyStorage(dbFeed),
       ...this.feeds(true).filter(f => f.closed).map(f => destroyStorage(f)),
     ]);
   }

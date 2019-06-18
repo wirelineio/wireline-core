@@ -20,6 +20,7 @@
     "@geut/discovery-swarm-webrtc": "^2.0.0-alpha.18",
     "@wirelineio/automerge-worker": "^0.1.12",
     "@wirelineio/megafeed": "^0.1.19",
+    "@wirelineio/utils": "^0.1.18",
     "@wirelineio/wire-inspect": "^0.1.17",
     "bufferutil": "^4.0.1",
     "charwise": "^3.0.1",

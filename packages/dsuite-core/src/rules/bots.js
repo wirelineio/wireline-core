@@ -2,7 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const { Megafeed } = require('@wirelineio/megafeed');
+const { getDiscoveryKey } = require('@wirelineio/utils');
 
 /**
  * setPartyRules
@@ -43,7 +43,7 @@ module.exports = function setRules(dsuite) {
           });
         }
       } else if (type === 'close') {
-        dsuite.swarm.leave(Megafeed.discoveryKey(peer.partyKey));
+        dsuite.swarm.leave(getDiscoveryKey(peer.partyKey));
       }
     }
   });
