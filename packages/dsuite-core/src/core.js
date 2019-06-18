@@ -15,6 +15,11 @@ const sorter = require('stream-sort');
 const { promisify } = require('util');
 
 const { Megafeed } = require('@wirelineio/megafeed');
+const {
+  keyToHex,
+  keyToBuffer,
+  getDiscoveryKey
+} = require('@wirelineio/utils');
 
 const swarm = require('./swarm');
 const viewTypes = require('./views');
@@ -188,7 +193,6 @@ class DSuite extends EventEmitter {
   //
 
   registerViews() {
-
     // TODO(burdon): Remove plurals.
     // TODO(burdon): Prefer uniform core.api['view-id'] to access (makes it clearer this is a named extension).
 
@@ -210,6 +214,13 @@ class DSuite extends EventEmitter {
     // Custom views.
 
     this.registerView({ name: 'chess',          view: 'LogsView' });
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  getPartyName(partyKey, feedKey) {
+    const partyKeyHex = keyToHex(partyKey);
+    const feedKeyHex = keyToHex(feedKey);
+    return `party-feed/${partyKeyHex}/${feedKeyHex}`;
   }
 
   registerView({ name, view }) {
@@ -234,7 +245,7 @@ class DSuite extends EventEmitter {
   //
 
   async connectToParty({ key }) {
-    const partyKey = Megafeed.keyToHex(key);
+    const partyKey = keyToHex(key);
 
     // TODO(burdon): Comment.
     await this.createLocalPartyFeed(partyKey);
@@ -244,14 +255,14 @@ class DSuite extends EventEmitter {
 
     return this._mega.addParty({
       rules: 'dsuite:documents',
-      key: Megafeed.keyToBuffer(key)
+      key: keyToBuffer(key)
     });
   }
 
   async connectToBot({ key }) {
     return this._mega.addParty({
       rules: 'dsuite:bot',
-      key: Megafeed.keyToBuffer(key)
+      key: keyToBuffer(key)
     });
   }
 
@@ -268,15 +279,15 @@ class DSuite extends EventEmitter {
   // TODO(burdon): Static/util?
   // eslint-disable-next-line class-methods-use-this
   getPartyName(partyKey, feedKey) {
-    const partyKeyHex = Megafeed.keyToHex(partyKey);
-    const feedKeyHex = Megafeed.keyToHex(feedKey);
+    const partyKeyHex = keyToHex(partyKey);
+    const feedKeyHex = keyToHex(feedKey);
 
     // TODO(burdon): Extract constants for names (e.g., 'party-feed', 'control-feed').
     return `party-feed/${partyKeyHex}/${feedKeyHex}`;
   }
 
   getPartyKeyFromFeedKey(key) {
-    const feed = this._mega.feedByDK(Megafeed.discoveryKey(key));
+    const feed = this._mega.feedByDK(getDiscoveryKey(key));
     if (feed) {
       const args = feed.name.split('/');
       return args[1];
@@ -366,11 +377,11 @@ class DSuite extends EventEmitter {
         .map(message => feed.pAppend(message))
     );
 
-    await this._core.api['participants'].bindControlProfile({ partyKey: Megafeed.keyToHex(partyKey) });
+    await this.core.api['participants'].bindControlProfile({ partyKey: keyToHex(partyKey) });
 
     await this._mega.addParty({
       rules: 'dsuite:documents',
-      key: Megafeed.keyToBuffer(partyKey)
+      key: keyToBuffer(partyKey)
     });
 
     return partyKey;

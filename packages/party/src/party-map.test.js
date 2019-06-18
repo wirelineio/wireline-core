@@ -21,13 +21,13 @@ const feedPromisify = (feed) => {
   return newFeed;
 };
 
-const storageMockup = () => ({
+const repositoryMockup = () => ({
   _parties: new Map(),
-  async getPartyList() {
+  async getList() {
     return Array.from(this._parties.values());
   },
-  async putParty(party) {
-    return this._parties.set(party.name.toString('hex'), party);
+  async put(key, party) {
+    return this._parties.set(key.toString('hex'), party);
   }
 });
 
@@ -40,7 +40,7 @@ class Peer extends EventEmitter {
     this.addFeed('local', ram, { valueEncoding: 'utf-8' });
 
     this._parties = new PartyMap({
-      storage: storageMockup()
+      repository: repositoryMockup()
     });
 
     this._parties.setRules({
