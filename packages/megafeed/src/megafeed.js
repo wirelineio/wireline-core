@@ -119,6 +119,11 @@ class Megafeed extends EventEmitter {
     return this._root.feed.secretKey;
   }
 
+  // eslint-disable-next-line
+  get isMegafeed() {
+    return true;
+  }
+
   /** * Feeds API ** */
 
   feed(...args) {

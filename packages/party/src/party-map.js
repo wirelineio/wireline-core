@@ -30,7 +30,7 @@ class PartyMap extends EventEmitter {
 
     this.id = opts.id || crypto.randomBytes(32);
 
-    if (typeof opts === 'object' && opts.constructor.name === 'Megafeed') {
+    if (typeof opts === 'object' && opts.isMegafeed) {
       this.storage = createStorage(opts._root);
       this._megaReady = () => opts.ready();
       this._megaFindFeed = ({ discoveryKey }) => opts.feedByDK(discoveryKey);
