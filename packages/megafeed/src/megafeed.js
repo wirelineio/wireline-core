@@ -21,29 +21,22 @@ const {
   keyToBuffer,
   keyToHex,
   parsePartyPattern,
-  filterFeedByPattern
+  filterFeedByPattern,
+  createRepository
 } = require('@wirelineio/utils');
 
 const createRoot = require('./root');
 const FeedMap = require('./feed-map');
 
 class Megafeed extends EventEmitter {
-  static keyPair(seed) {
-    return crypto.keyPair(seed);
-  }
-
-  static discoveryKey(key) {
-    return getDiscoveryKey(key);
-  }
-
-  static keyToBuffer(...args) {
-    return keyToBuffer(...args);
-  }
-
-  static keyToHex(...args) {
-    return keyToHex(...args);
-  }
-
+  /**
+   * 
+   * @param {RandomAccessStorage} storage 
+   * @param {Buffer} key
+   * @param {Object} options
+   * @param {Object[]} options.feeds
+   * @param {Object} options.types
+   */
   constructor(storage, key, options) {
     super();
     assert(storage, 'A default storage is required.');
@@ -83,16 +76,27 @@ class Megafeed extends EventEmitter {
     };
 
     // We save all our personal information like the feed list in a private feed
-    this._root = createRoot(this._storage('root', storage), rootKey, opts);
+    this._db = hypertrie(storage, rootKey, { secretKey: opts.secretKey });
+
+    this._repository = createRepository(this._db, 'feeds');
 
     // Feeds manager instance
-    this._feeds = new FeedMap({ storage: this._storage, opts, root: this._root });
+    this._feeds = new FeedMap({ storage: this._storage, opts, repository: this._repository });
+
+    
+    // Parties manager instance
+    this._parties = new PartyMap({
+      id: this._db.feed.id,
+      repository: createRepository(this._db, 'parties'),
+      ready: () => this.ready(),
+      findFeed: ({ discoveryKey }) => this.feedByDK(discoveryKey)
+    });
+
+    // Bubble events. 
+    // TODO(tinchoz49): create bubbleEvent in utils.
     ['append', 'download', 'feed:added', 'feed', 'feed:deleted'].forEach((event) => {
       this._feeds.on(event, (...args) => this.emit(event, ...args));
     });
-
-    // Parties manager instance
-    this._parties = new PartyMap(this);
     ['party', 'peer-add', 'peer-remove'].forEach((event) => {
       this._parties.on(event, (...args) => this.emit(event, ...args));
     });
@@ -104,19 +108,19 @@ class Megafeed extends EventEmitter {
   }
 
   get id() {
-    return this._root.feed.id;
+    return this._db.feed.id;
   }
 
   get key() {
-    return this._root.feed.key;
+    return this._db.feed.key;
   }
 
   get discoveryKey() {
-    return this._root.feed.discoveryKey;
+    return this._db.feed.discoveryKey;
   }
 
   get secretKey() {
-    return this._root.feed.secretKey;
+    return this._db.feed.secretKey;
   }
 
   // eslint-disable-next-line
@@ -195,7 +199,7 @@ class Megafeed extends EventEmitter {
       newParty.rules = 'megafeed:default';
     }
 
-    await this._root.pReady();
+    await this._repository.pReady();
 
     return this._parties.addParty(newParty);
   }
@@ -247,7 +251,7 @@ class Megafeed extends EventEmitter {
   }
 
   async close() {
-    const root = this._root;
+    const root = this._repository;
 
     await this.ready();
 
@@ -281,7 +285,7 @@ class Megafeed extends EventEmitter {
     };
 
     await Promise.all([
-      destroyStorage(this._root.feed),
+      destroyStorage(this._repository.feed),
       ...this.feeds(true).filter(f => f.closed).map(f => destroyStorage(f)),
     ]);
   }
