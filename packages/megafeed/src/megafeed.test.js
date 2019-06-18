@@ -248,7 +248,6 @@ describe('testing replicate process', () => {
 
     const stream1 = megafeed1.replicate({ key: partyKey });
     const stream2 = megafeed2.replicate({ key: partyKey });
-
     const ilegalFeed = await megafeed2.addFeed({ name: 'ilegalFeed' });
 
     await feed1.pAppend({ index: 0, value: 'hello from one' });

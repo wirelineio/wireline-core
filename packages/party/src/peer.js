@@ -86,7 +86,7 @@ class Peer extends EventEmitter {
 
     debug('replicate', { peerId: this.peerId.toString('hex'), replicate: feed.key.toString('hex') });
 
-    // TODO(burdon): What happens to the stream that is returned? Is this a hypercore (the options are non-standard).
+    // TODO(burdon): Stream is passed into the feed.
     const replicateOptions = Object.assign({}, this.opts, opts);
     feed.replicate(replicateOptions);
 

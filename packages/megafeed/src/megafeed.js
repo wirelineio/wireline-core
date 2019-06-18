@@ -222,6 +222,7 @@ class Megafeed extends EventEmitter {
 
   /**
    * Starts replicating the party.
+   * @returns {Protocol} Dat stream.
    */
   replicate(options = {}) {
     const { key } = options;
