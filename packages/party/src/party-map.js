@@ -125,13 +125,6 @@ class PartyMap extends EventEmitter {
     const partiesLoaded = this.list().map(party => keyToHex(party.key));
 
     const partiesPersisted = (await this.storage.getPartyList({ codec }))
-      .map((msg) => {
-        if (Buffer.isBuffer(msg)) {
-          return PartyMap.decode(msg).value;
-        }
-
-        return msg.value;
-      })
       .filter(party => !partiesLoaded.includes(keyToHex(party.key)));
 
     const partiesToLoad = partiesPersisted.filter((party) => {
@@ -143,7 +136,7 @@ class PartyMap extends EventEmitter {
     });
 
     try {
-      return await Promise.all(partiesToLoad.map(party => this.setParty(party)));
+      return await Promise.all(partiesToLoad.map(party => this.addParty(party)));
     } catch (err) {
       throw err;
     }
