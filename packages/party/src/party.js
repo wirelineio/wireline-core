@@ -152,7 +152,6 @@ class Party extends EventEmitter {
 
     eos(stream, (err) => {
       peer.emit('destroy', err, peer);
-
       debug('peer-destroy', err);
 
       this._peers.delete(peer);

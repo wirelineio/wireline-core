@@ -135,7 +135,7 @@ class FeedMap extends EventEmitter {
         if (opts.key) {
           this._feeds.set(
             keyToHex(getDiscoveryKey(opts.key)),
-            Object.assign({}, opts, { loaded: false }),
+            Object.assign({}, opts, { loaded: false })
           );
         }
 
