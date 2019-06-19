@@ -2,15 +2,16 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const view = require('kappa-view-level');
 const EventEmitter = require('events');
+const view = require('kappa-view-level');
 const sub = require('subleveldown');
 
-const { streamToList } = require('../utils/stream');
 const { append } = require('../protocol/messages');
+const { streamToList } = require('../utils/stream');
 
 const serializeChanges = change => (typeof change === 'string' ? change : JSON.stringify(change));
 
+// TODO(burdon): Rename LogView.
 module.exports = function LogsView(dsuite, { viewId }) {
   const { uuid, db } = dsuite;
 
@@ -22,7 +23,6 @@ module.exports = function LogsView(dsuite, { viewId }) {
   return view(viewDB, {
     map(msg) {
       const { value } = msg;
-
       if (!value.type.startsWith(`item.${viewId}.`)) {
         return [];
       }

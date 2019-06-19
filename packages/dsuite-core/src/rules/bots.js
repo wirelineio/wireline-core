@@ -8,6 +8,7 @@ const { Megafeed } = require('@wirelineio/megafeed');
  * setPartyRules
  * @param dsuite {DSuite}
  */
+// TODO(burdon): Rename dsuite.
 module.exports = function setRules(dsuite) {
   const { mega, conf } = dsuite;
 
@@ -19,9 +20,8 @@ module.exports = function setRules(dsuite) {
     },
 
     async handshake({ peer }) {
+      // The bot does nothing here, just wait for invitations through remoteUpdateFeeds.
       if (conf.isBot) {
-
-        // The bot does nothing here, just wait for invitations through remoteUpdateFeeds.
         return;
       }
 

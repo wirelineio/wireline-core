@@ -53,7 +53,7 @@ module.exports = function ParticipantsView(dsuite) {
           if (event === 'bind-profile') {
             events.emit(event, value);
 
-            if (!dsuite.core.api.participants.isMyProfile(value.author, value.partyKey)) {
+            if (!dsuite.core.api['participants'].isMyProfile(value.author, value.partyKey)) {
               events.emit('participant', value);
             }
           }
@@ -74,7 +74,7 @@ module.exports = function ParticipantsView(dsuite) {
         const feed = dsuite.getLocalPartyFeed(partyKey);
         const controlKey = dsuite.mega.feed('control').key.toString('hex');
 
-        const profile = await core.api.participants.getProfile({ partyKey });
+        const profile = await core.api['participants'].getProfile({ partyKey });
 
         if (profile) {
           return;
@@ -97,7 +97,7 @@ module.exports = function ParticipantsView(dsuite) {
         const reader = viewDB.createValueStream({ gte: fromKey, lte: toKey, reverse: opts.reverse });
 
         return streamToList(reader, (msg, next) => {
-          if (core.api.participants.isMyProfile(msg.author, msg.partyKey)) {
+          if (core.api['participants'].isMyProfile(msg.author, msg.partyKey)) {
             return next(false);
           }
 
@@ -106,7 +106,7 @@ module.exports = function ParticipantsView(dsuite) {
       },
 
       async getContacts(core, opts = {}) {
-        const participants = await core.api.participants.getParticipants(opts);
+        const participants = await core.api['participants'].getParticipants(opts);
         return Promise.all(participants.map(
           participant => core.api.contacts.getProfile({ key: participant.data.controlKey })
         ));

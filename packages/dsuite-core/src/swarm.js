@@ -25,6 +25,9 @@ module.exports = (dsuite, conf = {}) => {
   const { mega } = dsuite;
   const id = mega.feed('control').discoveryKey.toString('hex');
 
+  // TODO(burdon): This function "hides" the main swarm constructor.
+  // Move this outside and have adapater to add debug metrics.
+
   // TODO(burdon): Handle defaults externally (remove const here).
   // Priority: conf => ENV => default (SIGNALHUB const).
   const signalhub = conf.hub || process.env.SIGNALHUB || Config.SIGNALHUB;
@@ -40,6 +43,7 @@ module.exports = (dsuite, conf = {}) => {
     // Maximum number of peer candidates requested from the signaling server (but can have multiple in-coming).
     maxPeers: conf.maxPeers || process.env.SWARM_MAX_PEERS || (conf.isBot ? 64 : 2),
 
+    // TODO(burdon): Get's the main hypercore stream (not actually the feed replication stream).
     stream: info => mega.replicate({ key: info.channel, live: true }),
 
     simplePeer: {

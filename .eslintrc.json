@@ -17,6 +17,7 @@
   "rules": {
     "comma-dangle": "off",
     "consistent-return": "off",
+    "dot-notation": "off",
     "import/prefer-default-export": "off",
     "max-len": [2, 120, 2, {
       "ignoreComments": true,
@@ -26,6 +27,7 @@
       }
     ],
     "no-console": "off",
+    "no-multi-spaces": "off",
     "no-shadow": "off",
     "no-underscore-dangle": "off",
     "object-curly-newline": "off",

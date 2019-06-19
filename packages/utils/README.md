@@ -1,1 +1,3 @@
 # Wireline Utils
+
+RECONSIDER USE OF THIS PATTERN.
