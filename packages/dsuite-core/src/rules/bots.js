@@ -19,8 +19,9 @@ module.exports = function setRules(dsuite) {
     },
 
     async handshake({ peer }) {
-      if (conf.isBot) {
+      dsuite.emit(`rule:${this.name}:handshake`, { rule: this, peer });
 
+      if (conf.isBot) {
         // The bot does nothing here, just wait for invitations through remoteUpdateFeeds.
         return;
       }
@@ -32,7 +33,11 @@ module.exports = function setRules(dsuite) {
       });
     },
 
-    async onEphemeralMessage({ message: { type, value }, peer }) {
+    async onEphemeralMessage({ message, peer }) {
+      dsuite.emit(`rule:${this.name}:message`, { rule: this, message, peer });
+
+      const { type, value } = message;
+
       if (conf.isBot) {
         if (type === 'invite-to-party') {
           await dsuite.connectToParty({ key: value });

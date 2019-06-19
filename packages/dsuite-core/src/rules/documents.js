@@ -34,6 +34,8 @@ module.exports = function setRules(dsuite) {
     },
 
     async handshake({ peer }) {
+      dsuite.emit(`rule:${this.name}:handshake`, { rule: this, peer });
+
       const partyKey = peer.party.key.toString('hex');
       const controlFeed = mega.feed('control');
       const feed = await dsuite.getLocalPartyFeed(partyKey);
@@ -78,6 +80,10 @@ module.exports = function setRules(dsuite) {
       peer.on('destroy', () => {
         core.api.participants.events.removeListener('participant', onParticipant);
       });
+    },
+
+    async onEphemeralMessage({ message, peer }) {
+      dsuite.emit(`rule:${this.name}:message`, { rule: this, message, peer });
     },
 
     async onIntroduceFeeds({ message, peer }) {
