@@ -19,10 +19,10 @@ class Repository {
    * @param {Hypertrie} options.db Hypertrie DB to persist the data.
    * @param {String} options.namespace Key to group the data.
    */
-  constructor(options = {}) {
-    const { db, namespace } = options;
-
+  constructor(db, namespace, codec) {
     this._namespace = namespace;
+
+    this._codec = codec;
 
     this._dbReady = promisify(db.ready.bind(db));
     this._dbPut = promisify(db.put.bind(db));
@@ -35,17 +35,17 @@ class Repository {
     return this._dbReady();
   }
 
-  async getList({ codec }) {
+  async list() {
     const list = await this._dbList(`${this._namespace}/`);
-    return list.map(({ value }) => codec.decode(value));
+    return list.map(({ value }) => this._codec.decode(value));
   }
 
-  async get(key, { codec }) {
-    return this._dbGet(`${this._namespace}/${keyToHex(key)}`, { valueEncoding: codec });
+  async get(key) {
+    return this._dbGet(`${this._namespace}/${keyToHex(key)}`, { valueEncoding: this._codec });
   }
 
-  async put(key, value, { encode }) {
-    return this._dbPut(`${this._namespace}/${keyToHex(key)}`, encode(value));
+  async put(key, value) {
+    return this._dbPut(`${this._namespace}/${keyToHex(key)}`, this._codec.encode(value));
   }
 
   async delete(key) {

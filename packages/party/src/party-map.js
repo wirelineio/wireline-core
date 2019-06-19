@@ -4,42 +4,43 @@
 
 const { EventEmitter } = require('events');
 const assert = require('assert');
-const crypto = require('crypto');
 
 const mm = require('micromatch');
 const protocol = require('hypercore-protocol');
 
-const { keyToHex } = require('@wirelineio/utils');
+const { keyToHex, Repository } = require('@wirelineio/utils');
 
 const Rule = require('./rule');
 const Party = require('./party');
 const codec = require('./codec');
 
 class PartyMap extends EventEmitter {
-  static get codec() {
-    return codec;
-  }
-
-  static encodeParty(message) {
-    return codec.encode({ type: 'Party', message: message.serialize() });
-  }
 
   /**
    *
+   * @param {Hypertrie} db
    * @param {Object} opts
-   * @param {} opts.id
-   * @param {} opts.repository
-   * @param {} opts.ready
-   * @param {} opts.findFeed
+   * @param {Function} opts.ready
+   * @param {Function} opts.findFeed
    */
-  constructor({ id, repository, ready, findFeed }) {
+  constructor(db, options = {}) {
     super();
 
-    this.id = id || crypto.randomBytes(32);
+    this.id = db.id;
+
+    this._repository = new Repository(
+      db,
+      'parties',
+      {
+        encode: message => codec.encode({ type: 'Party', message: message.serialize() }),
+        decode: codec.decode
+      }
+    );
+
+    const { ready, findFeed } = options;
 
     this._ready = ready;
     this._findFeed = findFeed;
-    this._repository = repository;
 
     this._rules = new Map();
     this._parties = new Map();
@@ -88,7 +89,7 @@ class PartyMap extends EventEmitter {
     });
 
     try {
-      await this._repository.put(party.name, party, { encode: PartyMap.encodeParty });
+      await this._repository.put(party.name, party);
 
       const discoveryKey = keyToHex(party.discoveryKey);
 
@@ -129,7 +130,7 @@ class PartyMap extends EventEmitter {
 
     const partiesLoaded = this.list().map(party => keyToHex(party.key));
 
-    const partiesPersisted = (await this.storage.getPartyList({ codec }))
+    const partiesPersisted = (await this.storage.list())
       .filter(party => !partiesLoaded.includes(keyToHex(party.key)));
 
     const partiesToLoad = partiesPersisted.filter((party) => {

@@ -6,6 +6,7 @@ const { promisify } = require('util');
 const { pipeline } = require('stream');
 
 const hypercore = require('hypercore');
+const hypertrie = require('hypertrie');
 const ram = require('random-access-memory');
 const crypto = require('hypercore-crypto');
 const { EventEmitter } = require('events');
@@ -22,16 +23,6 @@ const feedPromisify = (feed) => {
   return newFeed;
 };
 
-const repositoryMockup = () => ({
-  _parties: new Map(),
-  async getList() {
-    return Array.from(this._parties.values());
-  },
-  async put(key, party) {
-    return this._parties.set(key.toString('hex'), party);
-  }
-});
-
 class Peer extends EventEmitter {
   constructor() {
     super();
@@ -40,9 +31,7 @@ class Peer extends EventEmitter {
 
     this.addFeed('local', ram, { valueEncoding: 'utf-8' });
 
-    this._parties = new PartyMap({
-      repository: repositoryMockup()
-    });
+    this._parties = new PartyMap(hypertrie(ram));
 
     this._parties.setRules({
       name: 'simple-party',

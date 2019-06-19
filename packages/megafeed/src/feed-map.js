@@ -17,7 +17,8 @@ const {
   getDiscoveryKey,
   keyToBuffer,
   Locker,
-  filterFeedByPattern
+  filterFeedByPattern,
+  Repository
 } = require('@wirelineio/utils');
 
 const schema = require('./schema.js');
@@ -33,26 +34,6 @@ const codec = codecProtobuf(schema);
  * @extends {EventEmitter}
  */
 class FeedMap extends EventEmitter {
-
-  /**
-   * Access to the codec protobuf schema for a feed message.
-   *
-   * @type {CodecProtobuf}
-   */
-  static get codec() {
-    return codec;
-  }
-
-  /**
-   * Encode a feed into a buffer using protocol-buffers.
-   *
-   * @static
-   * @param {Object} message
-   * @returns {Buffer}
-   */
-  static encodeFeed(message) {
-    return codec.encode({ type: 'Feed', message });
-  }
 
   /**
    * Create the properly format object message to encode and persist in the
@@ -107,22 +88,28 @@ class FeedMap extends EventEmitter {
   /**
    * constructor
    *
-   * @param {RandomAccessStorage} args.storage RandomAccessStorage to use by default by the feeds.
-   * @param {Repository} args.repository Repository to persist the feeds.
-   * @param {Object} args.types Types of constructor to create custom feeds.
-   * @param {Object} args.feedOptions Default options for each feed.
+   * @param {RandomAccessStorage} storage RandomAccessStorage to use by default by the feeds.
+   * @param {Repository} repository Repository to persist the feeds.
+   * @param {Object} options
+   * @param {Object} options.types Types of constructor to create custom feeds.
+   * @param {Object} options.feedOptions Default options for each feed.
    * @returns {FeedMap}
    */
-  constructor(args = {}) {
+  constructor(db, storage, options = {}) {
     super();
 
-    const { storage, repository, feeds = [], types = {}, feedOptions = {} } = args;
+    const { types = {}, feedOptions = {} } = options;
+
+    this._repository = new Repository(
+      db,
+      'feeds',
+      {
+        encode: message => codec.encode({ type: 'Feed', message }),
+        decode: codec.decode
+      }
+    );
 
     this._defaultStorage = storage;
-
-    this._repository = repository;
-
-    this._initFeeds = feeds;
 
     this._types = types;
 
@@ -138,38 +125,12 @@ class FeedMap extends EventEmitter {
    *
    * @returns {Promise}
    */
-  async ready() {
-    const initFeeds = this._initFeeds;
-    const repository = this._repository;
-
-    const persistedFeeds = (await repository.getList({ codec }))
-      .map(value => Object.assign({}, value, { persist: false }));
-
-    const feeds = persistedFeeds
-      .concat(
-        initFeeds
-          .map(feed => Object.assign({}, feed, { fromInit: true }))
-          .filter((feed) => {
-            const searchFor = [keyToHex(feed.name), keyToHex(feed.key)].filter(Boolean);
-            const idx = persistedFeeds.findIndex(
-              pf => searchFor.includes(keyToHex(pf.name)) || searchFor.includes(keyToHex(pf.key)),
-            );
-
-            if (idx === -1) {
-              return true;
-            }
-
-            persistedFeeds[idx] = Object.assign({}, persistedFeeds[idx], feed);
-            return false;
-          }),
-      )
-      .map(feed => Object.assign({}, feed, { load: feed.load === undefined ? true : feed.load }));
+  async initialize() {
+    const feeds = await this._repository.list({ codec });
 
     await Promise.all(
       feeds.map((opts) => {
-        const { fromInit } = opts;
-
-        if (opts.load || fromInit) {
+        if (opts.load) {
           return this.addFeed(opts);
         }
 
@@ -182,8 +143,27 @@ class FeedMap extends EventEmitter {
         }
 
         return null;
-      }),
+      })
     );
+  }
+
+  /**
+   * Get a feed by the discoveryKey.
+   *
+   * @param {String|Buffer} key
+   * @param {Boolean} all Include unloaded feeds.
+   * @returns {Hypercore|null}
+   */
+  feedByDK(key, all = false) {
+    const hexKey = keyToHex(key);
+
+    const feed = this._feeds.get(hexKey);
+
+    if (feed && !all && feed.loaded) {
+      return feed;
+    }
+
+    return null;
   }
 
   /**
@@ -205,25 +185,6 @@ class FeedMap extends EventEmitter {
     return this.feeds(all).find(
       f => f.name === hexKey || (f.key && keyToHex(f.key) === hexKey),
     );
-  }
-
-  /**
-   * Get a feed by the discoveryKey.
-   *
-   * @param {String|Buffer} key
-   * @param {Boolean} all Include unloaded feeds.
-   * @returns {Hypercore|null}
-   */
-  feedByDK(key, all = false) {
-    const hexKey = keyToHex(key);
-
-    const feed = this._feeds.get(hexKey);
-
-    if (feed && !all && feed.loaded) {
-      return feed;
-    }
-
-    return null;
   }
 
   /**
@@ -451,10 +412,15 @@ class FeedMap extends EventEmitter {
 
     const release = await this._locker.pLock(name);
 
+    let feed = this.feed(name);
+    if (feed) {
+      return feed;
+    }
+
     try {
       const createFeed = this._types[opts.type] || hypercore;
 
-      let feed = createFeed(this._storage(name, storage), key, {
+      feed = createFeed(this._storage(name, storage), key, {
         secretKey: opts.secretKey,
         valueEncoding: opts.valueEncoding,
       });
@@ -475,9 +441,7 @@ class FeedMap extends EventEmitter {
 
       const discoveryKey = keyToHex(feed.discoveryKey);
 
-      if (opts.persist) {
-        await this.persistFeed(feed, opts);
-      }
+      await this.persistFeed(feed, opts);
 
       this._feeds.set(discoveryKey, feed);
 

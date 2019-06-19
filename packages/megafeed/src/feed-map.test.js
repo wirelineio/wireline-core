@@ -1,18 +1,13 @@
 const ram = require('random-access-memory');
 const hypertrie = require('hypertrie');
 
-const { Repository } = require('@wirelineio/utils');
-
 const FeedMap = require('./feed-map');
 
 describe('config FeedMap', () => {
   test('example test', async () => {
     const db = hypertrie(ram);
 
-    const feedMap = new FeedMap({
-      storage: ram,
-      repository: new Repository({ db, namespace: 'feeds' })
-    });
+    const feedMap = new FeedMap(db, ram);
 
     const feed = await feedMap.addFeed({ name: 'local' });
 

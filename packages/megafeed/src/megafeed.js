@@ -19,7 +19,6 @@ const {
   keyToBuffer,
   parsePartyPattern,
   filterFeedByPattern,
-  Repository,
   bubblingEvents
 } = require('@wirelineio/utils');
 
@@ -61,10 +60,7 @@ class Megafeed extends EventEmitter {
     this._db = hypertrie(storage, rootKey, { secretKey: opts.secretKey });
 
     // Feeds manager instance
-    this._feeds = new FeedMap({
-      repository: new Repository({ db: this._db, namespace: 'feeds' }),
-      storage,
-      feeds: opts.feeds,
+    this._feeds = new FeedMap(this._db, storage, {
       types: opts.types,
       feedOptions: {
         valueEncoding: opts.valueEncoding
@@ -72,9 +68,7 @@ class Megafeed extends EventEmitter {
     });
 
     // Parties manager instance
-    this._parties = new PartyMap({
-      repository: new Repository({ db: this._db, namespace: 'parties' }),
-      id: this._db.feed.id,
+    this._parties = new PartyMap(this._db, {
       ready: () => this.ready(),
       findFeed: ({ discoveryKey }) => this.feedByDK(discoveryKey)
     });
@@ -340,7 +334,7 @@ class Megafeed extends EventEmitter {
   _initialize() {
     this._parties.setRules(this._defineDefaultPartyRules());
 
-    this._feeds.ready()
+    this._feeds.initialize()
       .then(() => {
         this._isReady = true;
         this.emit('ready');

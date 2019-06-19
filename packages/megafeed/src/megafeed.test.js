@@ -42,16 +42,6 @@ describe('config megafeed', () => {
     const mf = megafeed(ram);
     return mf.ready();
   });
-
-  test('initialize megafeed with a list of feeds', async () => {
-    const mf = megafeed(ram, {
-      feeds: [{ name: 'documentOne' }, { name: 'documentTwo' }],
-    });
-
-    await mf.ready();
-
-    expect(mf.feeds().length).toBe(2);
-  });
 });
 
 describe('add operations in a persistent feed', () => {
