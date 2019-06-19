@@ -4,15 +4,13 @@
 
 const charwise = require('charwise');
 const { EventEmitter } = require('events');
-const crypto = require('hypercore-crypto');
-const kappa = require('kappa-core');
+const { pipeline } = require('stream');
+
 const levelup = require('levelup');
 const memdown = require('memdown');
 const multi = require('multi-read-stream');
-const ram = require('random-access-memory');
-const pump = require('pump');
 const sorter = require('stream-sort');
-const { promisify } = require('util');
+const crypto = require('hypercore-crypto');
 
 const { Megafeed } = require('@wirelineio/megafeed');
 const {
@@ -344,7 +342,7 @@ class DSuite extends EventEmitter {
     const reader = multi.obj(partyFeeds.map(feed => feed.createReadStream()));
 
     return new Promise((resolve, reject) => {
-      const writable = pump(
+      const writable = pipeline(
         reader,
         sorter({
           count: Infinity,

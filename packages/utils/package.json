@@ -20,8 +20,7 @@
     "debug": "^4.1.1",
     "hypercore-crypto": "^1.0.0",
     "micromatch": "^3.1.10",
-    "mutexify": "^1.2.0",
-    "pify": "^4.0.1"
+    "mutexify": "^1.2.0"
   },
   "devDependencies": {
     "jest": "^24.5.0"

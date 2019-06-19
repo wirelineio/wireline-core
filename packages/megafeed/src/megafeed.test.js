@@ -5,8 +5,9 @@
 const tempy = require('tempy');
 const fs = require('fs');
 const path = require('path');
-const pify = require('pify');
-const pump = require('pump');
+const { promisify } = require('util');
+const { pipeline } = require('stream');
+
 const streamToPromise = require('stream-to-promise');
 
 const ram = require('random-access-memory');
@@ -101,14 +102,14 @@ describe('list / get / delete / load / close operations', () => {
     expect(this.mf.feeds().length).toBe(0);
 
     const db = this.mf._db;
-    const getFeed = pify(db.get.bind(db));
+    const getFeed = promisify(db.get.bind(db));
     const feed = await getFeed(`feed/${this.feed.key.toString('hex')}`);
     expect(feed).toBeNull();
   });
 
   test('load feeds: documentOne', async () => {
     const feed = await this.mf.addFeed({ name: 'documentOne' });
-    await pify(feed.close.bind(feed))();
+    await promisify(feed.close.bind(feed))();
 
     const result = await this.mf.loadFeeds(feed.key);
     expect(result.length).toBe(1);
@@ -142,7 +143,7 @@ describe('destroy megafeed storage', () => {
   test('destroy storage for _db and documentOne', async () => {
     await this.mf.destroy();
 
-    const access = pify(fs.access);
+    const access = promisify(fs.access);
     await expect(access(path.join(this.dir, 'root', 'tree'), fs.F_OK)).rejects.toThrow('ENOENT');
     await expect(access(path.join(this.dir, 'documentOne', 'tree'), fs.F_OK)).rejects.toThrow('ENOENT');
   });
@@ -179,7 +180,7 @@ describe('testing replicate process', () => {
     await feedOne.pAppend({ index: 0, value: 'hello from one' });
     await feedTwo.pAppend({ index: 1, value: 'hello from two' });
 
-    await pify(pump)(r1, r2, r1);
+    await promisify(pipeline)(r1, r2, r1);
 
     const resultOne = await streamToPromise(peerOne.createReadStream());
     const resultTwo = await streamToPromise(peerTwo.createReadStream());
@@ -201,7 +202,7 @@ describe('testing replicate process', () => {
 
     const r1 = peerOne.replicate({ key: partyKey, live: true });
     const r2 = peerTwo.replicate({ key: partyKey, live: true });
-    pify(pump)(r1, r2, r1);
+    promisify(pipeline)(r1, r2, r1);
 
     const messages = [];
     peerOne.on('append', (feed) => {
@@ -253,7 +254,7 @@ describe('testing replicate process', () => {
     await feedTwo.pAppend({ index: 1, value: 'hello from two' });
     await ilegalFeed.pAppend({ index: 2, value: 'hello from ilegalFeed' });
 
-    await pify(pump)(r1, r2, r1);
+    await promisify(pipeline)(r1, r2, r1);
 
     const resultOne = await streamToPromise(peerOne.createReadStream());
     const resultTwo = await streamToPromise(peerTwo.createReadStream());

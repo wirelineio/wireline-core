@@ -2,11 +2,12 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+const { promisify } = require('util');
+const { pipeline } = require('stream');
+
 const hypercore = require('hypercore');
 const ram = require('random-access-memory');
 const crypto = require('hypercore-crypto');
-const pump = require('pump');
-const pify = require('pify');
 const { EventEmitter } = require('events');
 
 const PartyMap = require('./party-map');
@@ -15,7 +16,7 @@ const feedPromisify = (feed) => {
   const newFeed = feed;
   ['ready', 'append', 'close', 'get', 'head'].forEach((prop) => {
     if (feed[prop]) {
-      newFeed[`p${prop[0].toUpperCase() + prop.slice(1)}`] = pify(feed[prop].bind(feed));
+      newFeed[`p${prop[0].toUpperCase() + prop.slice(1)}`] = promisify(feed[prop].bind(feed));
     }
   });
   return newFeed;
@@ -115,7 +116,7 @@ describe('simple party replication', () => {
     const streamTwo = await peerTwo.connect(partyKey);
 
     await new Promise((resolve, reject) => {
-      pump(streamOne, streamTwo, streamOne, (err) => {
+      pipeline(streamOne, streamTwo, streamOne, (err) => {
         if (err) {
           return reject(err);
         }

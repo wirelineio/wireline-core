@@ -4,11 +4,11 @@
 
 const { EventEmitter } = require('events');
 const path = require('path');
+const { promisify } = require('util');
 
 const hypercore = require('hypercore');
 const raf = require('random-access-file');
 const crypto = require('hypercore-crypto');
-const pify = require('pify');
 const debug = require('debug')('megafeed:feed-map');
 
 const codecProtobuf = require('@wirelineio/codec-protobuf');
@@ -97,7 +97,7 @@ class FeedMap extends EventEmitter {
     // Promise APY p*
     ['ready', 'append', 'close', 'get', 'head'].forEach((prop) => {
       if (feed[prop]) {
-        newFeed[`p${prop[0].toUpperCase() + prop.slice(1)}`] = pify(feed[prop].bind(feed));
+        newFeed[`p${prop[0].toUpperCase() + prop.slice(1)}`] = promisify(feed[prop].bind(feed));
       }
     });
 

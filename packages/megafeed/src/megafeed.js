@@ -4,13 +4,13 @@
 
 const assert = require('assert');
 const { EventEmitter } = require('events');
+const { promisify } = require('util');
+const { pipeline } = require('stream');
 
-const pify = require('pify');
 const hypertrie = require('hypertrie');
 const multi = require('multi-read-stream');
 const eos = require('end-of-stream');
 const through = require('through2');
-const pump = require('pump');
 
 const { PartyMap, Party } = require('@wirelineio/party');
 const {
@@ -235,9 +235,9 @@ class Megafeed extends EventEmitter {
 
     await this.ready();
 
-    await Promise.all(this.feeds().map(feed => pify(feed.close.bind(feed))()));
+    await Promise.all(this.feeds().map(feed => promisify(feed.close.bind(feed))()));
 
-    await pify(dbFeed.close.bind(dbFeed))();
+    await promisify(dbFeed.close.bind(dbFeed))();
   }
 
   async destroy() {
@@ -250,18 +250,18 @@ class Megafeed extends EventEmitter {
       warnings.push(err);
     }
 
-    const pifyDestroy = s => pify(s.destroy.bind(s))()
+    const promisifyDestroy = s => promisify(s.destroy.bind(s))()
       .catch(destroyErr => warnings.push(destroyErr));
 
     const destroyStorage = (feed) => {
       const s = feed._storage;
       return Promise.all([
-        pifyDestroy(s.bitfield),
-        pifyDestroy(s.tree),
-        pifyDestroy(s.data),
-        pifyDestroy(s.key),
-        pifyDestroy(s.secretKey),
-        pifyDestroy(s.signatures),
+        promisifyDestroy(s.bitfield),
+        promisifyDestroy(s.tree),
+        promisifyDestroy(s.data),
+        promisifyDestroy(s.key),
+        promisifyDestroy(s.secretKey),
+        promisifyDestroy(s.signatures),
       ]);
     };
 
@@ -282,7 +282,7 @@ class Megafeed extends EventEmitter {
 
     const stream = this.createReadStream(Object.assign({}, options, { live: true }));
 
-    pump(stream, through.obj((data, _, next) => {
+    pipeline(stream, through.obj((data, _, next) => {
       try {
         const result = onMessage(data);
         if (result && result.then) {
@@ -299,7 +299,7 @@ class Megafeed extends EventEmitter {
       } catch (err) {
         next(err);
       }
-    }));
+    }), () => {});
 
     return () => stream.destroy();
   }

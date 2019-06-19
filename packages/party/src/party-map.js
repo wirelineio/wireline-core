@@ -11,7 +11,7 @@ const protocol = require('hypercore-protocol');
 
 const { keyToHex } = require('@wirelineio/utils');
 
-const Rules = require('./rules');
+const Rule = require('./rule');
 const Party = require('./party');
 const codec = require('./codec');
 
@@ -53,15 +53,18 @@ class PartyMap extends EventEmitter {
     return Array.from(this._parties.values());
   }
 
-  setRules(rules) {
-    const newRules = rules;
 
-    assert(typeof newRules.name === 'string' && newRules.name.length > 0, 'Name rule string is required.');
+  setRules(options = {}) {
+    const { name, ready = this._ready, findFeed = this._findFeed, ...opts } = options;
 
-    newRules.ready = newRules.ready || this._ready;
-    newRules.findFeed = newRules.findFeed || this._findFeed;
+    assert(typeof name === 'string' && name.length > 0, 'setRule: "name" is required.');
 
-    this._rules.set(newRules.name, new Rules(newRules));
+    this._rules.set(name, new Rule({
+      ...opts,
+      name,
+      ready,
+      findFeed
+    }));
   }
 
   async addParty({ name, key, secretKey, rules, metadata }) {

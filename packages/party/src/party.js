@@ -11,7 +11,7 @@ const debug = require('debug')('party-map:party');
 const { keyToHex, keyToBuffer, getDiscoveryKey } = require('@wirelineio/utils');
 
 const Peer = require('./peer');
-const Rules = require('./rules');
+const Rule = require('./rule');
 
 class Party extends EventEmitter {
   static _addPartyExtension(obj) {
@@ -53,12 +53,12 @@ class Party extends EventEmitter {
       return;
     }
 
-    if (handler instanceof Rules) {
+    if (handler instanceof Rule) {
       this.rules = handler;
       return;
     }
 
-    this.rules = new Rules(handler);
+    this.rules = new Rule(handler);
   }
 
   replicate(options = {}) {
