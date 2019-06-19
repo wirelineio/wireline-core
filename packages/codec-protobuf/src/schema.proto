@@ -1,6 +1,15 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 syntax = "proto3";
+
+// TODO(burdon): Rename.
 package codecprotobuf;
 
+//
+// Message wrapper.
+//
 message AnyType {
   required string type = 1;
   bytes value = 2;

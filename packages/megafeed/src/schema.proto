@@ -2,6 +2,8 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+// TODO(burdon): Rename feed.proto
+
 syntax = "proto3";
 
 package megafeed;

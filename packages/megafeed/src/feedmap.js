@@ -8,7 +8,7 @@ const crypto = require('hypercore-crypto');
 const pify = require('pify');
 const debug = require('debug')('feedmap');
 
-const codecProtobuf = require('@wirelineio/codec-protobuf');
+const Protobuf = require('@wirelineio/codec-protobuf');
 
 // TODO(burdon): Anti-pattern (Max?)
 const {
@@ -21,7 +21,7 @@ const {
 
 const schema = require('./schema.js');
 
-const codec = codecProtobuf(schema);
+const codec = Protobuf(schema);
 
 /**
  * Feedmap manages a collection of hypercores.
@@ -31,15 +31,12 @@ class FeedMap extends EventEmitter {
   // TODO(burdon): Remove static methods.
 
   // TODO(burdon): Not used?
-  static get codec() {
-    return codec;
-  }
+  // static get codec() {
+  //   return codec;
+  // }
 
-  static encodeFeed(message) {
-    return codec.encode({ type: 'Feed', message });
-  }
-
-  static optsTorepository(feed, opts) {
+  // TODO(burdon): ???
+  static optsToRepository(feed, opts) {
     return {
       name: feed.name,
       key: keyToBuffer(opts.key || feed.key),
@@ -55,6 +52,7 @@ class FeedMap extends EventEmitter {
     };
   }
 
+  // TODO(burdon): ???
   static optsToHypercore(opts) {
     return {
       secretKey: opts.secretKey,
@@ -62,11 +60,21 @@ class FeedMap extends EventEmitter {
     };
   }
 
+  // TODO(burdon): Wrapper class or proto util.
+  static encodeFeed(message) {
+    return codec.encode({ type: 'Feed', message });
+  }
+
+  // TODO(burdon): Wrapper class.
   static isOpen(feed) {
     return feed.loaded && !feed.closed;
   }
 
-  // TODO(burdon): No.
+  /**
+   * @param {hypercore} feed
+   * @return {hypercore}
+   */
+  // TODO(burdon): Create wrapper class.
   static addNewFeedMethods(feed) {
     const newFeed = feed;
 
@@ -110,6 +118,7 @@ class FeedMap extends EventEmitter {
      * @type {Map<string, {megafeed.Feed}>} Map of protocol buffer definitions.
      */
     // TODO(burdon): Are these hypercores or mutant hypercore/protocol buffer hybrids?
+    // TODO(burdon): Confusing to use "feed" for both proto objects and hypercores.
     this._feeds = new Map();
 
     /**
@@ -131,14 +140,16 @@ class FeedMap extends EventEmitter {
   }
 
   /**
-   * TODO(burdon): ???
+   * TODO(burdon): Load?
    * @param initFeeds
    * @return {Promise<void>}
    */
+  // TODO(burdon): Why pass in array?
   async initFeeds(initFeeds = []) {
     // TODO(burdon): Not required.
     const repository = this._repository;
 
+    // TODO(burdon): Load all feeds protos?
     // TODO(burdon): Construct repository with codec rather than spec each time?
     const persistedFeeds = (await repository.getList({ codec }))
       .map(value => Object.assign({}, value, { persist: false }));
@@ -152,17 +163,18 @@ class FeedMap extends EventEmitter {
             const idx = persistedFeeds.findIndex(
               pf => searchFor.includes(keyToHex(pf.name)) || searchFor.includes(keyToHex(pf.key)),
             );
-
             if (idx === -1) {
               return true;
             }
 
+            // TODO(burdon): No side effects for filter.
             persistedFeeds[idx] = Object.assign({}, persistedFeeds[idx], feed);
             return false;
           }),
       )
       .map(feed => Object.assign({}, feed, { load: feed.load === undefined ? true : feed.load }));
 
+    // TODO(burdon): Where is the async?
     await Promise.all(
       feeds.map((opts) => {
         const { fromInit } = opts;
@@ -173,17 +185,21 @@ class FeedMap extends EventEmitter {
 
         if (opts.key) {
           const unloadedFeed = Object.assign({}, opts, { loaded: false });
-          this._feeds.set(
-            keyToHex(getDiscoveryKey(opts.key)),
-            unloadedFeed
-          );
+          this._feeds.set(keyToHex(getDiscoveryKey(opts.key)), unloadedFeed);
         }
 
+        // TODO(burdon): Why?
         return null;
       }),
     );
   }
 
+  //
+  // API
+  // TODO(burdon): Group methods (e.g., open, close).
+  //
+
+  // TODO(burdon): getFeed (verb-noun).
   feed(key, all = false) {
     const hexKey = keyToHex(key);
 
@@ -198,11 +214,11 @@ class FeedMap extends EventEmitter {
     );
   }
 
+  // TODO(burdon): Gets just one?
   feedByDK(key, all = false) {
     const hexKey = keyToHex(key);
 
     const feed = this._feeds.get(hexKey);
-
     if (feed && !all && feed.loaded) {
       return feed;
     }
@@ -210,9 +226,9 @@ class FeedMap extends EventEmitter {
     return null;
   }
 
+  // TODO(burdon): Combine with above.
   feeds(all = false) {
     const feeds = Array.from(this._feeds.values());
-
     if (all) {
       return feeds;
     }
@@ -220,30 +236,36 @@ class FeedMap extends EventEmitter {
     return feeds.filter(f => f.loaded);
   }
 
+  // TODO(burdon): Inconsistent with {} syntax.
   async openFeed(name, storage, key, options) {
     const opts = Object.assign({}, this._opts, options);
 
+    // By default persist the feed.
     if (opts.persist === undefined) {
-      // by default persist the feed
       opts.persist = true;
     }
 
+    // TODO(burdon): Why?
     const release = await this._locker.pLock(name);
 
     try {
+      // TODO(burdon): Why?
       const createFeed = this._types[opts.type] || hypercore;
 
       let feed = createFeed(this._storage(name, storage), key, FeedMap.optsToHypercore(opts));
 
       feed = FeedMap.addNewFeedMethods(feed);
 
+      // TODO(burdon): Why?
       feed.setMaxListeners(256);
 
+      // TODO(burdon): Must not add properties to third-party objects (collision).
       feed.name = name;
       feed.loaded = true;
       feed.silent = opts.silent;
       feed.announced = false;
 
+      // TODO(burdon): Leaky abstraction.
       feed.on('append', () => this.emit('append', feed));
       feed.on('download', (...args) => this.emit('download', ...args, feed));
 
@@ -251,6 +273,7 @@ class FeedMap extends EventEmitter {
 
       const discoveryKey = keyToHex(feed.discoveryKey);
 
+      // TODO(burdon): Open and save?
       if (opts.persist) {
         await this.persistFeed(feed, opts);
       }
@@ -259,6 +282,7 @@ class FeedMap extends EventEmitter {
 
       await release();
 
+      // TODO(burdon): Why?
       if (!feed.silent) {
         this.announce(feed);
       }
@@ -271,6 +295,21 @@ class FeedMap extends EventEmitter {
     }
   }
 
+  async closeFeed(key) {
+    const feed = this.feed(key);
+
+    if (!feed) {
+      return null;
+    }
+
+    if (FeedMap.isOpen(feed)) {
+      return feed.pClose();
+    }
+
+    return null;
+  }
+
+  // TODO(burdon): ???
   announce(feed) {
     if (feed.announced) {
       return;
@@ -342,6 +381,7 @@ class FeedMap extends EventEmitter {
 
       return null;
     } catch (err) {
+      // TODO(burdon): Standardize error handling?
       debug(err);
       await release();
       throw err;
@@ -362,6 +402,7 @@ class FeedMap extends EventEmitter {
 
       await repository.put(feed.name, update, { encode: FeedMap.encodeFeed });
 
+      // TODO(burdon): Why? (all paths return null except error which is undefined).
       return null;
     } catch (err) {
       debug(err);
@@ -369,9 +410,12 @@ class FeedMap extends EventEmitter {
     }
   }
 
+  // TODO(burdon): Make all methods plural.
   async loadFeeds(userPattern, options = {}) {
     let pattern = userPattern;
 
+    // TODO(burdon): Why sometimes not array?
+    // TODO(burdon): Consistent use of key vs. hex (see util, which guesses).
     if (Array.isArray(pattern)) {
       pattern = pattern.filter(Boolean).map(value => keyToHex(value));
     } else {
@@ -397,6 +441,7 @@ class FeedMap extends EventEmitter {
     }
   }
 
+  // TODO(burdon): Save?
   async persistFeed(feed, options = {}) {
     const repository = this._repository;
 
@@ -405,7 +450,7 @@ class FeedMap extends EventEmitter {
     const opts = Object.assign({}, options, { persist: true });
 
     try {
-      const formatFeed = FeedMap.optsTorepository(feed, opts);
+      const formatFeed = FeedMap.optsToRepository(feed, opts);
       await repository.put(formatFeed.name, formatFeed, { encode: FeedMap.encodeFeed });
       this._feeds.set(discoveryKey, feed);
       return feed;
@@ -413,20 +458,6 @@ class FeedMap extends EventEmitter {
       debug(err);
       throw err;
     }
-  }
-
-  async closeFeed(key) {
-    const feed = this.feed(key);
-
-    if (!feed) {
-      return null;
-    }
-
-    if (FeedMap.isOpen(feed)) {
-      return feed.pClose();
-    }
-
-    return null;
   }
 }
 
