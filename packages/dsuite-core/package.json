@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/dsuite-core",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "description": "Wireline wrapper for kappa.",
   "homepage": "https://github.com/wirelineio/dsuite#readme",
   "bugs": {
@@ -19,7 +19,7 @@
   "dependencies": {
     "@geut/discovery-swarm-webrtc": "^2.0.0-alpha.18",
     "@wirelineio/automerge-worker": "^0.1.12",
-    "@wirelineio/megafeed": "^0.1.19",
+    "@wirelineio/megafeed": "^0.1.20",
     "@wirelineio/wire-inspect": "^0.1.17",
     "bufferutil": "^4.0.1",
     "charwise": "^3.0.1",

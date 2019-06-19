@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/party",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "description": "Module for selective replication of feeds.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/party#readme",
   "bugs": {
