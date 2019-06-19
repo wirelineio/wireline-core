@@ -57,8 +57,6 @@ class Megafeed extends EventEmitter {
       opts = {};
     }
 
-    const feeds = opts.feeds || [];
-
     // We save all our personal information like the feed list in a private feed
     this._db = hypertrie(storage, rootKey, { secretKey: opts.secretKey });
 
@@ -66,7 +64,11 @@ class Megafeed extends EventEmitter {
     this._feeds = new FeedMap({
       repository: new Repository({ db: this._db, namespace: 'feeds' }),
       storage,
-      opts
+      feeds: opts.feeds,
+      types: opts.types,
+      feedOptions: {
+        valueEncoding: opts.valueEncoding
+      }
     });
 
     // Parties manager instance
@@ -78,13 +80,13 @@ class Megafeed extends EventEmitter {
     });
 
     // Bubble events.
-    bubblingEvents(this, this._feeds, ['append', 'download', 'feed:added', 'feed', 'feed:deleted']);
+    bubblingEvents(this, this._feeds, ['append', 'download', 'feed-add', 'feed', 'feed-remove']);
     bubblingEvents(this, this._parties, ['party', 'peer-add', 'peer-remove']);
 
     // everything is ready
     this._isReady = false;
 
-    this._initialize(feeds);
+    this._initialize();
   }
 
   get id() {
@@ -335,10 +337,10 @@ class Megafeed extends EventEmitter {
     return multiReader;
   }
 
-  _initialize(feeds) {
+  _initialize() {
     this._parties.setRules(this._defineDefaultPartyRules());
 
-    this._feeds.initFeeds(feeds)
+    this._feeds.ready()
       .then(() => {
         this._isReady = true;
         this.emit('ready');
