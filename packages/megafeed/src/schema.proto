@@ -1,13 +1,23 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 syntax = "proto3";
+
 package megafeed;
 
+//
+// Persistent data structure for feed.
+//
 message Feed {
-  required string name = 1;
-  required bytes key = 2;
+  required string name = 1;       // TODO(burdon): Path?
+  required bytes key = 2;         // TODO(burdon): publicKey?
   bytes secretKey = 3;
-  bool load = 4;
-  bool persist = 5;
-  string valueEncoding = 6;
+
+  string valueEncoding = 6;       // TODO(burdon): Why different?
+  string type = 8;                // TODO(burdon): ???
   bytes metadata = 7;
-  string type = 8;
+
+  bool load = 4;                  // TODO(burdon): ???
+  bool persist = 5;
 }

@@ -6,22 +6,31 @@ const { EventEmitter } = require('events');
 const hypercore = require('hypercore');
 const crypto = require('hypercore-crypto');
 const pify = require('pify');
-const debug = require('debug')('megafeed:feed-map');
+const debug = require('debug')('feedmap');
 
 const codecProtobuf = require('@wirelineio/codec-protobuf');
+
+// TODO(burdon): Anti-pattern (Max?)
 const {
   keyToHex,
-  getDiscoveryKey,
   keyToBuffer,
-  Locker,
-  filterFeedByPattern
+  getDiscoveryKey,
+  filterFeedByPattern,
+  Locker
 } = require('@wirelineio/utils');
 
 const schema = require('./schema.js');
 
 const codec = codecProtobuf(schema);
 
+/**
+ * Feedmap manages a collection of hypercores.
+ */
 class FeedMap extends EventEmitter {
+
+  // TODO(burdon): Remove static methods.
+
+  // TODO(burdon): Not used?
   static get codec() {
     return codec;
   }
@@ -57,6 +66,7 @@ class FeedMap extends EventEmitter {
     return feed.loaded && !feed.closed;
   }
 
+  // TODO(burdon): No.
   static addNewFeedMethods(feed) {
     const newFeed = feed;
 
@@ -70,30 +80,66 @@ class FeedMap extends EventEmitter {
     return newFeed;
   }
 
-  constructor({ storage, opts = {}, repository }) {
+  /**
+   * @param {{ read, write }} storage - random-access-storage
+   * @param {Repository} repository
+   * @param opts
+   */
+  // TODO(burdon): Params not objects.
+  constructor({ storage, repository, opts = {} }) {
     super();
+    console.assert(storage);
+    console.assert(repository);
 
-    this._feeds = new Map();
-
+    // TODO(burdon): This gets passed around a lot.
     this._storage = storage;
 
-    this._types = opts.types || {};
+    // TODO(burdon): Why storage AND repository?
+    // TODO(burdon): Remove dependency on Repository (and other utils).
+    this._repository = repository;
 
     this._opts = Object.assign({}, opts, {
-      // we purge the options to get a default options for every feed
+      // Purge the options to get default options for every feed.
+      // TODO(burdon): Then don't pass them in?
       feeds: undefined,
       secretKey: undefined,
       types: undefined
     });
 
-    this._repository = repository;
+    /**
+     * @type {Map<string, {megafeed.Feed}>} Map of protocol buffer definitions.
+     */
+    // TODO(burdon): Are these hypercores or mutant hypercore/protocol buffer hybrids?
+    this._feeds = new Map();
 
+    /**
+     * @type {Map<string, Function>} Map of hypercore constructors.
+     */
+    // TODO(burdon): Why?
+    this._types = opts.types || {};
+
+    // TODO(burdon): Why?
     this._locker = new Locker();
   }
 
+  toString() {
+    const meta = {
+      size: this._feeds.size
+    };
+
+    return `FeedMap(${JSON.stringify(meta)})`;
+  }
+
+  /**
+   * TODO(burdon): ???
+   * @param initFeeds
+   * @return {Promise<void>}
+   */
   async initFeeds(initFeeds = []) {
+    // TODO(burdon): Not required.
     const repository = this._repository;
 
+    // TODO(burdon): Construct repository with codec rather than spec each time?
     const persistedFeeds = (await repository.getList({ codec }))
       .map(value => Object.assign({}, value, { persist: false }));
 
@@ -239,9 +285,7 @@ class FeedMap extends EventEmitter {
     /* eslint-enable */
   }
 
-  async addFeed({
-    name = null, storage = null, key = null, ...userOpts
-  } = {}) {
+  async addFeed({ name = null, storage = null, key = null, ...userOpts } = {}) {
     const opts = userOpts;
     let feedName = name;
     let hexKey = key && keyToHex(key);
@@ -261,11 +305,7 @@ class FeedMap extends EventEmitter {
         return true;
       }
 
-      if (f.name === feedName) {
-        return true;
-      }
-
-      return false;
+      return (f.name === feedName);
     });
 
     if (feed) {
@@ -341,7 +381,7 @@ class FeedMap extends EventEmitter {
     const feeds = Array.from(this._feeds.values()).filter(feed => filterFeedByPattern(feed, pattern));
 
     try {
-      const result = await Promise.all(
+      return await Promise.all(
         feeds.map((feed) => {
           if (feed.loaded) {
             return feed;
@@ -351,7 +391,6 @@ class FeedMap extends EventEmitter {
           return this.openFeed(feed.name, opts.storage, feed.key, opts);
         }),
       );
-      return result;
     } catch (err) {
       debug(err);
       throw err;

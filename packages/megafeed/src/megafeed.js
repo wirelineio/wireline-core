@@ -14,7 +14,9 @@ const eos = require('end-of-stream');
 const through = require('through2');
 const pump = require('pump');
 
+// TODO(burdon): Remove dependency.
 const { PartyMap, Party } = require('@wirelineio/party');
+
 const {
   callbackPromise,
   keyToHex,
@@ -25,7 +27,7 @@ const {
   bubblingEvents
 } = require('@wirelineio/utils');
 
-const FeedMap = require('./feed-map');
+const FeedMap = require('./feedmap');
 
 class Megafeed extends EventEmitter {
   /**
@@ -405,5 +407,7 @@ class Megafeed extends EventEmitter {
   }
 }
 
+// TODO(burdon): Move compatibility wrappers to index.js
 module.exports = (...args) => new Megafeed(...args);
+
 module.exports.Megafeed = Megafeed;
