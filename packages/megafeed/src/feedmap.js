@@ -26,7 +26,7 @@ const codec = Protobuf(schema);
 /**
  * Feedmap manages a collection of hypercores.
  */
-class FeedMap extends EventEmitter {
+export default class FeedMap extends EventEmitter {
 
   // TODO(burdon): Remove static methods.
 
@@ -460,5 +460,3 @@ class FeedMap extends EventEmitter {
     }
   }
 }
-
-module.exports = FeedMap;
