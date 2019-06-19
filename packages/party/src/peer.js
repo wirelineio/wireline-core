@@ -4,13 +4,11 @@
 
 const { EventEmitter } = require('events');
 const crypto = require('crypto');
-
 const debug = require('debug')('party-map:peer');
 
-const codec = require('./codec');
+const { keyToBuffer } = require('@wirelineio/utils');
 
-// utils
-const { keyToBuffer } = require('./utils/keys');
+const codec = require('./codec');
 
 class Peer extends EventEmitter {
   static _parseTransactionMessages(type, message = {}) {

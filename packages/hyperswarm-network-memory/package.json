@@ -1,0 +1,41 @@
+{
+  "name": "@wirelineio/hyperswarm-network-memory",
+  "version": "0.1.18",
+  "description": "Wireline hyperswarm network implementation in memory.",
+  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/hyperswarm-network-memory#readme",
+  "bugs": {
+    "url": "https://github.com/wirelineio/wireline-core/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wirelineio/wireline-core.git"
+  },
+  "license": "GPL-3.0",
+  "main": "dist/index",
+  "module": "src/index",
+  "scripts": {
+    "build": "npm run clean && babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps",
+    "clean": "rm -rf dist",
+    "lint": "eslint ./src --ignore-path ../../.eslintignore",
+    "test": "jest --verbose",
+    "posttest": "npm run lint",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "browserslist": [
+    "> 5%"
+  ],
+  "dependencies": {
+    "end-of-stream": "^1.4.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.4.4",
+    "@babel/core": "^7.4.5",
+    "@babel/preset-env": "^7.4.5",
+    "babel-jest": "^24.8.0",
+    "eslint": "^5.16.0",
+    "jest": "^24.8.0"
+  }
+}

@@ -15,13 +15,17 @@ const through = require('through2');
 const pump = require('pump');
 
 const { PartyMap, Party } = require('@wirelineio/party');
+const {
+  callbackPromise,
+  getDiscoveryKey,
+  keyToBuffer,
+  keyToHex,
+  parsePartyPattern,
+  filterFeedByPattern
+} = require('@wirelineio/utils');
+
 const createRoot = require('./root');
 const FeedMap = require('./feed-map');
-
-// utils
-const { callbackPromise } = require('./utils/promise-help');
-const { getDiscoveryKey, keyToBuffer, keyToHex } = require('./utils/keys');
-const { parsePartyPattern } = require('./utils/glob');
 
 class Megafeed extends EventEmitter {
 
@@ -114,6 +118,11 @@ class Megafeed extends EventEmitter {
 
   get secretKey() {
     return this._root.feed.secretKey;
+  }
+
+  // eslint-disable-next-line
+  get isMegafeed() {
+    return true;
   }
 
   /** * Feeds API ** */
@@ -319,7 +328,7 @@ class Megafeed extends EventEmitter {
     const { filter } = opts;
 
     if (filter) {
-      feeds = feeds.filter(feed => feed.match(filter));
+      feeds = feeds.filter(feed => filterFeedByPattern(feed, filter));
     }
 
     feeds.forEach((feed) => {
@@ -330,7 +339,7 @@ class Megafeed extends EventEmitter {
 
     const onFeed = (feed) => {
       feed.ready(() => {
-        if (filter && !feed.match(filter)) {
+        if (filter && !filterFeedByPattern(feed, filter)) {
           return;
         }
 
@@ -367,7 +376,7 @@ class Megafeed extends EventEmitter {
 
         const pattern = parsePartyPattern(party);
 
-        const feeds = this.feeds().filter(feed => feed.match(pattern));
+        const feeds = this.feeds().filter(feed => filterFeedByPattern(feed, pattern));
 
         await peer.introduceFeeds({
           keys: feeds.map(feed => feed.key)
@@ -376,7 +385,7 @@ class Megafeed extends EventEmitter {
         feeds.forEach(feed => peer.replicate(feed));
 
         this.on('feed', async (feed) => {
-          if (!feed.match(pattern)) {
+          if (!filterFeedByPattern(feed, pattern)) {
             return;
           }
 

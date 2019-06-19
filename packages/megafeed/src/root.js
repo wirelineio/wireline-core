@@ -5,8 +5,7 @@
 const pify = require('pify');
 const hypertrie = require('hypertrie');
 
-// utils
-const { keyToHex } = require('./utils/keys');
+const { keyToHex } = require('@wirelineio/utils');
 
 module.exports = function createRoot(storage, rootKey, opts) {
   const root = hypertrie(storage, rootKey, Object.assign({}, opts, {

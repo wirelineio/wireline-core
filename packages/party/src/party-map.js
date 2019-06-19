@@ -9,13 +9,12 @@ const crypto = require('crypto');
 const mm = require('micromatch');
 const protocol = require('hypercore-protocol');
 
+const { keyToHex } = require('@wirelineio/utils');
+
 const createStorage = require('./storage');
 const Rules = require('./rules');
 const Party = require('./party');
 const codec = require('./codec');
-
-// utils
-const { keyToHex } = require('./utils/keys');
 
 class PartyMap extends EventEmitter {
   static get codec() {
@@ -31,7 +30,7 @@ class PartyMap extends EventEmitter {
 
     this.id = opts.id || crypto.randomBytes(32);
 
-    if (typeof opts === 'object' && opts.constructor.name === 'Megafeed') {
+    if (typeof opts === 'object' && opts.isMegafeed) {
       this.storage = createStorage(opts._root);
       this._megaReady = () => opts.ready();
       this._megaFindFeed = ({ discoveryKey }) => opts.feedByDK(discoveryKey);
@@ -126,13 +125,6 @@ class PartyMap extends EventEmitter {
     const partiesLoaded = this.list().map(party => keyToHex(party.key));
 
     const partiesPersisted = (await this.storage.getPartyList({ codec }))
-      .map((msg) => {
-        if (Buffer.isBuffer(msg)) {
-          return PartyMap.decode(msg).value;
-        }
-
-        return msg.value;
-      })
       .filter(party => !partiesLoaded.includes(keyToHex(party.key)));
 
     const partiesToLoad = partiesPersisted.filter((party) => {
@@ -144,7 +136,7 @@ class PartyMap extends EventEmitter {
     });
 
     try {
-      return await Promise.all(partiesToLoad.map(party => this.setParty(party)));
+      return await Promise.all(partiesToLoad.map(party => this.addParty(party)));
     } catch (err) {
       throw err;
     }

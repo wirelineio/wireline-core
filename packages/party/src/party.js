@@ -8,7 +8,8 @@ const protocol = require('hypercore-protocol');
 const eos = require('end-of-stream');
 const debug = require('debug')('party-map:party');
 
-const { keyToHex, keyToBuffer, getDiscoveryKey } = require('./utils/keys');
+const { keyToHex, keyToBuffer, getDiscoveryKey } = require('@wirelineio/utils');
+
 const Peer = require('./peer');
 const Rules = require('./rules');
 

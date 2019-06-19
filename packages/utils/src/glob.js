@@ -1,3 +1,7 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 const mm = require('micromatch');
 
 const { keyToHex, getDiscoveryKey } = require('./keys');
@@ -10,7 +14,7 @@ const parseMetadata = (metadata) => {
   }
 };
 
-const filterFeedByPattern = feed => (pattern) => {
+const filterFeedByPattern = (feed, pattern) => {
   const list = [feed.name, keyToHex(feed.key), keyToHex(getDiscoveryKey(feed.key))].filter(Boolean);
 
   if (feed.secretKey) {

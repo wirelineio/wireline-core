@@ -7,12 +7,15 @@ const hypercore = require('hypercore');
 const crypto = require('hypercore-crypto');
 const pify = require('pify');
 const debug = require('debug')('megafeed:feed-map');
-const codecProtobuf = require('@wirelineio/codec-protobuf');
 
-// utils
-const { keyToHex, getDiscoveryKey, keyToBuffer } = require('./utils/keys');
-const Locker = require('./utils/locker');
-const { filterFeedByPattern } = require('./utils/glob');
+const codecProtobuf = require('@wirelineio/codec-protobuf');
+const {
+  keyToHex,
+  getDiscoveryKey,
+  keyToBuffer,
+  Locker,
+  filterFeedByPattern
+} = require('@wirelineio/utils');
 
 const schema = require('./schema.js');
 
@@ -63,9 +66,6 @@ class FeedMap extends EventEmitter {
         newFeed[`p${prop[0].toUpperCase() + prop.slice(1)}`] = pify(feed[prop].bind(feed));
       }
     });
-
-    // Match glob pattern function
-    newFeed.match = filterFeedByPattern(newFeed);
 
     return newFeed;
   }
@@ -126,9 +126,10 @@ class FeedMap extends EventEmitter {
         }
 
         if (opts.key) {
+          const unloadedFeed = Object.assign({}, opts, { loaded: false });
           this._feeds.set(
             keyToHex(getDiscoveryKey(opts.key)),
-            Object.assign({}, opts, { loaded: false }),
+            unloadedFeed
           );
         }
 
@@ -337,7 +338,7 @@ class FeedMap extends EventEmitter {
       pattern = keyToHex(pattern);
     }
 
-    const feeds = Array.from(this._feeds.values()).filter(feed => feed.match(pattern));
+    const feeds = Array.from(this._feeds.values()).filter(feed => filterFeedByPattern(feed, pattern));
 
     try {
       const result = await Promise.all(

@@ -1,0 +1,50 @@
+{
+  "name": "@wirelineio/dsuite-core",
+  "version": "0.1.20",
+  "description": "Wireline wrapper for kappa.",
+  "homepage": "https://github.com/wirelineio/dsuite#readme",
+  "bugs": {
+    "url": "https://github.com/wirelineio/dsuite/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wirelineio/dsuite.git"
+  },
+  "license": "GPL-3.0",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint **/*.js --ignore-path ../../.eslintignore",
+    "signal": "discovery-signal-webrtc -p 4000"
+  },
+  "dependencies": {
+    "@geut/discovery-swarm-webrtc": "^2.0.0-alpha.18",
+    "@wirelineio/automerge-worker": "^0.1.12",
+    "@wirelineio/megafeed": "^0.1.20",
+    "@wirelineio/wire-inspect": "^0.1.17",
+    "bufferutil": "^4.0.1",
+    "charwise": "^3.0.1",
+    "debug": "^4.1.1",
+    "domexception": "^1.0.1",
+    "hypercore-crypto": "^1.0.0",
+    "hyperid": "^2.0.2",
+    "kappa-core": "^2.6.2",
+    "kappa-view-level": "^1.1.0",
+    "levelup": "^4.0.1",
+    "memdown": "^4.0.0",
+    "monotonic-timestamp": "0.0.9",
+    "multi-read-stream": "^2.0.0",
+    "pump": "^3.0.0",
+    "random-access-memory": "^3.1.1",
+    "request": "^2.88.0",
+    "request-promise-native": "^1.0.7",
+    "stream-sort": "^1.1.0",
+    "subleveldown": "^3.0.1",
+    "through2": "^3.0.0",
+    "utf-8-validate": "^5.0.2",
+    "varint": "^5.0.0",
+    "wrtc": "^0.3.5"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
