@@ -8,7 +8,7 @@ const { encodeFeedKey, decodeFeedKey } = require('../protocol/feeds');
  * setPartyRules
  * @param dsuite {DSuite}
  */
-// TODO(burdon): Rename this variable--what actually is it?
+// TODO(burdon): Rename dsuite.
 module.exports = function setRules(dsuite) {
   const { core, mega } = dsuite;
 
@@ -21,7 +21,7 @@ module.exports = function setRules(dsuite) {
     },
 
     async getParticipantKeys(partyKey) {
-      const participants = await dsuite.api.participants.getParticipants({ partyKey });
+      const participants = await dsuite.api['participants'].getParticipants({ partyKey });
 
       return participants.reduce((prev, participant) => (
         [
@@ -30,7 +30,6 @@ module.exports = function setRules(dsuite) {
           encodeFeedKey('party-feed', participant.author)
         ]),
       []);
-
     },
 
     async handshake({ peer }) {
@@ -74,9 +73,9 @@ module.exports = function setRules(dsuite) {
         });
       };
 
-      core.api.participants.events.on('participant', onParticipant);
+      core.api['participants'].events.on('participant', onParticipant);
       peer.on('destroy', () => {
-        core.api.participants.events.removeListener('participant', onParticipant);
+        core.api['participants'].events.removeListener('participant', onParticipant);
       });
     },
 
@@ -88,7 +87,6 @@ module.exports = function setRules(dsuite) {
         const { type, key } = decodeFeedKey(feedKey);
 
         let name;
-
         if (type === 'party-feed') {
           name = dsuite.getPartyName(partyKey, key);
         } else {

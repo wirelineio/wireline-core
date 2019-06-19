@@ -2,8 +2,8 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const view = require('kappa-view-level');
 const EventEmitter = require('events');
+const view = require('kappa-view-level');
 const sub = require('subleveldown');
 
 const { streamToList } = require('../utils/stream');
@@ -27,16 +27,15 @@ module.exports = function ContactsView(dsuite) {
   return view(viewDB, {
     map(msg) {
       const { value } = msg;
-
       if (!value.type.startsWith('contact.')) {
         return [];
       }
 
       const type = value.type.replace('contact.', '');
-
       switch (type) {
         case 'set-profile':
           return [[uuid('profile', value.author), value]];
+
         default:
           return [];
       }
@@ -73,9 +72,7 @@ module.exports = function ContactsView(dsuite) {
       getContacts(core, opts = {}) {
         const fromKey = uuid('profile');
         const toKey = `${fromKey}~`;
-
         const reader = viewDB.createValueStream({ gte: fromKey, lte: toKey, reverse: opts.reverse });
-
         return streamToList(reader, (msg, next) => {
           if (msg.author === feedKey) {
             return next(false);

@@ -2,15 +2,16 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const view = require('kappa-view-level');
 const EventEmitter = require('events');
+const view = require('kappa-view-level');
 const sub = require('subleveldown');
 
-const { streamToList } = require('../utils/stream');
 const { append } = require('../protocol/messages');
+const { streamToList } = require('../utils/stream');
 
 const serializeChanges = change => (typeof change === 'string' ? change : JSON.stringify(change));
 
+// TODO(burdon): Rename LogView.
 module.exports = function LogsView(dsuite, { viewId }) {
   const { uuid, db } = dsuite;
 
@@ -22,20 +23,17 @@ module.exports = function LogsView(dsuite, { viewId }) {
   return view(viewDB, {
     map(msg) {
       const { value } = msg;
-
       if (!value.type.startsWith(`item.${viewId}.`)) {
         return [];
       }
-
-      const type = value.type.replace(`item.${viewId}.`, '');
 
       const partyKey = dsuite.getPartyKeyFromFeedKey(msg.key);
       value.partyKey = partyKey;
 
       const { itemId } = value.data;
+      dsuite.core.api['items'].updatePartyByItemId(itemId, partyKey);
 
-      dsuite.core.api.items.updatePartyByItemId(itemId, partyKey);
-
+      const type = value.type.replace(`item.${viewId}.`, '');
       if (type === 'change') {
         return [[uuid('change', partyKey, itemId, value.timestamp), value]];
       }
@@ -66,7 +64,7 @@ module.exports = function LogsView(dsuite, { viewId }) {
 
     api: {
       async create(core, { type, title = 'Untitled', partyKey }) {
-        return core.api.items.create({ type, title, partyKey });
+        return core.api['items'].create({ type, title, partyKey });
       },
 
       async getById(core, itemId) {
@@ -75,7 +73,7 @@ module.exports = function LogsView(dsuite, { viewId }) {
 
         const {
           data: { title, type }
-        } = await core.api.items.getInfo(itemId);
+        } = await core.api['items'].getInfo(itemId);
 
         return {
           itemId,
@@ -92,7 +90,7 @@ module.exports = function LogsView(dsuite, { viewId }) {
       },
 
       async getChanges(core, itemId, opts = {}) {
-        const { partyKey } = core.api.items.getPartyForItemId(itemId);
+        const { partyKey } = core.api['items'].getPartyForItemId(itemId);
         const query = { reverse: opts.reverse };
         const fromKey = uuid('change', partyKey, itemId, opts.lastChange);
         const toKey = `${uuid('change', partyKey, itemId)}~`;
@@ -113,7 +111,7 @@ module.exports = function LogsView(dsuite, { viewId }) {
       },
 
       async appendChange(core, itemId, changes) {
-        const { feed } = core.api.items.getPartyForItemId(itemId);
+        const { feed } = core.api['items'].getPartyForItemId(itemId);
 
         return append(feed, {
           type: `item.${viewId}.change`,

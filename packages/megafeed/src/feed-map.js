@@ -191,7 +191,7 @@ class FeedMap extends EventEmitter {
 
       feed = FeedMap.addNewFeedMethods(feed);
 
-      feed.setMaxListeners(256);
+      feed.setMaxListeners(Infinity);
 
       feed.name = name;
       feed.loaded = true;

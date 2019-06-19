@@ -2,10 +2,10 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const view = require('kappa-view-level');
 const EventEmitter = require('events');
-const sub = require('subleveldown');
 const hyperid = require('hyperid');
+const view = require('kappa-view-level');
+const sub = require('subleveldown');
 
 const { streamToList } = require('../utils/stream');
 const { append } = require('../protocol/messages');
@@ -32,20 +32,17 @@ module.exports = function ItemsView(dsuite) {
   return view(viewDB, {
     map(msg) {
       const { value } = msg;
-
       if (!value.type.startsWith('item.')) {
         return [];
       }
-
-      const type = value.type.replace('item.', '');
 
       const partyKey = dsuite.getPartyKeyFromFeedKey(msg.key);
       value.partyKey = partyKey;
 
       const { itemId } = value.data;
+      dsuite.core.api['items'].updatePartyByItemId(itemId, partyKey);
 
-      dsuite.core.api.items.updatePartyByItemId(itemId, partyKey);
-
+      const type = value.type.replace('item.', '');
       if (type === 'metadata') {
         if (timestampItems.get(itemId) >= value.timestamp) {
           return [];
@@ -80,7 +77,7 @@ module.exports = function ItemsView(dsuite) {
           partyKey
         });
 
-        await core.api.items.setInfo({
+        await core.api['items'].setInfo({
           itemId,
           type,
           title
@@ -102,16 +99,16 @@ module.exports = function ItemsView(dsuite) {
       },
 
       async getInfo(core, itemId) {
-        const { partyKey } = core.api.items.getPartyForItemId(itemId);
+        const { partyKey } = core.api['items'].getPartyForItemId(itemId);
         return viewDB.get(uuid('metadata', partyKey, itemId));
       },
 
       async setInfo(core, data) {
-        const { feed } = core.api.items.getPartyForItemId(data.itemId);
+        const { feed } = core.api['items'].getPartyForItemId(data.itemId);
 
         let msg = {};
         try {
-          msg = await core.api.items.getInfo(data.itemId);
+          msg = await core.api['items'].getInfo(data.itemId);
         } catch (e) {
           // eslint-disable-next-line no-empty
         }
@@ -121,9 +118,11 @@ module.exports = function ItemsView(dsuite) {
 
       onChange(core, itemId, cb) {
         const handler = async ({ data: { itemId: id } }) => {
-          if (id !== itemId) return;
+          if (id !== itemId) {
+            return;
+          }
 
-          const { data } = await core.api.itmes.getInfo(itemId);
+          const { data } = await core.api['itmes'].getInfo(itemId);
 
           cb({ ...data });
         };
