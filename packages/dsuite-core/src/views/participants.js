@@ -2,8 +2,8 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const view = require('kappa-view-level');
 const EventEmitter = require('events');
+const view = require('kappa-view-level');
 const sub = require('subleveldown');
 
 const { streamToList } = require('../utils/stream');
@@ -38,6 +38,7 @@ module.exports = function ParticipantsView(dsuite) {
       switch (type) {
         case 'bind-profile':
           return [[uuid('participant', partyKey, value.author), value]];
+
         default:
           return [];
       }
@@ -108,7 +109,7 @@ module.exports = function ParticipantsView(dsuite) {
       async getContacts(core, opts = {}) {
         const participants = await core.api['participants'].getParticipants(opts);
         return Promise.all(participants.map(
-          participant => core.api.contacts.getProfile({ key: participant.data.controlKey })
+          participant => core.api['contacts'].getProfile({ key: participant.data.controlKey })
         ));
       },
 
@@ -117,7 +118,7 @@ module.exports = function ParticipantsView(dsuite) {
           const partyKey = opts.partyKey || currentPartyKey;
           const key = opts.key || dsuite.getLocalPartyFeed(partyKey).key.toString('hex');
           const participant = await viewDB.get(uuid('participant', partyKey, key));
-          return core.api.contacts.getProfile({ key: participant.data.controlKey });
+          return core.api['contacts'].getProfile({ key: participant.data.controlKey });
         } catch (error) {
           if (error.notFound) {
             return;
@@ -129,7 +130,7 @@ module.exports = function ParticipantsView(dsuite) {
 
       // Redirect to the contact setProfile.
       async setProfile(core, opts) {
-        return core.api.contacts.setProfile(opts);
+        return core.api['contacts'].setProfile(opts);
       },
 
       isMyProfile(core, key, partyKey) {
