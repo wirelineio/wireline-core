@@ -3,7 +3,10 @@
 //
 
 const { EventEmitter } = require('events');
+const path = require('path');
+
 const hypercore = require('hypercore');
+const raf = require('random-access-file');
 const crypto = require('hypercore-crypto');
 const pify = require('pify');
 const debug = require('debug')('megafeed:feed-map');
@@ -75,7 +78,18 @@ class FeedMap extends EventEmitter {
 
     this._feeds = new Map();
 
-    this._storage = storage;
+    this._defaultStorage = storage;
+
+    this._storage = (dir, customStorage) => {
+      const ras = customStorage || this._defaultStorage;
+
+      return (name) => {
+        if (typeof ras === 'string') {
+          return raf(path.join(ras, dir, name));
+        }
+        return ras(`${dir}/${name}`);
+      };
+    };
 
     this._types = opts.types || {};
 

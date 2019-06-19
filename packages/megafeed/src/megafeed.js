@@ -3,12 +3,10 @@
 //
 
 const assert = require('assert');
-const path = require('path');
 const { EventEmitter } = require('events');
 
 const pify = require('pify');
 const hypertrie = require('hypertrie');
-const raf = require('random-access-file');
 const multi = require('multi-read-stream');
 const eos = require('end-of-stream');
 const through = require('through2');
@@ -61,26 +59,13 @@ class Megafeed extends EventEmitter {
 
     const feeds = opts.feeds || [];
 
-    this._defaultStorage = storage;
-
-    this._storage = (dir, customStorage) => {
-      const ras = customStorage || this._defaultStorage;
-
-      return (name) => {
-        if (typeof ras === 'string') {
-          return raf(path.join(ras, dir, name));
-        }
-        return ras(`${dir}/${name}`);
-      };
-    };
-
     // We save all our personal information like the feed list in a private feed
     this._db = hypertrie(storage, rootKey, { secretKey: opts.secretKey });
 
     // Feeds manager instance
     this._feeds = new FeedMap({
       repository: new Repository({ db: this._db, namespace: 'feeds' }),
-      storage: this._storage,
+      storage,
       opts
     });
 
