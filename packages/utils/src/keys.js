@@ -5,14 +5,18 @@
 const crypto = require('hypercore-crypto');
 
 function keyToBuffer(key) {
+  // TODO(burdon): Defensive.
+  console.assert(key);
   if (!key) {
     return key;
   }
 
+  // TODO(burdon): Be consistent.
   return Buffer.isBuffer(key) ? key : Buffer.from(key, 'hex');
 }
 
 exports.keyToHex = (key) => {
+  // TODO(burdon): Force consistency.
   if (Buffer.isBuffer(key)) {
     return key.toString('hex');
   }

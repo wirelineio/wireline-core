@@ -20,6 +20,7 @@ class Repository {
    * @param {string} options.namespace Key to group the data.
    * @returns {undefined}
    */
+  // TODO(burdon): always assume hypertrie?
   constructor(options = {}) {
     const { db, namespace } = options;
 
@@ -36,6 +37,7 @@ class Repository {
     return this._dbReady();
   }
 
+  // TODO(burdon): list
   async getList({ codec }) {
     const list = await this._dbList(`${this._namespace}/`);
     return list.map(({ value }) => codec.decode(value));

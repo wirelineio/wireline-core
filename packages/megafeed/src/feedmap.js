@@ -88,6 +88,13 @@ export default class FeedMap extends EventEmitter {
     return newFeed;
   }
 
+  /*
+   const db = new Database(hypertrie);
+   const feedMap = new FeedMap(db);           // no caching (e.g., loaded); replace with hyperdrive? (mounting?)
+   await feedMap.getFeedsForTopic('xxx');     // db.query(key = '/party/xxx').
+   const mf = new MF(feedMap);
+   */
+
   /**
    * @param {{ read, write }} storage - random-access-storage
    * @param {Repository} repository
@@ -99,11 +106,10 @@ export default class FeedMap extends EventEmitter {
     console.assert(storage);
     console.assert(repository);
 
-    // TODO(burdon): This gets passed around a lot.
+    // TODO(burdon): This gets passed around a lot. Externalize factory.
     this._storage = storage;
 
-    // TODO(burdon): Why storage AND repository?
-    // TODO(burdon): Remove dependency on Repository (and other utils).
+    // TODO(burdon): Index (and storage) for all feed metadata.
     this._repository = repository;
 
     this._opts = Object.assign({}, opts, {
@@ -117,6 +123,7 @@ export default class FeedMap extends EventEmitter {
     /**
      * @type {Map<string, {megafeed.Feed}>} Map of protocol buffer definitions.
      */
+    // TODO(burdon): Hex string of key.
     // TODO(burdon): Are these hypercores or mutant hypercore/protocol buffer hybrids?
     // TODO(burdon): Confusing to use "feed" for both proto objects and hypercores.
     this._feeds = new Map();
@@ -124,7 +131,7 @@ export default class FeedMap extends EventEmitter {
     /**
      * @type {Map<string, Function>} Map of hypercore constructors.
      */
-    // TODO(burdon): Why?
+    // TODO(burdon): Consider hypertries for indexes.
     this._types = opts.types || {};
 
     // TODO(burdon): Why?
@@ -140,19 +147,19 @@ export default class FeedMap extends EventEmitter {
   }
 
   /**
-   * TODO(burdon): Load?
-   * @param initFeeds
-   * @return {Promise<void>}
+   * @param initFeeds - Feeds to load or create.
    */
-  // TODO(burdon): Why pass in array?
+  // TODO(burdon): Prefer to have no initialization or special semantics.
   async initFeeds(initFeeds = []) {
+
     // TODO(burdon): Not required.
     const repository = this._repository;
 
     // TODO(burdon): Load all feeds protos?
     // TODO(burdon): Construct repository with codec rather than spec each time?
-    const persistedFeeds = (await repository.getList({ codec }))
-      .map(value => Object.assign({}, value, { persist: false }));
+    const list = await repository.getList({ codec });
+    // TODO(burdon): What does persist: false mean?
+    const persistedFeeds = list.map(value => Object.assign({}, value, { persist: false }));
 
     const feeds = persistedFeeds
       .concat(
@@ -174,51 +181,34 @@ export default class FeedMap extends EventEmitter {
       )
       .map(feed => Object.assign({}, feed, { load: feed.load === undefined ? true : feed.load }));
 
-    // TODO(burdon): Where is the async?
+    // Wait for concurrent async activity.
     await Promise.all(
       feeds.map((opts) => {
-        const { fromInit } = opts;
+        const { load, key, fromInit } = opts;
 
-        if (opts.load || fromInit) {
+        // TODO(burdon): fromInit?
+        if (load || fromInit) {
           return this.addFeed(opts);
         }
 
-        if (opts.key) {
+        if (key) {
           const unloadedFeed = Object.assign({}, opts, { loaded: false });
-          this._feeds.set(keyToHex(getDiscoveryKey(opts.key)), unloadedFeed);
+          this._feeds.set(keyToHex(getDiscoveryKey(key)), unloadedFeed);
         }
 
-        // TODO(burdon): Why?
         return null;
-      }),
+      })
     );
   }
 
   //
   // API
-  // TODO(burdon): Group methods (e.g., open, close).
+  // TODO(burdon): Grouping methods (e.g., open, close).
   //
 
-  // TODO(burdon): getFeed (verb-noun).
-  feed(key, all = false) {
-    const hexKey = keyToHex(key);
-
-    const feed = this.feedByDK(hexKey, all);
-
-    if (feed) {
-      return feed;
-    }
-
-    return this.feeds(all).find(
-      f => f.name === hexKey || (f.key && keyToHex(f.key) === hexKey),
-    );
-  }
-
-  // TODO(burdon): Gets just one?
+  // TODO(burdon): Always one?
   feedByDK(key, all = false) {
-    const hexKey = keyToHex(key);
-
-    const feed = this._feeds.get(hexKey);
+    const feed = this._feeds.get(keyToHex(key));
     if (feed && !all && feed.loaded) {
       return feed;
     }
@@ -226,7 +216,20 @@ export default class FeedMap extends EventEmitter {
     return null;
   }
 
-  // TODO(burdon): Combine with above.
+  // TODO(burdon): getFeed (verbNoun).
+  feed(key, all = false) {
+    const hexKey = keyToHex(key);
+    const feed = this.feedByDK(hexKey, all);
+    if (feed) {
+      return feed;
+    }
+
+    return this.feeds(all).find(
+      f => (f.name === hexKey) || (f.key && keyToHex(f.key) === hexKey),
+    );
+  }
+
+  // TODO(burdon): Implicitely returns loaded feeds.
   feeds(all = false) {
     const feeds = Array.from(this._feeds.values());
     if (all) {
@@ -236,27 +239,47 @@ export default class FeedMap extends EventEmitter {
     return feeds.filter(f => f.loaded);
   }
 
+  /**
+   *
+   * @param name
+   * @param [storage]
+   * @param key
+   * @param options
+   */
+  // TODO(burdon): Private.
   // TODO(burdon): Inconsistent with {} syntax.
   async openFeed(name, storage, key, options) {
     const opts = Object.assign({}, this._opts, options);
 
     // By default persist the feed.
+    // TODO(burdon): This class shouldn't know about caching.
     if (opts.persist === undefined) {
       opts.persist = true;
     }
 
-    // TODO(burdon): Why?
+    // TODO(burdon): Dangerous: defeat race conditions? Externalize.
     const release = await this._locker.pLock(name);
 
+    /*
+      const feedMap = new FeedMap();
+
+      swarm.on('connect', (key) => {
+        const feed = await openFeed(name(key));
+      });
+     */
+
     try {
-      // TODO(burdon): Why?
+      // TODO(burdon): Should get existing if already exists.
+      // TODO(burdon): Move into factory?
       const createFeed = this._types[opts.type] || hypercore;
 
+      // TODO(burdon): Why pass in storage?
       let feed = createFeed(this._storage(name, storage), key, FeedMap.optsToHypercore(opts));
 
+      // TODO(burdon): Remove.
       feed = FeedMap.addNewFeedMethods(feed);
 
-      // TODO(burdon): Why?
+      // TODO(burdon): Move to factory.
       feed.setMaxListeners(256);
 
       // TODO(burdon): Must not add properties to third-party objects (collision).
@@ -265,30 +288,39 @@ export default class FeedMap extends EventEmitter {
       feed.silent = opts.silent;
       feed.announced = false;
 
-      // TODO(burdon): Leaky abstraction.
+      // TODO(burdon): Leaky abstraction: kappa adapter.
       feed.on('append', () => this.emit('append', feed));
       feed.on('download', (...args) => this.emit('download', ...args, feed));
 
+      /*
+        const feedMap = new FeedMap();
+        const core = kappa({ feedMapAdapter(feedMap); });
+       */
+
       await feed.pReady();
 
-      const discoveryKey = keyToHex(feed.discoveryKey);
-
-      // TODO(burdon): Open and save?
+      // TODO(burdon): Remove? Do we need transient feeds?
       if (opts.persist) {
         await this.persistFeed(feed, opts);
       }
 
-      this._feeds.set(discoveryKey, feed);
+      this._feeds.set(keyToHex(feed.discoveryKey), feed);
 
       await release();
 
-      // TODO(burdon): Why?
-      if (!feed.silent) {
-        this.announce(feed);
+      // TODO(burdon): Why silent?
+      // TODO(burdon): Move to Kappa adapter.
+      if (!feed.silent && !feed.announced) {
+        this.emit('feed:added', feed);
+        this.emit('feed', feed); // kappa support
+
+        feed.silent = false;
+        feed.announced = true;
       }
 
       return feed;
     } catch (err) {
+      // TODO(burdon): Standardize error handling.
       debug(err);
       await release();
       throw err;
@@ -297,7 +329,6 @@ export default class FeedMap extends EventEmitter {
 
   async closeFeed(key) {
     const feed = this.feed(key);
-
     if (!feed) {
       return null;
     }
@@ -309,33 +340,30 @@ export default class FeedMap extends EventEmitter {
     return null;
   }
 
-  // TODO(burdon): ???
-  announce(feed) {
-    if (feed.announced) {
-      return;
-    }
+  // RB: Vetos
+  // 1. babel
+  // 2. f(a, b=null, c=null, opts=null)
+  // 3.
 
-    this.emit('feed:added', feed);
-    this.emit('feed', feed); // kappa support
-
-    /* eslint-disable */
-    delete feed.silent;
-    feed.announced = true;
-    /* eslint-enable */
-  }
-
-  async addFeed({ name = null, storage = null, key = null, ...userOpts } = {}) {
+  // TODO(burdon): What are userOpts?
+  // TODO(burdon): Don't spread userOpts into params.
+  async addFeed({ storage = null, name = null, key = null, ...userOpts } = {}) {
+    // TODO(burdon): Not needed.
     const opts = userOpts;
-    let feedName = name;
+
     let hexKey = key && keyToHex(key);
 
+    let feedName = name;
     if (!feedName) {
       if (!hexKey) {
         const { publicKey, secretKey } = crypto.keyPair();
         hexKey = keyToHex(publicKey);
-        feedName = hexKey;
+        feedName = hexKey;  // TODO(burdon): Null.
         opts.secretKey = secretKey;
       }
+
+      // TODO(burdon): Name should be optional? (Strange to have default name; name is just an index).
+      // TODO(burdon): Need common "namespace" for hypertrie?
       feedName = hexKey;
     }
 
@@ -352,8 +380,8 @@ export default class FeedMap extends EventEmitter {
         return feed;
       }
 
+      // TODO(burdon): Singular method loadByName, loadByKey.
       const result = await this.loadFeeds([feed.name, keyToHex(feed.key)]);
-
       return result[0];
     }
 
@@ -364,7 +392,6 @@ export default class FeedMap extends EventEmitter {
     const repository = this._repository;
 
     const feed = this.feed(key);
-
     if (!feed) {
       return null;
     }
@@ -393,7 +420,6 @@ export default class FeedMap extends EventEmitter {
 
     try {
       const feed = await repository.get(key, { codec });
-
       if (!feed) {
         return null;
       }
@@ -410,7 +436,7 @@ export default class FeedMap extends EventEmitter {
     }
   }
 
-  // TODO(burdon): Make all methods plural.
+  // TODO(burdon): Make all methods plural?
   async loadFeeds(userPattern, options = {}) {
     let pattern = userPattern;
 
@@ -433,7 +459,7 @@ export default class FeedMap extends EventEmitter {
 
           const opts = Object.assign({}, feed, options);
           return this.openFeed(feed.name, opts.storage, feed.key, opts);
-        }),
+        })
       );
     } catch (err) {
       debug(err);
