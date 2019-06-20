@@ -4,9 +4,8 @@
 
 const { getDiscoveryKey } = require('@wirelineio/utils');
 
-// TODO(burdon): Remove dsuite dependency.
-module.exports = dsuite => (
-  {
+module.exports = ({ conf, swarm, partyManager }) => {
+  return {
     name: 'dsuite:bot',
 
     replicateOptions: {
@@ -24,7 +23,7 @@ module.exports = dsuite => (
       // If the peer is a user it sends a message with the partyKey.
       peer.sendEphemeralMessage({
         type: 'invite-to-party',
-        value: dsuite.currentPartyKey
+        value: partyManager.currentPartyKey
       });
     },
 
@@ -35,7 +34,7 @@ module.exports = dsuite => (
 
       if (dsuite.conf.isBot) {
         if (type === 'invite-to-party') {
-          await dsuite.connectToParty({ key: value });
+          await partyManager.connectToParty({ key: value });
 
           peer.sendEphemeralMessage({
             type: 'close',
@@ -43,7 +42,7 @@ module.exports = dsuite => (
           });
         }
       } else if (type === 'close') {
-        dsuite.swarm.leave(getDiscoveryKey(peer.partyKey));
+        swarm().leave(getDiscoveryKey(peer.partyKey));
       }
     }
   }

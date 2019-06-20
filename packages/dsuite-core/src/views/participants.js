@@ -11,12 +11,13 @@ const { uuid } = require('../utils/uuid');
 const { append } = require('../protocol/messages');
 
 module.exports = function ParticipantsView(dsuite) {
-  const { db } = dsuite;
+  const { core, mega, db, partyManager } = dsuite;
 
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
   let currentPartyKey;
+  // TODO(burdon): Events.
   dsuite.on('party-changed', ({ partyKey: newPartyKey }) => {
     currentPartyKey = newPartyKey.toString('hex');
   });
@@ -30,7 +31,7 @@ module.exports = function ParticipantsView(dsuite) {
         return [];
       }
 
-      const partyKey = dsuite.getPartyKeyFromFeedKey(msg.key);
+      const partyKey = partyManager.getPartyKeyFromFeedKey(msg.key);
       value.partyKey = partyKey;
 
       const type = value.type.replace('participant.', '');
@@ -53,7 +54,7 @@ module.exports = function ParticipantsView(dsuite) {
           if (event === 'bind-profile') {
             events.emit(event, value);
 
-            if (!dsuite.core.api['participants'].isMyProfile(value.author, value.partyKey)) {
+            if (!core.api['participants'].isMyProfile(value.author, value.partyKey)) {
               events.emit('participant', value);
             }
           }
@@ -66,13 +67,13 @@ module.exports = function ParticipantsView(dsuite) {
 
       // TODO(burdon): Comment.
       key() {
-        return dsuite.mega.key.toString('hex');
+        return mega.key.toString('hex');
       },
 
       async bindControlProfile(core, opts = {}) {
         const partyKey = opts.partyKey || currentPartyKey;
-        const feed = dsuite.getLocalPartyFeed(partyKey);
-        const controlKey = dsuite.mega.feed('control').key.toString('hex');
+        const feed = partyManager.getLocalPartyFeed(partyKey);
+        const controlKey = mega.feed('control').key.toString('hex');
 
         const profile = await core.api['participants'].getProfile({ partyKey });
 
@@ -115,7 +116,7 @@ module.exports = function ParticipantsView(dsuite) {
       async getProfile(core, opts = {}) {
         try {
           const partyKey = opts.partyKey || currentPartyKey;
-          const key = opts.key || dsuite.getLocalPartyFeed(partyKey).key.toString('hex');
+          const key = opts.key || partyManager.getLocalPartyFeed(partyKey).key.toString('hex');
           const participant = await viewDB.get(uuid('participant', partyKey, key));
           return core.api['contacts'].getProfile({ key: participant.data.controlKey });
         } catch (error) {
@@ -133,7 +134,7 @@ module.exports = function ParticipantsView(dsuite) {
       },
 
       isMyProfile(core, key, partyKey) {
-        const feed = dsuite.getLocalPartyFeed(partyKey || currentPartyKey);
+        const feed = partyManager.getLocalPartyFeed(partyKey || currentPartyKey);
         return feed && key === feed.key.toString('hex');
       },
 

@@ -12,8 +12,9 @@ const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
 const { append } = require('../protocol/messages');
 
+// TODO(burdon): Remove dsuite (events).
 module.exports = function DocumentsView(dsuite, { viewId }) {
-  const { db } = dsuite;
+  const { core, db, partyManager } = dsuite;
 
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
@@ -33,6 +34,7 @@ module.exports = function DocumentsView(dsuite, { viewId }) {
   } = automergeWorker;
 
   automergeWorker.on('status', () => {
+    // TODO(burdon): Move to local events?
     dsuite.emit('metric.kappa.document.status');
   });
 
@@ -43,11 +45,11 @@ module.exports = function DocumentsView(dsuite, { viewId }) {
         return [];
       }
 
-      const partyKey = dsuite.getPartyKeyFromFeedKey(msg.key);
+      const partyKey = partyManager.getPartyKeyFromFeedKey(msg.key);
       value.partyKey = partyKey;
 
       const { itemId } = value.data;
-      dsuite.core.api['items'].updatePartyByItemId(itemId, partyKey);
+      core.api['items'].updatePartyByItemId(itemId, partyKey);
 
       const type = value.type.replace(`item.${viewId}.`, '');
       if (type === 'change') {

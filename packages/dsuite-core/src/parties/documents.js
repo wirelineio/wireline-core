@@ -2,10 +2,10 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+const PartyManager = require('../parties/party_manager');
 const { encodeFeedKey, decodeFeedKey } = require('../protocol/feeds');
 
-// TODO(burdon): Remove dsuite dependency.
-module.exports = function setRules(dsuite) {
+module.exports = ({ core, mega, partyManager }) => {
   return {
     name: 'dsuite:documents',
 
@@ -15,7 +15,7 @@ module.exports = function setRules(dsuite) {
     },
 
     async getParticipantKeys(partyKey) {
-      const participants = await dsuite.core.api['participants'].getParticipants({ partyKey });
+      const participants = await core.api['participants'].getParticipants({ partyKey });
 
       return participants.reduce((prev, participant) => (
         [
@@ -30,8 +30,8 @@ module.exports = function setRules(dsuite) {
       dsuite.emit(`rule:${this.name}:handshake`, { rule: this, peer });
 
       const partyKey = peer.party.key.toString('hex');
-      const controlFeed = dsuite.mega.feed('control');
-      const feed = await dsuite.getLocalPartyFeed(partyKey);
+      const controlFeed = mega.feed('control');
+      const feed = await partyManager.getLocalPartyFeed(partyKey);
 
       const participantKeys = await this.getParticipantKeys(partyKey);
 
@@ -88,7 +88,7 @@ module.exports = function setRules(dsuite) {
 
         let name;
         if (type === 'party-feed') {
-          name = dsuite.getPartyName(partyKey, key);
+          name = PartyManager.getPartyName(partyKey, key);
         } else {
           name = `control-feed/${key.toString('hex')}`;
         }

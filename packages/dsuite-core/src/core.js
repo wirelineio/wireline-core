@@ -22,12 +22,20 @@ const {
 } = require('@wirelineio/utils');
 
 const swarm = require('./swarm');
-const viewTypes = require('./views');
-const botPartyRules = require('./rules/bots.js');
-const documentPartyRules = require('./rules/documents.js');
+const { ViewTypes, Views } = require('./views');
 
-// TODO(burdon): Rename Framework? (and rename variables "core" in other modules (not "kappa", "dsuite").
+const PartyManager = require('./parties/party_manager.js');
+const PartySerializer = require('./parties/serializer.js');
+
+const botPartyRules = require('./parties/bots.js');
+const documentPartyRules = require('./parties/documents.js');
+
+/**
+ * App framework.
+ */
 class DSuite extends EventEmitter {
+
+  // TODO(burdon): Move to appkit?
 
   /**
    * DSuite core. Creates kappa views and configs swarming.
@@ -49,46 +57,75 @@ class DSuite extends EventEmitter {
     this._conf = conf;
 
     const { db, keys, storage = ram } = this._conf;
-    const { publicKey: key, secretKey } = keys || {};
+
+    // Map of views indexed by name.
+    // TODO(burdon): Factor out ViewManager.
+    this._views = new Map();
+
+    // Created on initialize.
+    this._swarm = null;
+
+    //
+    // Megafeed
+    //
+
+    const feeds = [
+      {
+        name: 'control' // TODO(burdon): Factor out consts.
+      },
+      {
+        name: PartyManager.getPartyName(conf.partyKey, 'local'),
+        load: false
+      }
+    ];
 
     // Create megafeed.
+    const { publicKey: key, secretKey } = keys || {};
     this._mega = new Megafeed(storage, key, {
       valueEncoding: 'json',
-      secretKey
+      secretKey,
+      feeds
     });
 
-    // Set the replication rules.
-    // TODO(burdon): Remove dependency on this.
-    this._mega.setRules(documentPartyRules(this));
-    this._mega.setRules(botPartyRules(this));
+    const replicationRules = [
+      documentPartyRules({ core: this._core, mega: this._mega, partyManager: this._partyManager }),
+      botPartyRules({ conf, swarm: () => { return this._swarm; }, partyManager: this._partyManager })
+    ];
+
+    replicationRules.forEach(rule => this._mega.setRules(rule));
 
     // Metrics.
     this._mega.on('append', (feed) => {
       this.emit('metric.mega.append', { value: feed.key.toString('hex') });
     });
 
+    //
+    // Kappa
+    //
+
     // Create kapp views.
+    // TODO(burdon): Rename kappa.
     this._core = kappa(null, {
-      // TODO(burdon): Create Adapter.
-      multifeed: this._mega
+      multifeed: this._mega // TODO(burdon): Create Adapter.
     });
 
-    // TODO(burdon): Remove (or pass required components to stores).
-    // Sometimes we need access to the dsuite instance in our apollo stores.
+    // TODO(burdon): Remove: create custom view constructor/injector.
+    // Sometimes we need access to the dsuite instance in our apollo stores (e.g., IPFS serializer).
     this._core.dsuite = this;
 
     // TODO(burdon): Required for kappa.
     // In-memory cache for views.
     this._db = db || levelup(memdown());
 
-    // Map of views indexed by name.
-    this._views = new Map();
+    //
+    // Parties
+    //
 
-    // TODO(burdon): Currently only supports one party at a time?
-    this._currentPartyKey = null;
+    // Manages parties.
+    this._partyManager = new PartyManager(this, this._mega, this._core);
 
-    // Created on initialize.
-    this._swarm = null;
+    // Import/export
+    this._serializer = new PartySerializer(this);
   }
 
   //
@@ -113,13 +150,6 @@ class DSuite extends EventEmitter {
     return this._conf;
   }
 
-  // TODO(burdon): Remove (use core.api below). Check botkit, etc.
-  // @deprecated
-  get api() {
-    console.warn('deprecated');
-    return this._core.api;
-  }
-
   // TODO(burdon): Rename kappa.
   get core() {
     return this._core;
@@ -133,8 +163,12 @@ class DSuite extends EventEmitter {
     return this._swarm;
   }
 
-  get currentPartyKey() {
-    return this._currentPartyKey;
+  get partyManager() {
+    return this._partyManager;
+  }
+
+  get serializer() {
+    return this._serializer;
   }
 
   //
@@ -143,7 +177,7 @@ class DSuite extends EventEmitter {
 
   async initialize() {
     // Initialize control feed of the user.
-    await this.initializeFeeds();
+    await this._mega.addFeed({ name: 'control' });
 
     // Register kappa views.
     this.registerViews();
@@ -157,14 +191,14 @@ class DSuite extends EventEmitter {
 
     // TODO(burdon): Really needs a comment.
     if (this._conf.isBot) {
-      await this.connectToBot({
+      await this._partyManager.connectToBot({
         key: this._mega.key
       });
     }
 
     // TODO(burdon): Need to re-initialize if changed?
     if (this._conf.partyKey) {
-      await this.setParty({ key: this._conf.partyKey });
+      await this._partyManager.setParty({ key: this._conf.partyKey });
     }
 
     // Set Profile if name is provided.
@@ -179,36 +213,14 @@ class DSuite extends EventEmitter {
     this.emit('ready');
   }
 
-  async initializeFeeds() {
-    await this._mega.addFeed({ name: 'control' });
-  }
-
   //
-  // Views
+  // Kappa
   //
 
   registerViews() {
     // TODO(burdon): Remove plurals.
     // TODO(burdon): Prefer uniform core.api['view-id'] to access (makes it clearer this is a named extension).
-
-    // System views.
-
-    this.registerView({ name: 'contacts',       view: 'ContactsView' });
-    this.registerView({ name: 'participants',   view: 'ParticipantsView' });
-    this.registerView({ name: 'items',          view: 'ItemsView' });
-
-    // Dsuite views.
-
-    this.registerView({ name: 'documents',      view: 'DocumentsView' });
-    this.registerView({ name: 'presentations',  view: 'DocumentsView' });
-    this.registerView({ name: 'sheets',         view: 'DocumentsView' });
-    this.registerView({ name: 'graphs',         view: 'LogsView' });
-    this.registerView({ name: 'sketch',         view: 'LogsView' });
-    this.registerView({ name: 'kanban',         view: 'LogsView' });
-
-    // Custom views.
-
-    this.registerView({ name: 'chess',          view: 'LogsView' });
+    Views.forEach(view => this.registerView(view));
   }
 
   registerView({ name, view }) {
@@ -216,7 +228,7 @@ class DSuite extends EventEmitter {
       return this._views.get(name);
     }
 
-    const createView = (typeof view === 'string') ? viewTypes[view] : view;
+    const createView = (typeof view === 'string') ? ViewTypes[view] : view;
 
     this._core.use(name, createView(this, { viewId: name }));
 
@@ -224,152 +236,9 @@ class DSuite extends EventEmitter {
     return this._views.get(name);
   }
 
+  // TODO(burdon): Used by apollo (factor out ViewManager).
   hasView(name) {
     return this._views.has(name);
-  }
-
-  //
-  // Connecting
-  //
-
-  async connectToParty({ key }) {
-    const partyKey = keyToHex(key);
-
-    // TODO(burdon): Comment.
-    await this.createLocalPartyFeed(partyKey);
-
-    // Bind the control profile with the party that we are going to connect to.
-    await this._core.api['participants'].bindControlProfile({ partyKey });
-
-    return this._mega.addParty({
-      rules: 'dsuite:documents',
-      key: keyToBuffer(key)
-    });
-  }
-
-  async connectToBot({ key }) {
-    return this._mega.addParty({
-      rules: 'dsuite:bot',
-      key: keyToBuffer(key)
-    });
-  }
-
-  //
-  // Parties
-  //
-
-  isLocal(key, partyKey) {
-    const feed = this.getLocalPartyFeed(partyKey || this._currentPartyKey);
-
-    return feed && key === feed.key.toString('hex');
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  getPartyName(partyKey, feedKey) {
-    const partyKeyHex = keyToHex(partyKey);
-    const feedKeyHex = keyToHex(feedKey);
-    return `party-feed/${partyKeyHex}/${feedKeyHex}`;
-  }
-
-  getPartyKeyFromFeedKey(key) {
-    const feed = this._mega.feedByDK(getDiscoveryKey(key));
-    if (feed) {
-      const args = feed.name.split('/');
-      return args[1];
-    }
-
-    return null;
-  }
-
-  getLocalPartyFeed(partyKey) {
-    const name = this.getPartyName(partyKey, 'local');
-    return this._mega.feed(name);
-  }
-
-  async createLocalPartyFeed(partyKey) {
-    const feed = this.getLocalPartyFeed(partyKey);
-    if (feed) {
-      return feed;
-    }
-
-    const name = this.getPartyName(partyKey, 'local');
-    return this._mega.addFeed({ name, load: false });
-  }
-
-  /**
-   * @param opts {Object}
-   * @param opts.key {Buffer} Party Key.
-   */
-  async setParty({ key }) {
-    const party = this._mega.party(key);
-    if (!party) {
-      await this.connectToParty({ key });
-    }
-
-    if (this._currentPartyKey !== key) {
-      this._currentPartyKey = key;
-      const feed = this.getLocalPartyFeed(key);
-      // TODO(burdon): Document events. Prefer Typed map of event names.
-      this.emit('party-changed', { partyKey: key, feed });
-    }
-  }
-
-  //
-  // Serialization
-  // TODO(burdon): Factor out to megafeed.
-  //
-
-  async serializeParty(partyKey = this._currentPartyKey) {
-
-    // TODO(burdon): Change FeedMap abstraction so that it doesn't trigger kappa by default.
-    // Load the feeds `({ silent: true })` without notifying kappa.
-    const partyFeeds = await this._mega.loadFeeds(this.getPartyName(partyKey, '**'), { silent: true });
-
-    // Read the messages from all party feeds.
-    const reader = multi.obj(partyFeeds.map(feed => feed.createReadStream()));
-
-    return new Promise((resolve, reject) => {
-      const writable = pump(
-        reader,
-        sorter({
-          count: Infinity,
-          compare: (a, b) => a.timestamp - b.timestamp
-        }),
-        (err) => {
-          if (err) {
-            return reject(err);
-          }
-
-          return resolve(Buffer.from(JSON.stringify(writable.get())));
-        }
-      );
-    });
-  }
-
-  // TODO(burdon): Rename deserializeParty?
-  async createPartyFromBuffer({ partyKey = crypto.randomBytes(32), buffer }) {
-    const messages = JSON.parse(buffer);
-
-    const feed = await this._mega.addFeed({
-      name: this.getPartyName(partyKey, 'local'),
-      load: false,
-      silent: true
-    });
-
-    await Promise.all(
-      messages
-        .filter(message => !message.type.includes('bind-profile'))
-        .map(message => feed.pAppend(message))
-    );
-
-    await this.core.api['participants'].bindControlProfile({ partyKey: keyToHex(partyKey) });
-
-    await this._mega.addParty({
-      rules: 'dsuite:documents',
-      key: keyToBuffer(partyKey)
-    });
-
-    return partyKey;
   }
 }
 

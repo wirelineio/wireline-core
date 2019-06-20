@@ -1,6 +1,7 @@
 //
 // Copyright 2019 Wireline, Inc.
 //
+
 const { EventEmitter } = require('events');
 
 const crypto = require('hypercore-crypto');
@@ -13,7 +14,11 @@ const { keyToHex, keyToBuffer, getDiscoveryKey } = require('@wirelineio/utils');
 const Peer = require('./peer');
 const Rule = require('./rule');
 
+/**
+ * TODO(burdon): Move into MegaFeed?
+ */
 class Party extends EventEmitter {
+
   static _addPartyExtension(obj) {
     if (!obj.extensions.includes('party')) {
       obj.extensions.push('party');

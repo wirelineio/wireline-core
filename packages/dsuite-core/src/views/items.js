@@ -14,7 +14,7 @@ const { append } = require('../protocol/messages');
 const createId = hyperid({ urlSafe: true });
 
 module.exports = function ItemsView(dsuite) {
-  const { db } = dsuite;
+  const { core, db, partyManager } = dsuite;
 
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
@@ -37,11 +37,11 @@ module.exports = function ItemsView(dsuite) {
         return [];
       }
 
-      const partyKey = dsuite.getPartyKeyFromFeedKey(msg.key);
+      const partyKey = partyManager.getPartyKeyFromFeedKey(msg.key);
       value.partyKey = partyKey;
 
       const { itemId } = value.data;
-      dsuite.core.api['items'].updatePartyByItemId(itemId, partyKey);
+      core.api['items'].updatePartyByItemId(itemId, partyKey);
 
       const type = value.type.replace('item.', '');
       if (type === 'metadata') {
@@ -74,7 +74,7 @@ module.exports = function ItemsView(dsuite) {
         // eslint-disable-next-line no-param-reassign
         partyKey = partyKey || currentPartyKey;
         partiesByItem.set(itemId, {
-          feed: dsuite.getLocalPartyFeed(partyKey),
+          feed: partyManager.getLocalPartyFeed(partyKey),
           partyKey
         });
 
@@ -137,7 +137,7 @@ module.exports = function ItemsView(dsuite) {
       updatePartyByItemId(core, itemId, partyKey) {
         if (!partiesByItem.has(itemId)) {
           partiesByItem.set(itemId, {
-            feed: dsuite.getLocalPartyFeed(partyKey),
+            feed: partyManager.getLocalPartyFeed(partyKey),
             partyKey
           });
         }
