@@ -177,11 +177,12 @@ class FeedMap extends EventEmitter {
   async openFeed(name, storage, key, options) {
     const opts = Object.assign({}, this._opts, options);
 
+    // By default persist the feed.
     if (opts.persist === undefined) {
-      // by default persist the feed
       opts.persist = true;
     }
 
+    // TODO(burdon): Bug: after locking, release will STILL create a new hypercore.
     const release = await this._locker.pLock(name);
 
     try {
@@ -239,9 +240,7 @@ class FeedMap extends EventEmitter {
     /* eslint-enable */
   }
 
-  async addFeed({
-    name = null, storage = null, key = null, ...userOpts
-  } = {}) {
+  async addFeed({ name = null, storage = null, key = null, ...userOpts } = {}) {
     const opts = userOpts;
     let feedName = name;
     let hexKey = key && keyToHex(key);
@@ -261,11 +260,7 @@ class FeedMap extends EventEmitter {
         return true;
       }
 
-      if (f.name === feedName) {
-        return true;
-      }
-
-      return false;
+      return (f.name === feedName);
     });
 
     if (feed) {
@@ -274,7 +269,6 @@ class FeedMap extends EventEmitter {
       }
 
       const result = await this.loadFeeds([feed.name, keyToHex(feed.key)]);
-
       return result[0];
     }
 
@@ -341,7 +335,7 @@ class FeedMap extends EventEmitter {
     const feeds = Array.from(this._feeds.values()).filter(feed => filterFeedByPattern(feed, pattern));
 
     try {
-      const result = await Promise.all(
+      return await Promise.all(
         feeds.map((feed) => {
           if (feed.loaded) {
             return feed;
@@ -351,7 +345,6 @@ class FeedMap extends EventEmitter {
           return this.openFeed(feed.name, opts.storage, feed.key, opts);
         }),
       );
-      return result;
     } catch (err) {
       debug(err);
       throw err;
