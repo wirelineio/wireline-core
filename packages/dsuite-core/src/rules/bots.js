@@ -4,14 +4,11 @@
 
 const { Megafeed } = require('@wirelineio/megafeed');
 
-/**
- * setPartyRules
- * @param dsuite {DSuite}
- */
-module.exports = function setRules(dsuite) {
-  const { mega, conf } = dsuite;
+// TODO(burdon): Remove dsuite dependency.
+module.exports = (dsuite) => {
+  const { conf } = dsuite;
 
-  mega.setRules({
+  return {
     name: 'dsuite:bot',
 
     replicateOptions: {
@@ -21,8 +18,8 @@ module.exports = function setRules(dsuite) {
     async handshake({ peer }) {
       dsuite.emit(`rule:${this.name}:handshake`, { rule: this, peer });
 
+      // The bot does nothing here, just wait for invitations through remoteUpdateFeeds.
       if (conf.isBot) {
-        // The bot does nothing here, just wait for invitations through remoteUpdateFeeds.
         return;
       }
 
@@ -48,8 +45,9 @@ module.exports = function setRules(dsuite) {
           });
         }
       } else if (type === 'close') {
+        // TODO(burdon): Move to util.
         dsuite.swarm.leave(Megafeed.discoveryKey(peer.partyKey));
       }
     }
-  });
+  };
 };

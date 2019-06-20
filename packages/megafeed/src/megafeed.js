@@ -28,6 +28,7 @@ const createRoot = require('./root');
 const FeedMap = require('./feed-map');
 
 class Megafeed extends EventEmitter {
+
   static keyPair(seed) {
     return crypto.keyPair(seed);
   }

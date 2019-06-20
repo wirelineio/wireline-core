@@ -46,7 +46,7 @@ class DiscoverySwarm extends EventEmitter {
         return this.emit('connection', socket, info);
       }
 
-      socket.setMaxListeners(256);
+      socket.setMaxListeners(Infinity);
 
       const conn = this._stream(details);
       conn.on('handshake', () => {

@@ -11,12 +11,9 @@ const TYPES = {
   'party-feed': 1
 };
 
-const INVERTED_TYPES = Object.keys(TYPES).reduce(
-  (result, next) => ({
-    ...result, [TYPES[next]]: next
-  }),
-  {}
-);
+const INVERTED_TYPES = Object.keys(TYPES).reduce((result, next) => ({ ...result, [TYPES[next]]: next }), {});
+
+// TODO(burdon): Create codec?
 
 exports.encodeFeedKey = function encodeFeedKey(type, feedKey) {
   const feedBuffer = Megafeed.keyToBuffer(feedKey);

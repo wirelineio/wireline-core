@@ -190,19 +190,19 @@ The contacts view gives you access to handle `profile` and `contacts` operations
 #### contacts.getProfile()
 
 ```js
-async dsuite.api.contacts.getProfile({ key })
+async dsuite.api['contacts'].getProfile({ key })
 ```
 
 #### contacts.setProfile()
 
 ```js
-async dsuite.api.contacts.setProfile({ key, data })
+async dsuite.api['contacts'].setProfile({ key, data })
 ```
 
 #### contacts.getContacts()
 
 ```js
-async dsuite.api.contacts.getContacts()
+async dsuite.api['contacts'].getContacts()
 ```
 
 ## Pad Views
@@ -219,7 +219,7 @@ The documents view provides operations for handling collaborative text documents
 #### documents.create(opts)
 
 ```js
-async dsuite.api.documents.create({ type, title = 'Untitled', partyKey })
+async dsuite.api['documents'].create({ type, title = 'Untitled', partyKey })
 ```
 
 Creates a new document.
@@ -230,7 +230,7 @@ Creates a new document.
 #### documents.getById(itemId)
 
 ```js
-async dsuite.api.documents.getById(itemId)
+async dsuite.api['documents'].getById(itemId)
 ```
 
 Retrieves a document by itemId.
@@ -238,7 +238,7 @@ Retrieves a document by itemId.
 #### documents.appendChange(itemId, changes)
 
 ```js
-async dsuite.api.documents.appendChange(itemId, changes)
+async dsuite.api['documents'].appendChange(itemId, changes)
 ```
 
 Append a new change message on the document with `itemId`.
@@ -246,13 +246,13 @@ Append a new change message on the document with `itemId`.
 #### documents.getChanges(itemId, opts)
 
 ```js
-async dsuite.api.documents.getChanges(itemId, { reverse, lastChange })
+async dsuite.api['documents'].getChanges(itemId, { reverse, lastChange })
 ```
 
 #### documents.onChange(itemId, cb)
 
 ```js
-async dsuite.api.documents.onChange(itemId, cb)
+async dsuite.api['documents'].onChange(itemId, cb)
 ```
 
 TBC
