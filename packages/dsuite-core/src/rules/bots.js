@@ -4,15 +4,11 @@
 
 const { Megafeed } = require('@wirelineio/megafeed');
 
-/**
- * setPartyRules
- * @param dsuite {DSuite}
- */
-// TODO(burdon): Rename dsuite.
-module.exports = function setRules(dsuite) {
-  const { mega, conf } = dsuite;
+// TODO(burdon): Remove dsuite dependency.
+module.exports = (dsuite) => {
+  const { conf } = dsuite;
 
-  mega.setRules({
+  return {
     name: 'dsuite:bot',
 
     replicateOptions: {
@@ -43,8 +39,9 @@ module.exports = function setRules(dsuite) {
           });
         }
       } else if (type === 'close') {
+        // TODO(burdon): Move to util.
         dsuite.swarm.leave(Megafeed.discoveryKey(peer.partyKey));
       }
     }
-  });
+  };
 };

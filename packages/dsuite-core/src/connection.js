@@ -9,6 +9,9 @@ class ConectionMap {
 
   constructor(root) {
     this._root = root;
+
+    // TODO(burdon): Use Map.
+    // Map of Peers indexed by ID.
     this._peerMap = {
       [root]: []
     };

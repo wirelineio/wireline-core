@@ -4,15 +4,11 @@
 
 const { encodeFeedKey, decodeFeedKey } = require('../protocol/feeds');
 
-/**
- * setPartyRules
- * @param dsuite {DSuite}
- */
-// TODO(burdon): Rename dsuite.
+// TODO(burdon): Remove dsuite dependency.
 module.exports = function setRules(dsuite) {
   const { core, mega } = dsuite;
 
-  mega.setRules({
+  return {
     name: 'dsuite:documents',
 
     replicateOptions: {
@@ -99,5 +95,5 @@ module.exports = function setRules(dsuite) {
       // The keys I allow to replicate.
       return { keys };
     }
-  });
+  };
 };
