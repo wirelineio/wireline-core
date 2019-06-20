@@ -15,7 +15,7 @@ module.exports = function setRules(dsuite) {
     },
 
     async getParticipantKeys(partyKey) {
-      const participants = await dsuite.api['participants'].getParticipants({ partyKey });
+      const participants = await dsuite.core.api['participants'].getParticipants({ partyKey });
 
       return participants.reduce((prev, participant) => (
         [

@@ -7,13 +7,14 @@ const view = require('kappa-view-level');
 const sub = require('subleveldown');
 
 const { append } = require('../protocol/messages');
+const { uuid } = require('../utils/uuid');
 const { streamToList } = require('../utils/stream');
 
 const serializeChanges = change => (typeof change === 'string' ? change : JSON.stringify(change));
 
 // TODO(burdon): Rename LogView.
 module.exports = function LogsView(dsuite, { viewId }) {
-  const { uuid, db } = dsuite;
+  const { db } = dsuite;
 
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);

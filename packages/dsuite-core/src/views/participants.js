@@ -7,10 +7,11 @@ const view = require('kappa-view-level');
 const sub = require('subleveldown');
 
 const { streamToList } = require('../utils/stream');
+const { uuid } = require('../utils/uuid');
 const { append } = require('../protocol/messages');
 
 module.exports = function ParticipantsView(dsuite) {
-  const { uuid, db } = dsuite;
+  const { db } = dsuite;
 
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
@@ -25,16 +26,14 @@ module.exports = function ParticipantsView(dsuite) {
   return view(viewDB, {
     map(msg) {
       const { value } = msg;
-
       if (!value.type.startsWith('participant.')) {
         return [];
       }
 
-      const type = value.type.replace('participant.', '');
-
       const partyKey = dsuite.getPartyKeyFromFeedKey(msg.key);
       value.partyKey = partyKey;
 
+      const type = value.type.replace('participant.', '');
       switch (type) {
         case 'bind-profile':
           return [[uuid('participant', partyKey, value.author), value]];

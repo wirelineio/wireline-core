@@ -2,7 +2,6 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const charwise = require('charwise');
 const { EventEmitter } = require('events');
 
 const kappa = require('kappa-core');
@@ -105,15 +104,6 @@ class DSuite extends EventEmitter {
     return this._db;
   }
 
-  // TODO(burdon): Move to static util (used by views).
-  // eslint-disable-next-line class-methods-use-this
-  uuid(...args) {
-    return args
-      .filter(Boolean)
-      .map(charwise.encode)
-      .join('!');
-  }
-
   //
   // Accessors
   //
@@ -123,8 +113,10 @@ class DSuite extends EventEmitter {
     return this._conf;
   }
 
-  // TODO(burdon): Remove (use core.api below).
+  // TODO(burdon): Remove (use core.api below). Check botkit, etc.
+  // @deprecated
   get api() {
+    console.warn('deprecated');
     return this._core.api;
   }
 

@@ -10,7 +10,7 @@ const { DSuite } = require('.');
   const dsuite = new DSuite({ hub: 'https://signal.wireline.ninja', isBot: true, name: 'test-bot' });
   await dsuite.initialize();
 
-  console.log(`Bot PK: ${await dsuite.api['contacts'].key()}`);
+  console.log(`Bot PK: ${await dsuite.core.api['contacts'].key()}`);
   dsuite.mega.on('append', (feed) => {
     feed.head(console.log);
   });

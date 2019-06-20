@@ -8,12 +8,13 @@ const view = require('kappa-view-level');
 const sub = require('subleveldown');
 
 const { streamToList } = require('../utils/stream');
+const { uuid } = require('../utils/uuid');
 const { append } = require('../protocol/messages');
 
 const createId = hyperid({ urlSafe: true });
 
 module.exports = function ItemsView(dsuite) {
-  const { uuid, db } = dsuite;
+  const { db } = dsuite;
 
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);

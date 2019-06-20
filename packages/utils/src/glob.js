@@ -29,9 +29,7 @@ const filterFeedByPattern = (feed, pattern) => {
 const parsePartyPattern = (party) => {
   const metadata = parseMetadata(party.metadata);
 
-  const pattern = metadata && metadata.filter ? metadata.filter : '*';
-
-  return pattern;
+  return metadata && metadata.filter ? metadata.filter : '*';
 };
 
 module.exports = { filterFeedByPattern, parsePartyPattern };

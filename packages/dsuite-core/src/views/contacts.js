@@ -7,10 +7,11 @@ const view = require('kappa-view-level');
 const sub = require('subleveldown');
 
 const { streamToList } = require('../utils/stream');
+const { uuid } = require('../utils/uuid');
 const { append } = require('../protocol/messages');
 
 module.exports = function ContactsView(dsuite) {
-  const { uuid, mega, db } = dsuite;
+  const { mega, db } = dsuite;
 
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);

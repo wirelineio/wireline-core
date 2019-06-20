@@ -9,10 +9,11 @@ const sub = require('subleveldown');
 const { createAutomergeWorker } = require('@wirelineio/automerge-worker');
 
 const { streamToList } = require('../utils/stream');
+const { uuid } = require('../utils/uuid');
 const { append } = require('../protocol/messages');
 
 module.exports = function DocumentsView(dsuite, { viewId }) {
-  const { uuid, db } = dsuite;
+  const { db } = dsuite;
 
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);

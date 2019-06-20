@@ -2,7 +2,8 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-exports.callbackPromise = function callbackPromise() {
+// TODO(burdon): Remove
+function callbackPromise() {
   let callback;
 
   const promise = new Promise(((resolve, reject) => {
@@ -14,4 +15,6 @@ exports.callbackPromise = function callbackPromise() {
 
   callback.promise = promise;
   return callback;
-};
+}
+
+module.exports.callbackPromise = callbackPromise;
