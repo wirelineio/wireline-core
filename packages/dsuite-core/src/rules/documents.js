@@ -6,8 +6,6 @@ const { encodeFeedKey, decodeFeedKey } = require('../protocol/feeds');
 
 // TODO(burdon): Remove dsuite dependency.
 module.exports = function setRules(dsuite) {
-  const { core, mega } = dsuite;
-
   return {
     name: 'dsuite:documents',
 
@@ -32,7 +30,7 @@ module.exports = function setRules(dsuite) {
       dsuite.emit(`rule:${this.name}:handshake`, { rule: this, peer });
 
       const partyKey = peer.party.key.toString('hex');
-      const controlFeed = mega.feed('control');
+      const controlFeed = dsuite.mega.feed('control');
       const feed = await dsuite.getLocalPartyFeed(partyKey);
 
       const participantKeys = await this.getParticipantKeys(partyKey);
@@ -48,7 +46,7 @@ module.exports = function setRules(dsuite) {
 
       keys.forEach((feedKey) => {
         const { key } = decodeFeedKey(feedKey);
-        const feed = mega.feed(key);
+        const feed = dsuite.mega.feed(key);
         peer.replicate(feed);
       });
 
@@ -66,14 +64,14 @@ module.exports = function setRules(dsuite) {
 
         keys.forEach((feedKey) => {
           const { key } = decodeFeedKey(feedKey);
-          const feed = mega.feed(key);
+          const feed = dsuite.mega.feed(key);
           peer.replicate(feed);
         });
       };
 
-      core.api['participants'].events.on('participant', onParticipant);
+      dsuite.core.api['participants'].events.on('participant', onParticipant);
       peer.on('destroy', () => {
-        core.api['participants'].events.removeListener('participant', onParticipant);
+        dsuite.core.api['participants'].events.removeListener('participant', onParticipant);
       });
     },
 
@@ -95,7 +93,7 @@ module.exports = function setRules(dsuite) {
           name = `control-feed/${key.toString('hex')}`;
         }
 
-        return mega.addFeed({ name, key, load: false });
+        return dsuite.mega.addFeed({ name, key, load: false });
       }));
 
       // The keys I allow to replicate.

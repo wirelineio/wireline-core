@@ -5,10 +5,8 @@
 const { Megafeed } = require('@wirelineio/megafeed');
 
 // TODO(burdon): Remove dsuite dependency.
-module.exports = (dsuite) => {
-  const { conf } = dsuite;
-
-  return {
+module.exports = dsuite => (
+  {
     name: 'dsuite:bot',
 
     replicateOptions: {
@@ -19,7 +17,7 @@ module.exports = (dsuite) => {
       dsuite.emit(`rule:${this.name}:handshake`, { rule: this, peer });
 
       // The bot does nothing here, just wait for invitations through remoteUpdateFeeds.
-      if (conf.isBot) {
+      if (dsuite.conf.isBot) {
         return;
       }
 
@@ -35,7 +33,7 @@ module.exports = (dsuite) => {
 
       const { type, value } = message;
 
-      if (conf.isBot) {
+      if (dsuite.conf.isBot) {
         if (type === 'invite-to-party') {
           await dsuite.connectToParty({ key: value });
 
@@ -49,5 +47,5 @@ module.exports = (dsuite) => {
         dsuite.swarm.leave(Megafeed.discoveryKey(peer.partyKey));
       }
     }
-  };
-};
+  }
+);
