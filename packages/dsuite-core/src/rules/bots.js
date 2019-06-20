@@ -16,6 +16,8 @@ module.exports = (dsuite) => {
     },
 
     async handshake({ peer }) {
+      dsuite.emit(`rule:${this.name}:handshake`, { rule: this, peer });
+
       // The bot does nothing here, just wait for invitations through remoteUpdateFeeds.
       if (conf.isBot) {
         return;
@@ -28,7 +30,11 @@ module.exports = (dsuite) => {
       });
     },
 
-    async onEphemeralMessage({ message: { type, value }, peer }) {
+    async onEphemeralMessage({ message, peer }) {
+      dsuite.emit(`rule:${this.name}:message`, { rule: this, message, peer });
+
+      const { type, value } = message;
+
       if (conf.isBot) {
         if (type === 'invite-to-party') {
           await dsuite.connectToParty({ key: value });
