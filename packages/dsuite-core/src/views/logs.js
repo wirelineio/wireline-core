@@ -7,14 +7,13 @@ const view = require('kappa-view-level');
 const sub = require('subleveldown');
 
 const { append } = require('../protocol/messages');
+const { uuid } = require('../utils/uuid');
 const { streamToList } = require('../utils/stream');
 
 const serializeChanges = change => (typeof change === 'string' ? change : JSON.stringify(change));
 
 // TODO(burdon): Rename LogView.
-module.exports = function LogsView(dsuite, { viewId }) {
-  const { uuid, db } = dsuite;
-
+module.exports = function LogsView({ core, db, partyManager }, { viewId }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
@@ -27,11 +26,11 @@ module.exports = function LogsView(dsuite, { viewId }) {
         return [];
       }
 
-      const partyKey = dsuite.getPartyKeyFromFeedKey(msg.key);
+      const partyKey = partyManager.getPartyKeyFromFeedKey(msg.key);
       value.partyKey = partyKey;
 
       const { itemId } = value.data;
-      dsuite.core.api['items'].updatePartyByItemId(itemId, partyKey);
+      core.api['items'].updatePartyByItemId(itemId, partyKey);
 
       const type = value.type.replace(`item.${viewId}.`, '');
       if (type === 'change') {
@@ -52,10 +51,10 @@ module.exports = function LogsView(dsuite, { viewId }) {
           if (event === 'change') {
             const { itemId } = value.data;
 
-            const changes = await dsuite.core.api[viewId].getChanges(itemId);
+            const changes = await core.api[viewId].getChanges(itemId);
             const content = changes.map(({ data: { changes } }) => changes).map(serializeChanges).join('');
 
-            const localChange = dsuite.isLocal(value.author, value.partyKey);
+            const localChange = partyManager.isPartyLocal(value.author, value.partyKey);
 
             events.emit(`${viewId}.logentry`, itemId, content, localChange, changes);
           }

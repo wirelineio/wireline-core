@@ -23,3 +23,7 @@ STYLE
 - toString (meta) pattern
 - remove all defensive checks (e.g., console.assert early).
 - move away from ({ a, b, c }) pattern for REQUIRED params only.
+
+TO DISCUSS
+
+- Move party into megafeed

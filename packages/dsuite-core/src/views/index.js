@@ -2,8 +2,73 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-exports.ContactsView = require('./contacts');
-exports.DocumentsView = require('./documents');
-exports.ItemsView = require('./items');
-exports.LogsView = require('./logs');
-exports.ParticipantsView = require('./participants');
+const ContactsView = require('./contacts');
+const DocumentsView = require('./documents');
+const ItemsView = require('./items');
+const LogsView = require('./logs');
+const ParticipantsView = require('./participants');
+
+module.exports.ViewTypes = {
+  ContactsView,
+  DocumentsView,
+  ItemsView,
+  LogsView,
+  ParticipantsView
+};
+
+// TODO(burdon): Remove plurals.
+module.exports.Views = [
+
+  // System views.
+
+  {
+    name: 'contacts',
+    view: 'ContactsView'
+  },
+  {
+    name: 'participants',
+    view: 'ParticipantsView'
+  },
+  {
+    name: 'items',
+    view: 'ItemsView'
+  },
+
+  // Dsuite views.
+
+  {
+    name: 'documents',
+    view: 'DocumentsView'
+  },
+  {
+    name: 'presentations',
+    view: 'DocumentsView'
+  },
+
+  // TODO(burdon): Convert to LogView.
+  {
+    name: 'sheets',
+    view: 'DocumentsView'
+  },
+
+  // TODO(burdon): No need to register LogView since default?
+  {
+    name: 'graphs',
+    view: 'LogsView'
+  },
+  {
+    name: 'sketch',
+    view: 'LogsView'
+  },
+  {
+    name: 'kanban',
+    view: 'LogsView'
+  },
+
+  // Custom views.
+
+  {
+    name: 'chess',
+    view: 'LogsView'
+  }
+];

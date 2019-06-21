@@ -4,9 +4,8 @@
 
 const { getDiscoveryKey } = require('@wirelineio/utils');
 
-// TODO(burdon): Remove dsuite dependency.
-module.exports = dsuite => (
-  {
+module.exports = ({ conf, swarm, partyManager }) => {
+  return {
     name: 'dsuite:bot',
 
     replicateOptions: {
@@ -14,28 +13,28 @@ module.exports = dsuite => (
     },
 
     async handshake({ peer }) {
-      dsuite.emit(`rule:${this.name}:handshake`, { rule: this, peer });
+      partyManager.emit('rule-handshake', { rule: this, peer });
 
       // The bot does nothing here, just wait for invitations through remoteUpdateFeeds.
-      if (dsuite.conf.isBot) {
+      if (conf.isBot) {
         return;
       }
 
       // If the peer is a user it sends a message with the partyKey.
       peer.sendEphemeralMessage({
         type: 'invite-to-party',
-        value: dsuite.currentPartyKey
+        value: partyManager.currentPartyKey
       });
     },
 
     async onEphemeralMessage({ message, peer }) {
-      dsuite.emit(`rule:${this.name}:message`, { rule: this, message, peer });
+      partyManager.emit('rule-ephemeral-message', { rule: this, message, peer });
 
       const { type, value } = message;
 
-      if (dsuite.conf.isBot) {
+      if (conf.isBot) {
         if (type === 'invite-to-party') {
-          await dsuite.connectToParty({ key: value });
+          await partyManager.connectToParty({ key: value });
 
           peer.sendEphemeralMessage({
             type: 'close',
@@ -43,8 +42,8 @@ module.exports = dsuite => (
           });
         }
       } else if (type === 'close') {
-        dsuite.swarm.leave(getDiscoveryKey(peer.partyKey));
+        swarm.leave(getDiscoveryKey(peer.partyKey));
       }
     }
-  }
-);
+  };
+};
