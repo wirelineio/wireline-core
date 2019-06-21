@@ -3,7 +3,10 @@
 //
 
 const { EventEmitter } = require('events');
+const path = require('path');
+
 const hypercore = require('hypercore');
+const raf = require('random-access-file');
 const crypto = require('hypercore-crypto');
 const pify = require('pify');
 const debug = require('debug')('megafeed:feed-map');
@@ -14,30 +17,41 @@ const {
   getDiscoveryKey,
   keyToBuffer,
   Locker,
-  filterFeedByPattern
+  filterFeedByPattern,
+  Repository
 } = require('@wirelineio/utils');
 
 const schema = require('./schema.js');
 
 const codec = codecProtobuf(schema);
 
+/**
+ * FeedMap
+ *
+ * Management of multiple feeds to create, update, load, find and delete feeds
+ * into a persist repository storage.
+ *
+ * @extends {EventEmitter}
+ */
 class FeedMap extends EventEmitter {
-  static get codec() {
-    return codec;
-  }
 
-  static encodeFeed(message) {
-    return codec.encode({ type: 'Feed', message });
-  }
-
-  static optsToRoot(feed, opts) {
+  /**
+   * Create the properly format object message to encode and persist in the
+   * repository.
+   *
+   * @static
+   * @param {Hypercore} feed
+   * @param {Object} opts
+   * @returns {Object}
+   */
+  static formatToRepository(feed, opts) {
     return {
       name: feed.name,
       key: keyToBuffer(opts.key || feed.key),
       secretKey: keyToBuffer(opts.secretKey || feed.secretKey),
       // should be loaded during the initialization
       load: opts.load,
-      // should be persisted in the root
+      // should be persisted in the repository
       persist: opts.persist,
       // hypercore opts derivated
       valueEncoding: opts.valueEncoding,
@@ -46,17 +60,18 @@ class FeedMap extends EventEmitter {
     };
   }
 
-  static optsToHypercore(opts) {
-    return {
-      secretKey: opts.secretKey,
-      valueEncoding: opts.valueEncoding,
-    };
-  }
-
+  /**
+   * Check if a feed is open (loaded and with the storage open).
+   *
+   * @static
+   * @param {Hypercore} feed
+   * @returns {Boolean}
+   */
   static isOpen(feed) {
     return feed.loaded && !feed.closed;
   }
 
+  // TODO: remove, find another way.
   static addNewFeedMethods(feed) {
     const newFeed = feed;
 
@@ -70,58 +85,52 @@ class FeedMap extends EventEmitter {
     return newFeed;
   }
 
-  constructor({ storage, opts = {}, root }) {
+  /**
+   * constructor
+   *
+   * @param {RandomAccessStorage} storage RandomAccessStorage to use by default by the feeds.
+   * @param {Repository} repository Repository to persist the feeds.
+   * @param {Object} options
+   * @param {Object} options.types Types of constructor to create custom feeds.
+   * @param {Object} options.feedOptions Default options for each feed.
+   * @returns {FeedMap}
+   */
+  constructor(db, storage, options = {}) {
     super();
 
+    const { types = {}, feedOptions = {} } = options;
+
+    this._repository = new Repository(
+      db,
+      'feeds',
+      {
+        encode: message => codec.encode({ type: 'Feed', message }),
+        decode: codec.decode
+      }
+    );
+
+    this._defaultStorage = storage;
+
+    this._types = types;
+
+    this._opts = feedOptions;
+
     this._feeds = new Map();
-
-    this._storage = storage;
-
-    this._types = opts.types || {};
-
-    this._opts = Object.assign({}, opts, {
-      // we purge the options to get a default options for every feed
-      feeds: undefined,
-      secretKey: undefined,
-      types: undefined
-    });
-
-    this._root = root;
 
     this._locker = new Locker();
   }
 
-  async initFeeds(initFeeds = []) {
-    const root = this._root;
-
-    const persistedFeeds = (await root.getFeedList({ codec }))
-      .map(value => Object.assign({}, value, { persist: false }));
-
-    const feeds = persistedFeeds
-      .concat(
-        initFeeds
-          .map(feed => Object.assign({}, feed, { fromInit: true }))
-          .filter((feed) => {
-            const searchFor = [keyToHex(feed.name), keyToHex(feed.key)].filter(Boolean);
-            const idx = persistedFeeds.findIndex(
-              pf => searchFor.includes(keyToHex(pf.name)) || searchFor.includes(keyToHex(pf.key)),
-            );
-
-            if (idx === -1) {
-              return true;
-            }
-
-            persistedFeeds[idx] = Object.assign({}, persistedFeeds[idx], feed);
-            return false;
-          }),
-      )
-      .map(feed => Object.assign({}, feed, { load: feed.load === undefined ? true : feed.load }));
+  /**
+   * Wait for FeedMap being initialized.
+   *
+   * @returns {Promise}
+   */
+  async initialize() {
+    const feeds = await this._repository.list({ codec });
 
     await Promise.all(
       feeds.map((opts) => {
-        const { fromInit } = opts;
-
-        if (opts.load || fromInit) {
+        if (opts.load) {
           return this.addFeed(opts);
         }
 
@@ -134,10 +143,36 @@ class FeedMap extends EventEmitter {
         }
 
         return null;
-      }),
+      })
     );
   }
 
+  /**
+   * Get a feed by the discoveryKey.
+   *
+   * @param {String|Buffer} key
+   * @param {Boolean} all Include unloaded feeds.
+   * @returns {Hypercore|null}
+   */
+  feedByDK(key, all = false) {
+    const hexKey = keyToHex(key);
+
+    const feed = this._feeds.get(hexKey);
+
+    if (feed && !all && feed.loaded) {
+      return feed;
+    }
+
+    return null;
+  }
+
+  /**
+   * Get a feed by the discoveryKey, name or feed key.
+   *
+   * @param {String|Buffer} key
+   * @param {Boolean} all Include unloaded feeds.
+   * @returns {Hypercore|null}
+   */
   feed(key, all = false) {
     const hexKey = keyToHex(key);
 
@@ -152,18 +187,12 @@ class FeedMap extends EventEmitter {
     );
   }
 
-  feedByDK(key, all = false) {
-    const hexKey = keyToHex(key);
-
-    const feed = this._feeds.get(hexKey);
-
-    if (feed && !all && feed.loaded) {
-      return feed;
-    }
-
-    return null;
-  }
-
+  /**
+   * Get the list of feeds.
+   *
+   * @param {Boolean} all Include unloaded feeds.
+   * @returns {Hypercore[]}
+   */
   feeds(all = false) {
     const feeds = Array.from(this._feeds.values());
 
@@ -174,73 +203,22 @@ class FeedMap extends EventEmitter {
     return feeds.filter(f => f.loaded);
   }
 
-  async openFeed(name, storage, key, options) {
-    const opts = Object.assign({}, this._opts, options);
+  /**
+   * Add a new feed to FeedMap.
+   * If the feed already exists but is not loaded it will load the feed instead of
+   * create a new one.
+   *
+   * @param {Object} args
+   * @param {String} args.name
+   * @param {RandomAccessStorage} args.storage
+   * @param {Buffer|String} args.key
+   * @returns {Hypercore}
+   */
+  async addFeed(args = {}) {
+    const {
+      name = null, storage = null, key = null, ...userOpts
+    } = args;
 
-    // By default persist the feed.
-    if (opts.persist === undefined) {
-      opts.persist = true;
-    }
-
-    // TODO(burdon): Bug: after locking, release will STILL create a new hypercore.
-    const release = await this._locker.pLock(name);
-
-    try {
-      const createFeed = this._types[opts.type] || hypercore;
-
-      let feed = createFeed(this._storage(name, storage), key, FeedMap.optsToHypercore(opts));
-
-      feed = FeedMap.addNewFeedMethods(feed);
-
-      feed.setMaxListeners(Infinity);
-
-      feed.name = name;
-      feed.loaded = true;
-      feed.silent = opts.silent;
-      feed.announced = false;
-
-      feed.on('append', () => this.emit('append', feed));
-      feed.on('download', (...args) => this.emit('download', ...args, feed));
-
-      await feed.pReady();
-
-      const discoveryKey = keyToHex(feed.discoveryKey);
-
-      if (opts.persist) {
-        await this.persistFeed(feed, opts);
-      }
-
-      this._feeds.set(discoveryKey, feed);
-
-      await release();
-
-      if (!feed.silent) {
-        this.announce(feed);
-      }
-
-      return feed;
-    } catch (err) {
-      debug(err);
-      await release();
-      throw err;
-    }
-  }
-
-  announce(feed) {
-    if (feed.announced) {
-      return;
-    }
-
-    this.emit('feed:added', feed);
-    this.emit('feed', feed); // kappa support
-
-    /* eslint-disable */
-    delete feed.silent;
-    feed.announced = true;
-    /* eslint-enable */
-  }
-
-  async addFeed({ name = null, storage = null, key = null, ...userOpts } = {}) {
     const opts = userOpts;
     let feedName = name;
     let hexKey = key && keyToHex(key);
@@ -272,11 +250,17 @@ class FeedMap extends EventEmitter {
       return result[0];
     }
 
-    return this.openFeed(feedName, storage, key, opts);
+    return this._openFeed(feedName, storage, key, opts);
   }
 
-  async delFeed(key) {
-    const root = this._root;
+  /**
+   * Remove a feed from FeedMap.
+   *
+   * @param {Buffer|String} key
+   * @returns {Promise}
+   */
+  async deleteFeed(key) {
+    const repository = this._repository;
 
     const feed = this.feed(key);
 
@@ -287,14 +271,12 @@ class FeedMap extends EventEmitter {
     const release = await this._locker.pLock(feed.name);
 
     try {
-      await root.delFeed(feed.key);
+      await repository.delete(feed.name);
       this._feeds.delete(keyToHex(getDiscoveryKey(feed.key)));
 
-      this.emit('feed:deleted', feed);
+      this.emit('feed-remove', feed);
 
       await release();
-
-      return null;
     } catch (err) {
       debug(err);
       await release();
@@ -302,11 +284,18 @@ class FeedMap extends EventEmitter {
     }
   }
 
+  /**
+   * Update a feed by a callback transform.
+   *
+   * @param {Buffer|String} key
+   * @param {Function} transform
+   * @returns {Promise}
+   */
   async updateFeed(key, transform) {
-    const root = this._root;
+    const repository = this._repository;
 
     try {
-      const feed = await root.getFeed(key, { codec });
+      const feed = await repository.get(key, { codec });
 
       if (!feed) {
         return null;
@@ -314,15 +303,20 @@ class FeedMap extends EventEmitter {
 
       const update = transform(feed.value);
 
-      await root.putFeed(update, { encode: FeedMap.encodeFeed });
-
-      return null;
+      await repository.put(feed.name, update, { encode: FeedMap.encodeFeed });
     } catch (err) {
       debug(err);
       throw err;
     }
   }
 
+  /**
+   * Load feeds by a pattern.
+   *
+   * @param {String|String[]} pattern
+   * @param {Object} options
+   * @returns {Hypercore[]}
+   */
   async loadFeeds(userPattern, options = {}) {
     let pattern = userPattern;
 
@@ -335,14 +329,14 @@ class FeedMap extends EventEmitter {
     const feeds = Array.from(this._feeds.values()).filter(feed => filterFeedByPattern(feed, pattern));
 
     try {
-      return await Promise.all(
+      return Promise.all(
         feeds.map((feed) => {
           if (feed.loaded) {
             return feed;
           }
 
           const opts = Object.assign({}, feed, options);
-          return this.openFeed(feed.name, opts.storage, feed.key, opts);
+          return this._openFeed(feed.name, opts.storage, feed.key, opts);
         }),
       );
     } catch (err) {
@@ -352,14 +346,15 @@ class FeedMap extends EventEmitter {
   }
 
   async persistFeed(feed, options = {}) {
-    const root = this._root;
+    const repository = this._repository;
 
     const discoveryKey = keyToHex(feed.discoveryKey);
 
     const opts = Object.assign({}, options, { persist: true });
 
     try {
-      await root.putFeed(FeedMap.optsToRoot(feed, opts), { encode: FeedMap.encodeFeed });
+      const formatFeed = FeedMap.formatToRepository(feed, opts);
+      await repository.put(formatFeed.name, formatFeed, { encode: FeedMap.encodeFeed });
       this._feeds.set(discoveryKey, feed);
       return feed;
     } catch (err) {
@@ -380,6 +375,88 @@ class FeedMap extends EventEmitter {
     }
 
     return null;
+  }
+
+  announce(feed) {
+    if (feed.announced) {
+      return;
+    }
+
+    this.emit('feed-add', feed);
+    this.emit('feed', feed); // kappa support
+
+    /* eslint-disable */
+    delete feed.silent;
+    feed.announced = true;
+    /* eslint-enable */
+  }
+
+  _storage(dir, customStorage) {
+    const ras = customStorage || this._defaultStorage;
+
+    return (name) => {
+      if (typeof ras === 'string') {
+        return raf(path.join(ras, dir, name));
+      }
+      return ras(`${dir}/${name}`);
+    };
+  }
+
+  async _openFeed(name, storage, key, options) {
+    const opts = Object.assign({}, this._opts, options);
+
+    if (opts.persist === undefined) {
+      // by default persist the feed
+      opts.persist = true;
+    }
+
+    const release = await this._locker.pLock(name);
+
+    let feed = this.feed(name);
+    if (feed) {
+      return feed;
+    }
+
+    try {
+      const createFeed = this._types[opts.type] || hypercore;
+
+      feed = createFeed(this._storage(name, storage), key, {
+        secretKey: opts.secretKey,
+        valueEncoding: opts.valueEncoding,
+      });
+
+      feed = FeedMap.addNewFeedMethods(feed);
+
+      feed.setMaxListeners(256);
+
+      feed.name = name;
+      feed.loaded = true;
+      feed.silent = opts.silent;
+      feed.announced = false;
+
+      feed.on('append', () => this.emit('append', feed));
+      feed.on('download', (...args) => this.emit('download', ...args, feed));
+
+      await feed.pReady();
+
+      const discoveryKey = keyToHex(feed.discoveryKey);
+
+      await this.persistFeed(feed, opts);
+
+      this._feeds.set(discoveryKey, feed);
+
+      await release();
+
+      if (!feed.silent) {
+        this.announce(feed);
+      }
+
+      return feed;
+    } catch (err) {
+      debug(err);
+      await release();
+      throw err;
+    }
   }
 }
 

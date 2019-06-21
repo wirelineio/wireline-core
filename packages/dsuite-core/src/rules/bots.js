@@ -2,7 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const { Megafeed } = require('@wirelineio/megafeed');
+const { getDiscoveryKey } = require('@wirelineio/utils');
 
 // TODO(burdon): Remove dsuite dependency.
 module.exports = dsuite => (
@@ -43,8 +43,7 @@ module.exports = dsuite => (
           });
         }
       } else if (type === 'close') {
-        // TODO(burdon): Move to util.
-        dsuite.swarm.leave(Megafeed.discoveryKey(peer.partyKey));
+        dsuite.swarm.leave(getDiscoveryKey(peer.partyKey));
       }
     }
   }

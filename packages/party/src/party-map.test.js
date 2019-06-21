@@ -2,12 +2,14 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+const { EventEmitter } = require('events');
+
 const hypercore = require('hypercore');
+const hypertrie = require('hypertrie');
 const ram = require('random-access-memory');
 const crypto = require('hypercore-crypto');
 const pump = require('pump');
 const pify = require('pify');
-const { EventEmitter } = require('events');
 
 const PartyMap = require('./party-map');
 
@@ -21,16 +23,6 @@ const feedPromisify = (feed) => {
   return newFeed;
 };
 
-const storageMockup = () => ({
-  _parties: new Map(),
-  async getPartyList() {
-    return Array.from(this._parties.values());
-  },
-  async putParty(party) {
-    return this._parties.set(party.name.toString('hex'), party);
-  }
-});
-
 class Peer extends EventEmitter {
   constructor() {
     super();
@@ -39,9 +31,7 @@ class Peer extends EventEmitter {
 
     this.addFeed('local', ram, { valueEncoding: 'utf-8' });
 
-    this._parties = new PartyMap({
-      storage: storageMockup()
-    });
+    this._parties = new PartyMap(hypertrie(ram));
 
     this._parties.setRules({
       name: 'simple-party',

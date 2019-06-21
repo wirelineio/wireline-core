@@ -1,5 +1,5 @@
-const crypto = require('crypto');
 const pump = require('pump');
+const crypto = require('crypto');
 
 const Party = require('./party');
 
@@ -55,5 +55,5 @@ test('party handshake', (done) => {
     expect(peer.party).toBe(peerOne);
   });
 
-  pump(r1, r2, r1);
+  pump(r1, r2, r1, () => {});
 });

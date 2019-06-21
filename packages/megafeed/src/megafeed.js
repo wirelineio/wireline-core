@@ -3,48 +3,36 @@
 //
 
 const assert = require('assert');
-const path = require('path');
 const { EventEmitter } = require('events');
 
-const pify = require('pify');
-const crypto = require('hypercore-crypto');
-const raf = require('random-access-file');
+const pump = require('pump');
+const hypertrie = require('hypertrie');
 const multi = require('multi-read-stream');
 const eos = require('end-of-stream');
 const through = require('through2');
-const pump = require('pump');
+const pify = require('pify');
 
 const { PartyMap, Party } = require('@wirelineio/party');
 const {
   callbackPromise,
-  getDiscoveryKey,
-  keyToBuffer,
   keyToHex,
+  keyToBuffer,
   parsePartyPattern,
-  filterFeedByPattern
+  filterFeedByPattern,
+  bubblingEvents
 } = require('@wirelineio/utils');
 
-const createRoot = require('./root');
 const FeedMap = require('./feed-map');
 
 class Megafeed extends EventEmitter {
-
-  static keyPair(seed) {
-    return crypto.keyPair(seed);
-  }
-
-  static discoveryKey(key) {
-    return getDiscoveryKey(key);
-  }
-
-  static keyToBuffer(...args) {
-    return keyToBuffer(...args);
-  }
-
-  static keyToHex(...args) {
-    return keyToHex(...args);
-  }
-
+  /**
+   *
+   * @param {RandomAccessStorage} storage
+   * @param {Buffer} key
+   * @param {Object} options
+   * @param {Object[]} options.feeds
+   * @param {Object} options.types
+   */
   constructor(storage, key, options) {
     super();
     assert(storage, 'A default storage is required.');
@@ -68,56 +56,47 @@ class Megafeed extends EventEmitter {
       opts = {};
     }
 
-    const feeds = opts.feeds || [];
-
-    this._defaultStorage = storage;
-
-    this._storage = (dir, customStorage) => {
-      const ras = customStorage || this._defaultStorage;
-
-      return (name) => {
-        if (typeof ras === 'string') {
-          return raf(path.join(ras, dir, name));
-        }
-        return ras(`${dir}/${name}`);
-      };
-    };
-
     // We save all our personal information like the feed list in a private feed
-    this._root = createRoot(this._storage('root', storage), rootKey, opts);
+    this._db = hypertrie(storage, rootKey, { secretKey: opts.secretKey });
 
     // Feeds manager instance
-    this._feeds = new FeedMap({ storage: this._storage, opts, root: this._root });
-    ['append', 'download', 'feed:added', 'feed', 'feed:deleted'].forEach((event) => {
-      this._feeds.on(event, (...args) => this.emit(event, ...args));
+    this._feeds = new FeedMap(this._db, storage, {
+      types: opts.types,
+      feedOptions: {
+        valueEncoding: opts.valueEncoding
+      }
     });
 
     // Parties manager instance
-    this._parties = new PartyMap(this);
-    ['party', 'peer-add', 'peer-remove'].forEach((event) => {
-      this._parties.on(event, (...args) => this.emit(event, ...args));
+    this._parties = new PartyMap(this._db, {
+      ready: () => this.ready(),
+      findFeed: ({ discoveryKey }) => this.feedByDK(discoveryKey)
     });
+
+    // Bubble events.
+    bubblingEvents(this, this._feeds, ['append', 'download', 'feed-add', 'feed', 'feed-remove']);
+    bubblingEvents(this, this._parties, ['party', 'peer-add', 'peer-remove']);
 
     // everything is ready
     this._isReady = false;
 
-    this._initialize(feeds);
+    this._initialize();
   }
 
   get id() {
-    return this._root.feed.id;
+    return this._db.id;
   }
 
   get key() {
-    return this._root.feed.key;
+    return this._db.key;
   }
 
   get discoveryKey() {
-    return this._root.feed.discoveryKey;
+    return this._db.discoveryKey;
   }
 
   get secretKey() {
-    return this._root.feed.secretKey;
+    return this._db.secretKey;
   }
 
   // eslint-disable-next-line
@@ -145,10 +124,10 @@ class Megafeed extends EventEmitter {
     return this._feeds.addFeed(options);
   }
 
-  async delFeed(key) {
+  async deleteFeed(key) {
     await this.ready();
 
-    return this._feeds.delFeed(key);
+    return this._feeds.deleteFeed(key);
   }
 
   async updateFeed(key, transform) {
@@ -195,8 +174,6 @@ class Megafeed extends EventEmitter {
     if (!newParty.rules) {
       newParty.rules = 'megafeed:default';
     }
-
-    await this._root.pReady();
 
     return this._parties.addParty(newParty);
   }
@@ -248,16 +225,17 @@ class Megafeed extends EventEmitter {
   }
 
   async close() {
-    const root = this._root;
+    const dbFeed = this._db.feed;
 
     await this.ready();
 
-    await Promise.all(this.feeds().map(feed => feed.pClose()));
+    await Promise.all(this.feeds().map(feed => pify(feed.close.bind(feed))()));
 
-    await root.pClose();
+    await pify(dbFeed.close.bind(dbFeed))();
   }
 
   async destroy() {
+    const dbFeed = this._db.feed;
     const warnings = [];
 
     try {
@@ -266,23 +244,23 @@ class Megafeed extends EventEmitter {
       warnings.push(err);
     }
 
-    const pifyDestroy = s => pify(s.destroy.bind(s))()
+    const promisifyDestroy = s => pify(s.destroy.bind(s))()
       .catch(destroyErr => warnings.push(destroyErr));
 
     const destroyStorage = (feed) => {
       const s = feed._storage;
       return Promise.all([
-        pifyDestroy(s.bitfield),
-        pifyDestroy(s.tree),
-        pifyDestroy(s.data),
-        pifyDestroy(s.key),
-        pifyDestroy(s.secretKey),
-        pifyDestroy(s.signatures),
+        promisifyDestroy(s.bitfield),
+        promisifyDestroy(s.tree),
+        promisifyDestroy(s.data),
+        promisifyDestroy(s.key),
+        promisifyDestroy(s.secretKey),
+        promisifyDestroy(s.signatures),
       ]);
     };
 
     await Promise.all([
-      destroyStorage(this._root.feed),
+      destroyStorage(dbFeed),
       ...this.feeds(true).filter(f => f.closed).map(f => destroyStorage(f)),
     ]);
   }
@@ -315,7 +293,7 @@ class Megafeed extends EventEmitter {
       } catch (err) {
         next(err);
       }
-    }));
+    }), () => {});
 
     return () => stream.destroy();
   }
@@ -353,10 +331,10 @@ class Megafeed extends EventEmitter {
     return multiReader;
   }
 
-  _initialize(feeds) {
+  _initialize() {
     this._parties.setRules(this._defineDefaultPartyRules());
 
-    this._feeds.initFeeds(feeds)
+    this._feeds.initialize()
       .then(() => {
         this._isReady = true;
         this.emit('ready');

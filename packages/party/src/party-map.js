@@ -4,42 +4,45 @@
 
 const { EventEmitter } = require('events');
 const assert = require('assert');
-const crypto = require('crypto');
 
 const mm = require('micromatch');
 const protocol = require('hypercore-protocol');
 
-const { keyToHex } = require('@wirelineio/utils');
+const { keyToHex, Repository } = require('@wirelineio/utils');
 
-const createStorage = require('./storage');
-const Rules = require('./rules');
+const Rule = require('./rule');
 const Party = require('./party');
 const codec = require('./codec');
 
 class PartyMap extends EventEmitter {
-  static get codec() {
-    return codec;
-  }
 
-  static encodeParty(message) {
-    return codec.encode({ type: 'Party', message: message.serialize() });
-  }
-
-  constructor(opts = {}) {
+  /**
+   *
+   * @param {Hypertrie} db
+   * @param {Object} opts
+   * @param {Function} opts.ready
+   * @param {Function} opts.findFeed
+   */
+  constructor(db, options = {}) {
     super();
 
-    this.id = opts.id || crypto.randomBytes(32);
+    this.id = db.id;
 
-    if (typeof opts === 'object' && opts.isMegafeed) {
-      this.storage = createStorage(opts._root);
-      this._megaReady = () => opts.ready();
-      this._megaFindFeed = ({ discoveryKey }) => opts.feedByDK(discoveryKey);
-    } else {
-      this.storage = opts.storage;
-    }
+    this._repository = new Repository(
+      db,
+      'parties',
+      {
+        encode: message => codec.encode({ type: 'Party', message: message.serialize() }),
+        decode: codec.decode
+      }
+    );
+
+    const { ready, findFeed } = options;
+
+    this._ready = ready;
+    this._findFeed = findFeed;
 
     this._rules = new Map();
-
     this._parties = new Map();
   }
 
@@ -51,15 +54,18 @@ class PartyMap extends EventEmitter {
     return Array.from(this._parties.values());
   }
 
-  setRules(rules) {
-    const newRules = rules;
 
-    assert(typeof newRules.name === 'string' && newRules.name.length > 0, 'Name rule string is required.');
+  setRules(options = {}) {
+    const { name, ready = this._ready, findFeed = this._findFeed, ...opts } = options;
 
-    newRules.ready = newRules.ready || this._megaReady;
-    newRules.findFeed = newRules.findFeed || this._megaFindFeed;
+    assert(typeof name === 'string' && name.length > 0, 'setRule: "name" is required.');
 
-    this._rules.set(newRules.name, new Rules(newRules));
+    this._rules.set(name, new Rule({
+      ...opts,
+      name,
+      ready,
+      findFeed
+    }));
   }
 
   async addParty({ name, key, secretKey, rules, metadata }) {
@@ -83,7 +89,7 @@ class PartyMap extends EventEmitter {
     });
 
     try {
-      await this.storage.putParty(party, { encode: PartyMap.encodeParty });
+      await this._repository.put(party.name, party);
 
       const discoveryKey = keyToHex(party.discoveryKey);
 
@@ -124,7 +130,7 @@ class PartyMap extends EventEmitter {
 
     const partiesLoaded = this.list().map(party => keyToHex(party.key));
 
-    const partiesPersisted = (await this.storage.getPartyList({ codec }))
+    const partiesPersisted = (await this.storage.list())
       .filter(party => !partiesLoaded.includes(keyToHex(party.key)));
 
     const partiesToLoad = partiesPersisted.filter((party) => {

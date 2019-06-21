@@ -17,7 +17,7 @@ module.exports = function ContactsView(dsuite) {
 
   let feed;
   let feedKey;
-  mega.ready(() => {
+  dsuite.on('ready', () => {
     feed = mega.feed('control');
     feedKey = feed.key.toString('hex');
   });

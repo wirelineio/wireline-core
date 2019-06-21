@@ -2,22 +2,28 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const glob = require('./src/glob');
-const keys = require('./src/keys');
-const locker = require('./src/locker');
-const promiseHelp = require('./src/promise-help');
+const { filterFeedByPattern, parsePartyPattern } = require('./src/glob');
+const { keyToHex, getDiscoveryKey, parseToKeys, keyToBuffer } = require('./src/keys');
+const Locker = require('./src/locker');
+const { callbackPromise } = require('./src/promise-help');
+const Repository = require('./src/repository');
+const bubblingEvents = require('./src/bubbling-events');
 
 module.exports = {
 
-  filterFeedByPattern: glob.filterFeedByPattern,
-  parsePartyPattern: glob.parsePartyPattern,
+  filterFeedByPattern,
+  parsePartyPattern,
 
-  keyToHex: keys.keyToHex,
-  getDiscoveryKey: keys.getDiscoveryKey,
-  parseToKeys: keys.parseToKeys,
-  keyToBuffer: keys.keyToBuffer,
+  keyToHex,
+  getDiscoveryKey,
+  parseToKeys,
+  keyToBuffer,
 
-  Locker: locker,
+  Locker,
 
-  callbackPromise: promiseHelp.callbackPromise
+  callbackPromise,
+
+  Repository,
+
+  bubblingEvents
 };

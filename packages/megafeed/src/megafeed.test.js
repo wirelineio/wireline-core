@@ -5,9 +5,10 @@
 const tempy = require('tempy');
 const fs = require('fs');
 const path = require('path');
-const pify = require('pify');
-const pump = require('pump');
+
 const streamToPromise = require('stream-to-promise');
+const pump = require('pump');
+const pify = require('pify');
 
 const ram = require('random-access-memory');
 const crypto = require('hypercore-crypto');
@@ -25,7 +26,7 @@ describe('config megafeed', () => {
     });
 
     expect(mf._feeds._opts.valueEncoding).toBe('utf-8');
-    expect(mf._root.feed._storage.key.constructor.name).toBe('RandomAccessFile');
+    expect(mf._db.feed._storage.key.constructor.name).toBe('RandomAccessFile');
   });
 
   test('config with ram and valueEncoding json', () => {
@@ -34,22 +35,12 @@ describe('config megafeed', () => {
     });
 
     expect(mf._feeds._opts.valueEncoding).toBe('json');
-    expect(mf._root.feed._storage.key.constructor.name).toBe('RAM');
+    expect(mf._db.feed._storage.key.constructor.name).toBe('RAM');
   });
 
   test('megafeed should be ready after the initialize process', () => {
     const mf = megafeed(ram);
     return mf.ready();
-  });
-
-  test('initialize megafeed with a list of feeds', async () => {
-    const mf = megafeed(ram, {
-      feeds: [{ name: 'documentOne' }, { name: 'documentTwo' }],
-    });
-
-    await mf.ready();
-
-    expect(mf.feeds().length).toBe(2);
   });
 });
 
@@ -97,11 +88,11 @@ describe('list / get / delete / load / close operations', () => {
   });
 
   test('delete feed: documentOne', async () => {
-    await this.mf.delFeed('documentOne');
+    await this.mf.deleteFeed('documentOne');
     expect(this.mf.feeds().length).toBe(0);
 
-    const root = this.mf._root;
-    const getFeed = pify(root.get.bind(root));
+    const db = this.mf._db;
+    const getFeed = pify(db.get.bind(db));
     const feed = await getFeed(`feed/${this.feed.key.toString('hex')}`);
     expect(feed).toBeNull();
   });
@@ -139,7 +130,7 @@ describe('destroy megafeed storage', () => {
     this.feed = await this.mf.addFeed({ name: 'documentOne' });
   });
 
-  test('destroy storage for _root and documentOne', async () => {
+  test('destroy storage for _db and documentOne', async () => {
     await this.mf.destroy();
 
     const access = pify(fs.access);

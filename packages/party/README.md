@@ -52,11 +52,12 @@ Your party can share and replicate a set of:
 ### Single party multi-writer with two writers
 
 ```javascript
-const { pipeline } = require('stream');
 const { EventEmitter } = require('events');
+
 const crypto = require('crypto');
 const ram = require('random-access-memory');
 const hypercore = require('hypercore');
+const pump = require('pump');
 
 const { Party } = require('@wirelineio/party');
 
@@ -123,18 +124,18 @@ class Peer extends EventEmitter {
 const partyKey = crypto.randomBytes(32);
 
 const alice = new Peer(partyKey);
-const max = new Peer(partyKey);
+const bob = new Peer(partyKey);
 
 const r1 = alice.replicate({ live: true });
-const r2 = max.replicate({ live: true });
+const r2 = bob.replicate({ live: true });
 
 setInterval(() => {
   alice.sendMessage("Hi I'm Alice");
 }, 1000);
 
-max.on('message', console.log);
+bob.on('message', console.log);
 
-pipeline(r1, r2, r1, (err) => {
+pump(r1, r2, r1, (err) => {
   if (err) {
     console.log(err);
   }

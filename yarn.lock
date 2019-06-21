@@ -4338,10 +4338,29 @@ hyperid@^2.0.2:
     uuid "^3.3.2"
     uuid-parse "^1.0.0"
 
-hypertrie@^3.4.0:
-  version "3.6.0"
-  resolved "https://registry.yarnpkg.com/hypertrie/-/hypertrie-3.6.0.tgz#6a99da6201d530f749535cddf7f56400e80db448"
-  integrity sha512-KWDdQKtxfRpEllCZiXSBVZcZokxwo7p+PBCmk/6WBQSEWLYl32itq6T+axA4E+k58Jf50TjR85CnIUCmYg6fxA==
+hypertrie@^3.6.1:
+  version "3.6.1"
+  resolved "https://registry.yarnpkg.com/hypertrie/-/hypertrie-3.6.1.tgz#b74b60d9e0717db1fcbe3bcac0ce82042974fdfc"
+  integrity sha512-9CZrlFMsXOq+JgjHTpnIGTWGTfejAD59Tpl++WNxXBL7GT3AqHtSlbelK8i/33Z2OjB4tsEfslURMK8yCa9kQQ==
+  dependencies:
+    bulk-write-stream "^1.1.4"
+    codecs "^2.0.0"
+    hypercore "^7.0.0"
+    inherits "^2.0.3"
+    inspect-custom-symbol "^1.1.0"
+    is-options "^1.0.1"
+    mutexify "^1.2.0"
+    nanoiterator "^1.2.0"
+    protocol-buffers-encodings "^1.1.0"
+    sodium-universal "^2.0.0"
+    thunky "^1.0.2"
+    unordered-set "^2.0.1"
+    varint "^5.0.0"
+
+hypertrie@^3.7.0:
+  version "3.7.0"
+  resolved "https://registry.yarnpkg.com/hypertrie/-/hypertrie-3.7.0.tgz#963e3c736ff2d9c1feecceb1af63dd7312a8b538"
+  integrity sha512-+x5y0ATbKn0mHPfRwVJZV243KHl3A0zoQ3y8BSxobj+dYxgBZBe0gNCY6JLuEIcPq9Aehl9kdSySPUpN7XhUig==
   dependencies:
     bulk-write-stream "^1.1.4"
     codecs "^2.0.0"

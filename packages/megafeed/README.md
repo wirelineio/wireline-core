@@ -24,7 +24,7 @@ $ npm install @wirelineio/megafeed
 ## Usage
 
 ```javascript
-const { pipeline } = require('stream');
+const pump = require('pump');
 const ram = require('random-access-memory');
 const megafeed = require('@wirelineio/megafeed');
 
@@ -32,31 +32,31 @@ const alice = megafeed(ram, {
   valueEncoding: 'utf-8'
 });
 
-const max = megafeed(ram, {
+const bob = megafeed(ram, {
   valueEncoding: 'utf-8'
 });
 
 alice.on('append', feed => feed.head(console.log));
-max.on('append', feed => feed.head(console.log));
+bob.on('append', feed => feed.head(console.log));
 
 (async () => {
   await alice.ready();
-  await max.ready();
+  await bob.ready();
 
   // replicate
   const r1 = alice.replicate({ key: alice.key, live: true });
-  const r2 = max.replicate({ key: alice.key, live: true });
-  pipeline(r1, r2, r1, (err) => {
+  const r2 = bob.replicate({ key: alice.key, live: true });
+  pump(r1, r2, r1, (err) => {
     if (err) {
       console.log(err);
     }
   });
 
   const aliceFeed = await alice.addFeed({ name: 'chat' });
-  const maxFeed = await max.addFeed({ name: 'chat' });
+  const bobFeed = await bob.addFeed({ name: 'chat' });
 
   aliceFeed.append("Hi i'm Alice");
-  maxFeed.append("Hi i'm Max");
+  bobFeed.append("Hi i'm Bob");
 })();
 ```
 
