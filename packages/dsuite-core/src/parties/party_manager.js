@@ -103,6 +103,7 @@ class PartyManager extends EventEmitter {
     const party = this._mega.party(key);
     if (!party) {
       await this.connectToParty({ key });
+      await this._mega.loadFeeds(`party-feed/${key.toString('hex')}/*`);
     }
 
     if (this._currentPartyKey !== key) {
