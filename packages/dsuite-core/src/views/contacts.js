@@ -10,16 +10,17 @@ const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
 const { append } = require('../protocol/messages');
 
-module.exports = function ContactsView(dsuite) {
-  const { mega, db } = dsuite;
+module.exports = function ContactsView({ mega, db }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
   let feed;
   let feedKey;
-  dsuite.on('ready', () => {
-    feed = mega.feed('control');
-    feedKey = feed.key.toString('hex');
+  mega.on('feed', (_feed) => {
+    if (_feed.name === 'control') {
+      feed = _feed;
+      feedKey = feed.key.toString('hex');
+    }
   });
 
   const viewDB = sub(db, 'contacts', { valueEncoding: 'json' });
