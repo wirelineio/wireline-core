@@ -27,7 +27,7 @@ module.exports = ({ core, mega, partyManager }) => {
     },
 
     async handshake({ peer }) {
-      dsuite.emit(`rule:${this.name}:handshake`, { rule: this, peer });
+      partyManager.emit('rule-handshake', { rule: this, peer });
 
       const partyKey = peer.party.key.toString('hex');
       const controlFeed = mega.feed('control');
@@ -46,7 +46,7 @@ module.exports = ({ core, mega, partyManager }) => {
 
       keys.forEach((feedKey) => {
         const { key } = decodeFeedKey(feedKey);
-        const feed = dsuite.mega.feed(key);
+        const feed = mega.feed(key);
         peer.replicate(feed);
       });
 
@@ -64,19 +64,19 @@ module.exports = ({ core, mega, partyManager }) => {
 
         keys.forEach((feedKey) => {
           const { key } = decodeFeedKey(feedKey);
-          const feed = dsuite.mega.feed(key);
+          const feed = mega.feed(key);
           peer.replicate(feed);
         });
       };
 
-      dsuite.core.api['participants'].events.on('participant', onParticipant);
+      core.api['participants'].events.on('participant', onParticipant);
       peer.on('destroy', () => {
-        dsuite.core.api['participants'].events.removeListener('participant', onParticipant);
+        core.api['participants'].events.removeListener('participant', onParticipant);
       });
     },
 
     async onEphemeralMessage({ message, peer }) {
-      dsuite.emit(`rule:${this.name}:message`, { rule: this, message, peer });
+      partyManager.emit('rule-ephemeral-message', { rule: this, message, peer });
     },
 
     async onIntroduceFeeds({ message, peer }) {
@@ -93,7 +93,7 @@ module.exports = ({ core, mega, partyManager }) => {
           name = `control-feed/${key.toString('hex')}`;
         }
 
-        return dsuite.mega.addFeed({ name, key, load: false });
+        return mega.addFeed({ name, key, load: false });
       }));
 
       // The keys I allow to replicate.

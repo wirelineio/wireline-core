@@ -8,18 +8,10 @@ const kappa = require('kappa-core');
 const ram = require('random-access-memory');
 const levelup = require('levelup');
 const memdown = require('memdown');
-const multi = require('multi-read-stream');
-const sorter = require('stream-sort');
-const crypto = require('hypercore-crypto');
-const pump = require('pump');
 const pify = require('pify');
 
 const { Megafeed } = require('@wirelineio/megafeed');
-const {
-  keyToHex,
-  keyToBuffer,
-  getDiscoveryKey
-} = require('@wirelineio/utils');
+const { bubblingEvents } = require('@wirelineio/utils');
 
 const swarm = require('./swarm');
 const { ViewTypes, Views } = require('./views');
@@ -86,13 +78,6 @@ class DSuite extends EventEmitter {
       secretKey,
       feeds
     });
-
-    const replicationRules = [
-      documentPartyRules({ core: this._core, mega: this._mega, partyManager: this._partyManager }),
-      botPartyRules({ conf, swarm: () => { return this._swarm; }, partyManager: this._partyManager })
-    ];
-
-    replicationRules.forEach(rule => this._mega.setRules(rule));
 
     // Metrics.
     this._mega.on('append', (feed) => {
@@ -176,6 +161,7 @@ class DSuite extends EventEmitter {
   //
 
   async initialize() {
+
     // Initialize control feed of the user.
     await this._mega.addFeed({ name: 'control' });
 
@@ -188,6 +174,15 @@ class DSuite extends EventEmitter {
     // Connect to the swarm.
     // TODO(burdon): Remove factory method and create adapter to manage events.
     this._swarm = swarm(this, this._conf);
+
+    const replicationRules = [
+      documentPartyRules({ core: this._core, mega: this._mega, partyManager: this._partyManager }),
+      botPartyRules({ conf: this._conf, swarm: this._swarm, partyManager: this._partyManager })
+    ];
+
+    replicationRules.forEach(rule => this._mega.setRules(rule));
+
+    bubblingEvents(this, this.partyManager, ['rule-handshake', 'rule-ephemeral-message']);
 
     // TODO(burdon): Really needs a comment.
     if (this._conf.isBot) {

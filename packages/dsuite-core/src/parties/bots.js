@@ -13,10 +13,10 @@ module.exports = ({ conf, swarm, partyManager }) => {
     },
 
     async handshake({ peer }) {
-      dsuite.emit(`rule:${this.name}:handshake`, { rule: this, peer });
+      partyManager.emit('rule-handshake', { rule: this, peer });
 
       // The bot does nothing here, just wait for invitations through remoteUpdateFeeds.
-      if (dsuite.conf.isBot) {
+      if (conf.isBot) {
         return;
       }
 
@@ -28,11 +28,11 @@ module.exports = ({ conf, swarm, partyManager }) => {
     },
 
     async onEphemeralMessage({ message, peer }) {
-      dsuite.emit(`rule:${this.name}:message`, { rule: this, message, peer });
+      partyManager.emit('rule-ephemeral-message', { rule: this, message, peer });
 
       const { type, value } = message;
 
-      if (dsuite.conf.isBot) {
+      if (conf.isBot) {
         if (type === 'invite-to-party') {
           await partyManager.connectToParty({ key: value });
 
@@ -42,8 +42,8 @@ module.exports = ({ conf, swarm, partyManager }) => {
           });
         }
       } else if (type === 'close') {
-        swarm().leave(getDiscoveryKey(peer.partyKey));
+        swarm.leave(getDiscoveryKey(peer.partyKey));
       }
     }
-  }
-);
+  };
+};
