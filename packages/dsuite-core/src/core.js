@@ -161,15 +161,14 @@ class DSuite extends EventEmitter {
   //
 
   async initialize() {
+    // Register kappa views.
+    this.registerViews();
 
     // Initialize control feed of the user.
     await this._mega.addFeed({ name: 'control' });
 
     // Load initial feeds for the currentPartyKey. Default is to lazy load feeds on connection.
     await this._mega.loadFeeds('control-feed/*');
-
-    // Register kappa views.
-    this.registerViews();
 
     // TODO(burdon): Comment (e.g., this must happen before above).
     await pify(this._core.ready.bind(this._core))();
