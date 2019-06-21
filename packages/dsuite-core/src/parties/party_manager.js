@@ -4,7 +4,7 @@
 
 const { EventEmitter } = require('events');
 
-const { Megafeed } = require('@wirelineio/megafeed');
+const { getDiscoveryKey, keyToHex, keyToBuffer } = require('@wirelineio/utils');
 
 /**
  * Manages party-related state.
@@ -16,8 +16,8 @@ class PartyManager extends EventEmitter {
   // TODO(burdon): Move to Megafeed.
   // eslint-disable-next-line class-methods-use-this
   static getPartyName(partyKey, feedKey) {
-    const partyKeyHex = Megafeed.keyToHex(partyKey);
-    const feedKeyHex = Megafeed.keyToHex(feedKey);
+    const partyKeyHex = keyToHex(partyKey);
+    const feedKeyHex = keyToHex(feedKey);
 
     // TODO(burdon): Extract constants for names (e.g., 'party-feed', 'control-feed').
     return `party-feed/${partyKeyHex}/${feedKeyHex}`;
@@ -50,7 +50,7 @@ class PartyManager extends EventEmitter {
   }
 
   getPartyKeyFromFeedKey(key) {
-    const feed = this._mega.feedByDK(Megafeed.discoveryKey(key));
+    const feed = this._mega.feedByDK(getDiscoveryKey(key));
     if (feed) {
       const args = feed.name.split('/');
       return args[1];
@@ -65,7 +65,7 @@ class PartyManager extends EventEmitter {
   }
 
   async connectToParty({ key }) {
-    const partyKey = Megafeed.keyToHex(key);
+    const partyKey = keyToHex(key);
 
     await this.createLocalPartyFeed(partyKey);
 
@@ -74,14 +74,14 @@ class PartyManager extends EventEmitter {
 
     return this._mega.addParty({
       rules: 'dsuite:documents',
-      key: Megafeed.keyToBuffer(key)
+      key: keyToBuffer(key)
     });
   }
 
   async connectToBot({ key }) {
     return this._mega.addParty({
       rules: 'dsuite:bot',
-      key: Megafeed.keyToBuffer(key)
+      key: keyToBuffer(key)
     });
   }
 
