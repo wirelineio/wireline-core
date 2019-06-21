@@ -4,7 +4,7 @@
 
 import { EventEmitter } from 'events';
 import crypto from 'crypto';
-import { pipeline } from 'stream';
+import pump from 'pump';
 
 import network from '@wirelineio/hyperswarm-network-memory';
 
@@ -53,7 +53,7 @@ class DiscoverySwarm extends EventEmitter {
         this.emit('connection', conn, info);
       });
 
-      pipeline(socket, conn, socket, (err) => {
+      pump(socket, conn, socket, (err) => {
         if (err) {
           console.log(err);
           this.emit('error', err);

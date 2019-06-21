@@ -2,7 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import { promisify } from 'util';
+import pify from 'pify';
 import hypercore from 'hypercore';
 import ram from 'random-access-memory';
 import DiscoverySwarm from './discovery-swarm';
@@ -10,7 +10,7 @@ import DiscoverySwarm from './discovery-swarm';
 test('replicate using discovery-swarm and hypercore', async (done) => {
   const localFeed = hypercore(ram, { valueEncoding: 'utf-8' });
 
-  await promisify(localFeed.ready.bind(localFeed))();
+  await pify(localFeed.ready.bind(localFeed))();
 
   const replicaFeed = hypercore(ram, localFeed.key, { valueEncoding: 'utf-8' });
   replicaFeed.on('append', () => {

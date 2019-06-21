@@ -2,7 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const { promisify } = require('util');
+const pify = require('pify');
 
 const { keyToHex } = require('./keys');
 
@@ -24,11 +24,11 @@ class Repository {
 
     this._codec = codec;
 
-    this._dbReady = promisify(db.ready.bind(db));
-    this._dbPut = promisify(db.put.bind(db));
-    this._dbGet = promisify(db.get.bind(db));
-    this._dbDelete = promisify(db.del.bind(db));
-    this._dbList = promisify(db.list.bind(db));
+    this._dbReady = pify(db.ready.bind(db));
+    this._dbPut = pify(db.put.bind(db));
+    this._dbGet = pify(db.get.bind(db));
+    this._dbDelete = pify(db.del.bind(db));
+    this._dbList = pify(db.list.bind(db));
   }
 
   async ready() {

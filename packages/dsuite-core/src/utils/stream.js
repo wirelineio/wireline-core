@@ -2,12 +2,12 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const { pipeline } = require('stream');
+const pump = require('pump');
 const through = require('through2');
 
 const eachMsg = (reader, cb) => (
   new Promise((resolve, reject) => {
-    pipeline(
+    pump(
       reader,
       through.obj((chunk, _, next) => {
         cb.call(this, chunk, next);

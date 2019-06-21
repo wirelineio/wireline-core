@@ -4,13 +4,16 @@
 
 const charwise = require('charwise');
 const { EventEmitter } = require('events');
-const { pipeline } = require('stream');
 
+const kappa = require('kappa-core');
+const ram = require('random-access-memory');
 const levelup = require('levelup');
 const memdown = require('memdown');
 const multi = require('multi-read-stream');
 const sorter = require('stream-sort');
 const crypto = require('hypercore-crypto');
+const pump = require('pump');
+const pify = require('pify');
 
 const { Megafeed } = require('@wirelineio/megafeed');
 const {
@@ -51,10 +54,6 @@ class DSuite extends EventEmitter {
 
     // Create megafeed.
     this._mega = new Megafeed(storage, key, {
-      feeds: [
-        { name: 'control' }, // TODO(burdon): Factor out special name.
-        { name: this.getPartyName(conf.partyKey, 'local'), load: false }
-      ],
       valueEncoding: 'json',
       secretKey
     });
@@ -151,12 +150,14 @@ class DSuite extends EventEmitter {
   //
 
   async initialize() {
+    // Initialize control feed of the user.
+    await this.initializeFeeds();
 
     // Register kappa views.
     this.registerViews();
 
     // TODO(burdon): Comment (e.g., this must happen before above).
-    await promisify(this._core.ready.bind(this._core))();
+    await pify(this._core.ready.bind(this._core))();
 
     // Connect to the swarm.
     // TODO(burdon): Remove factory method and create adapter to manage events.
@@ -186,6 +187,10 @@ class DSuite extends EventEmitter {
     this.emit('ready');
   }
 
+  async initializeFeeds() {
+    await this._mega.addFeed({ name: 'control' });
+  }
+
   //
   // Views
   //
@@ -212,13 +217,6 @@ class DSuite extends EventEmitter {
     // Custom views.
 
     this.registerView({ name: 'chess',          view: 'LogsView' });
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  getPartyName(partyKey, feedKey) {
-    const partyKeyHex = keyToHex(partyKey);
-    const feedKeyHex = keyToHex(feedKey);
-    return `party-feed/${partyKeyHex}/${feedKeyHex}`;
   }
 
   registerView({ name, view }) {
@@ -274,13 +272,10 @@ class DSuite extends EventEmitter {
     return feed && key === feed.key.toString('hex');
   }
 
-  // TODO(burdon): Static/util?
   // eslint-disable-next-line class-methods-use-this
   getPartyName(partyKey, feedKey) {
     const partyKeyHex = keyToHex(partyKey);
     const feedKeyHex = keyToHex(feedKey);
-
-    // TODO(burdon): Extract constants for names (e.g., 'party-feed', 'control-feed').
     return `party-feed/${partyKeyHex}/${feedKeyHex}`;
   }
 
@@ -342,7 +337,7 @@ class DSuite extends EventEmitter {
     const reader = multi.obj(partyFeeds.map(feed => feed.createReadStream()));
 
     return new Promise((resolve, reject) => {
-      const writable = pipeline(
+      const writable = pump(
         reader,
         sorter({
           count: Infinity,
