@@ -25,8 +25,8 @@ const {
 const FeedMap = require('./feed-map');
 
 class Megafeed extends EventEmitter {
+
   /**
-   *
    * @param {RandomAccessStorage} storage
    * @param {Buffer} key
    * @param {Object} options

@@ -11,7 +11,7 @@ const { getDiscoveryKey, keyToHex, keyToBuffer } = require('@wirelineio/utils');
  */
 class PartyManager extends EventEmitter {
 
-  // TODO(burdon): Refactor this abstraction into megafeed/party.
+  // TODO(burdon): Refactor into party module.
 
   // TODO(burdon): Move to Megafeed.
   // eslint-disable-next-line class-methods-use-this

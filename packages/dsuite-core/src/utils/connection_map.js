@@ -5,6 +5,7 @@
 /**
  * Graph of connections.
  */
+// TODO(burdon): Not used (DebugPanel?)
 class ConectionMap {
 
   constructor(root) {

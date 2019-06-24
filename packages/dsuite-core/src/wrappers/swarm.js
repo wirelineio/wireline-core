@@ -5,37 +5,36 @@
 const discoverySwarmWebrtc = require('@geut/discovery-swarm-webrtc');
 const createDebug = require('debug');
 
-const Metric = require('./utils/metric');
-const Config = require('./config');
+const Metric = require('../utils/metric');
+const Config = require('../config');
 
 const debug = createDebug('dsuite:swarm');
 
 const isBrowser = typeof window !== 'undefined';
 
 /**
- * Subscribe to swarm network messages.
+ * Creates the swarm.
  *
- * @param dsuite kappa core.
- * @param conf {Object}
- * @param conf.isBot {Boolean}
- * @param conf.maxPeers {Number}
- * @param conf.hub {String|Array}
+ * @param mega
+ * @param conf
+ * @return {*|DiscoverySwarmWebrtc}
  */
-module.exports = (dsuite, conf = {}) => {
-  const { mega } = dsuite;
-  const id = mega.feed('control').discoveryKey.toString('hex');
+exports.createSwarm = (mega, conf) => {
 
-  // TODO(burdon): This function "hides" the main swarm constructor.
-  // Move this outside and have adapater to add debug metrics.
+  // TODO(burdon): Removing control feed.
+  const id = mega.feed('control').discoveryKey.toString('hex');
 
   // TODO(burdon): Handle defaults externally (remove const here).
   // Priority: conf => ENV => default (SIGNALHUB const).
   const signalhub = conf.hub || process.env.SIGNALHUB || Config.SIGNALHUB;
   const ice = JSON.parse(conf.ice || process.env.ICE_SERVERS || Config.ICE_SERVERS);
 
-  // TODO(burdon): This starts before the client has been initialized. Create init() method?
+  debug('Connecting:', JSON.stringify({ signalhub, ice }));
+  debug('PeerId:', mega.id.toString('hex'));
+
   const swarm = conf.swarm || discoverySwarmWebrtc;
-  const sw = swarm({
+
+  return swarm({
     id,
 
     urls: Array.isArray(signalhub) ? signalhub : [signalhub],
@@ -54,12 +53,24 @@ module.exports = (dsuite, conf = {}) => {
       }
     }
   });
+};
 
-  debug('Connecting:', JSON.stringify({ signalhub, ice }));
-  debug('PeerId:', mega.id.toString('hex'));
+/**
+ * Add event handlers for debugging.
+ *
+ * @param sw
+ * @param mega
+ * @param dsuite
+ * @return {*|DiscoverySwarmWebrtc}
+ */
+// TODO(burdon): Event bubbling (rather than on dsuite object?)
+exports.addSwarmHandlers = (sw, mega, dsuite) => {
 
   // TODO(burdon): 'swarm.peers' (different from connections).
   // sw.signal.info(data => console.log(data));
+
+  // TODO(burdon): Removing control feed.
+  const id = mega.feed('control').discoveryKey.toString('hex');
 
   sw.on('connection', (peer, info) => {
     sw.signal.info({ type: 'connection', channel: info.channel, peers: [id, info.id] });

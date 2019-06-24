@@ -3,17 +3,13 @@
 //
 
 const { EventEmitter } = require('events');
-
-const kappa = require('kappa-core');
 const ram = require('random-access-memory');
 const levelup = require('levelup');
 const memdown = require('memdown');
 const pify = require('pify');
 
-const { Megafeed } = require('@wirelineio/megafeed');
 const { bubblingEvents } = require('@wirelineio/utils');
 
-const swarm = require('./swarm');
 const { ViewTypes, Views } = require('./views');
 
 const PartyManager = require('./parties/party_manager.js');
@@ -22,12 +18,17 @@ const PartySerializer = require('./parties/serializer.js');
 const botPartyRules = require('./parties/bots.js');
 const documentPartyRules = require('./parties/documents.js');
 
+const { createMega } = require('./wrappers/mega');
+const { createKappa, createKappaViewAdapter } = require('./wrappers/kappa');
+const { createSwarm, addSwarmHandlers } = require('./wrappers/swarm');
+
 /**
  * App framework.
  */
 class DSuite extends EventEmitter {
 
-  // TODO(burdon): Move to appkit?
+  // TODO(burdon): Remove all external dependencies (passing "this")
+  // TODO(burdon): Rename Framework (separate repo or move to appkit?)
 
   /**
    * DSuite core. Creates kappa views and configs swarming.
@@ -72,12 +73,8 @@ class DSuite extends EventEmitter {
     ];
 
     // Create megafeed.
-    const { publicKey: key, secretKey } = keys || {};
-    this._mega = new Megafeed(storage, key, {
-      valueEncoding: 'json',
-      secretKey,
-      feeds
-    });
+    const { publicKey, secretKey } = keys || {};
+    this._mega = createMega(storage, publicKey, secretKey, feeds);
 
     // Metrics.
     this._mega.on('append', (feed) => {
@@ -88,19 +85,12 @@ class DSuite extends EventEmitter {
     // Kappa
     //
 
-    // Create kapp views.
-    // TODO(burdon): Rename kappa.
-    this._core = kappa(null, {
-      multifeed: this._mega // TODO(burdon): Create Adapter.
-    });
-
-    // TODO(burdon): Remove: create custom view constructor/injector.
-    // Sometimes we need access to the dsuite instance in our apollo stores (e.g., IPFS serializer).
-    this._core.dsuite = this;
-
-    // TODO(burdon): Required for kappa.
     // In-memory cache for views.
     this._db = db || levelup(memdown());
+
+    // Create kapp views.
+    // TODO(burdon): Rename kappa.
+    this._core = createKappa(this._mega, createKappaViewAdapter(this));
 
     //
     // Parties
@@ -110,20 +100,7 @@ class DSuite extends EventEmitter {
     this._partyManager = new PartyManager(this, this._mega, this._core);
 
     // Import/export
-    this._serializer = new PartySerializer(this);
-  }
-
-  //
-  // Kappa API
-  // TODO(burdon): Create adapter.
-  //
-
-  get _logs() {
-    return this._mega;
-  }
-
-  get db() {
-    return this._db;
+    this._serializer = new PartySerializer(this._core, this._mega, this._partyManager);
   }
 
   //
@@ -133,6 +110,11 @@ class DSuite extends EventEmitter {
   // TODO(burdon): Remove (pass options as required).
   get conf() {
     return this._conf;
+  }
+
+  // TODO(burdon): Required by views.
+  get db() {
+    return this._db;
   }
 
   // TODO(burdon): Rename kappa.
@@ -170,12 +152,14 @@ class DSuite extends EventEmitter {
     // Load initial feeds for the currentPartyKey. Default is to lazy load feeds on connection.
     await this._mega.loadFeeds('control-feed/*');
 
-    // TODO(burdon): Comment (e.g., this must happen before above).
+    // Wait for kappa to initialize.
     await pify(this._core.ready.bind(this._core))();
 
     // Connect to the swarm.
-    // TODO(burdon): Remove factory method and create adapter to manage events.
-    this._swarm = swarm(this, this._conf);
+    this._swarm = createSwarm(this._mega, this._conf);
+
+    // TODO(burdon): Remove (event bubbling).
+    addSwarmHandlers(this._swarm, this._mega, this);
 
     const replicationRules = [
       documentPartyRules({ core: this._core, mega: this._mega, partyManager: this._partyManager }),
@@ -225,9 +209,21 @@ class DSuite extends EventEmitter {
       return this._views.get(name);
     }
 
-    const createView = (typeof view === 'string') ? ViewTypes[view] : view;
+    const viewConstructor = (typeof view === 'string') ? ViewTypes[view] : view;
 
-    this._core.use(name, createView(this, { viewId: name }));
+    // TODO(burdon): Remove dependency on this. Pass individual params.
+    const adapter = {
+
+      // TODO(burdon): Event bubbling?
+      on: this.on.bind(this),
+
+      core: this._core,
+      mega: this._mega,
+      db: this._db,
+      partyManager: this._partyManager
+    };
+
+    this._core.use(name, viewConstructor(adapter, { viewId: name }));
 
     this._views.set(name, this._core.api[name]);
     return this._views.get(name);

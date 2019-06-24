@@ -7,7 +7,7 @@ const multi = require('multi-read-stream');
 const pump = require('pump');
 const sorter = require('stream-sort');
 
-const { Megafeed } = require('@wirelineio/megafeed');
+const { keyToBuffer, keyToHex } = require('@wirelineio/utils');
 
 const PartyManager = require('../parties/party_manager');
 
@@ -16,9 +16,9 @@ const PartyManager = require('../parties/party_manager');
  */
 class PartySerializer {
 
-  // TODO(burdon): Factor out to megafeed.
+  // TODO(burdon): Refactor into party module.
 
-  constructor({ core, mega, partyManager }) {
+  constructor(core, mega, partyManager) {
     this._core = core;
     this._mega = mega;
     this._partyManager = partyManager;
@@ -79,11 +79,11 @@ class PartySerializer {
         .map(message => feed.pAppend(message))
     );
 
-    await this._core.api['participants'].bindControlProfile({ partyKey: Megafeed.keyToHex(partyKey) });
+    await this._core.api['participants'].bindControlProfile({ partyKey: keyToHex(partyKey) });
 
     await this._mega.addParty({
       rules: 'dsuite:documents',
-      key: Megafeed.keyToBuffer(partyKey)
+      key: keyToBuffer(partyKey)
     });
 
     return partyKey;
