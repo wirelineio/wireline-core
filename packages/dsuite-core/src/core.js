@@ -168,6 +168,7 @@ class DSuite extends EventEmitter {
 
     replicationRules.forEach(rule => this._mega.setRules(rule));
 
+    // TODO(burdon): ???
     bubblingEvents(this, this.partyManager, ['rule-handshake', 'rule-ephemeral-message']);
 
     // TODO(burdon): Really needs a comment.
@@ -220,6 +221,7 @@ class DSuite extends EventEmitter {
       core: this._core,
       mega: this._mega,
       db: this._db,
+
       partyManager: this._partyManager
     };
 
