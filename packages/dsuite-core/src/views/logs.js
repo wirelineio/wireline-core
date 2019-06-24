@@ -82,6 +82,7 @@ module.exports = function LogsView({ core, db, partyManager }, { viewId }) {
           changes
         };
       },
+
       // TODO(elmasse) Quick fix, this needs review. It might be better to use getChages and return the proper value from there.
       async getLogs(core, itemId) {
         const changes = (await core.api[viewId].getChanges(itemId));

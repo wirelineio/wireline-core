@@ -67,6 +67,7 @@ module.exports = function ItemsView({ core, db, partyManager }) {
     // TODO(burdon): Standardize method names.
 
     api: {
+      // TODO(burdon): Remove default title.
       async create(core, { type, title = 'Untitled', partyKey }) {
         const itemId = createId();
 
