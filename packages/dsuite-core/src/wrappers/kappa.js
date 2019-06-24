@@ -36,6 +36,7 @@ class Adapter {
     this._dsuite = dsuite;
 
     const methods = [
+      // TODO(burdon): Events
       'on',                 // connectionStatusChange => connection
       'removeListener',     // cleanupSubscription => connection
     ];

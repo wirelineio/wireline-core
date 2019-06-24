@@ -23,14 +23,11 @@ class PartyManager extends EventEmitter {
     return `party-feed/${partyKeyHex}/${feedKeyHex}`;
   }
 
-  constructor(dsuite, mega, core) {
+  constructor(mega, core) {
     super();
 
     console.assert(mega);
     console.assert(core);
-
-    // TODO(burdon): Remove (required for events).
-    this._dsuite = dsuite;
 
     this._mega = mega;
     this._core = core;

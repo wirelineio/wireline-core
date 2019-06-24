@@ -18,9 +18,9 @@ class PartySerializer {
 
   // TODO(burdon): Refactor into party module.
 
-  constructor(core, mega, partyManager) {
-    this._core = core;
+  constructor(mega, core, partyManager) {
     this._mega = mega;
+    this._core = core;
     this._partyManager = partyManager;
   }
 

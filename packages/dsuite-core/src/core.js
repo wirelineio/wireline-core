@@ -96,10 +96,13 @@ class DSuite extends EventEmitter {
     //
 
     // Manages parties.
-    this._partyManager = new PartyManager(this, this._mega, this._kappa);
+    this._partyManager = new PartyManager(this._mega, this._kappa);
 
     // Import/export
-    this._serializer = new PartySerializer(this._kappa, this._mega, this._partyManager);
+    this._serializer = new PartySerializer(this._mega, this._kappa, this._partyManager);
+
+    // Register kappa views.
+    this.registerViews();
   }
 
   //
@@ -137,8 +140,6 @@ class DSuite extends EventEmitter {
   //
 
   async initialize() {
-    // Register kappa views.
-    this.registerViews();
 
     // Initialize control feed of the user.
     await this._mega.addFeed({ name: 'control' });
@@ -190,7 +191,7 @@ class DSuite extends EventEmitter {
   }
 
   //
-  // Kappa
+  // Kappa views.
   //
 
   registerViews() {
