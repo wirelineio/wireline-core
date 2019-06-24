@@ -51,6 +51,7 @@ module.exports.Views = [
     view: 'DocumentsView'
   },
 
+  // TODO(burdon): Move to Launchpad?
   // TODO(burdon): No need to register LogView since default?
   {
     name: 'graphs',

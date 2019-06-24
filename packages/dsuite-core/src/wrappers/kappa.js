@@ -24,7 +24,7 @@ exports.createKappa = (mega, adapter) => {
     }
   });
 
-  // TODO(burdon): Temporary wrapper for views (kappa => dsuite)
+  // TODO(burdon): Pass additional properties to KappaLink instead.
   instance.dsuite = adapter;
 
   return instance;
@@ -32,22 +32,22 @@ exports.createKappa = (mega, adapter) => {
 
 class Adapter {
 
-  constructor(dsuite) {
-    this._dsuite = dsuite;
+  constructor(framework) {
+    this._frameowrk = framework;
 
     const methods = [
       // TODO(burdon): Events
-      'on',                 // connectionStatusChange => connection
-      'removeListener',     // cleanupSubscription => connection
+      'on',                     // connectionStatusChange => connection
+      'removeListener',         // cleanupSubscription => connection
     ];
 
-    methods.forEach((method) => { this[method] = this._dsuite[method].bind(this._dsuite); });
+    methods.forEach((method) => { this[method] = this._frameowrk[method].bind(this._frameowrk); });
   }
 
   // connectionStatusChange => swarm.signal
   get swarm() {
-    return this._dsuite.swarm;
+    return this._frameowrk.swarm;
   }
 }
 
-exports.createKappaViewAdapter = dsuite => new Adapter(dsuite);
+exports.createKappaViewAdapter = framework => new Adapter(framework);

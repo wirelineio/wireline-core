@@ -10,7 +10,8 @@ const pify = require('pify');
 
 const { bubblingEvents } = require('@wirelineio/utils');
 
-const { ViewTypes, Views } = require('./views');
+const { ViewTypes, Views } = require('./views/defs');
+const ViewManager = require('./views/view_manager');
 
 const PartyManager = require('./parties/party_manager.js');
 const PartySerializer = require('./parties/serializer.js');
@@ -50,10 +51,6 @@ class DSuite extends EventEmitter {
     this._conf = conf;
 
     const { db, keys, storage = ram } = this._conf;
-
-    // Map of views indexed by name.
-    // TODO(burdon): Factor out ViewManager.
-    this._views = new Map();
 
     // Created on initialize.
     this._swarm = null;
@@ -101,8 +98,15 @@ class DSuite extends EventEmitter {
     // Import/export
     this._serializer = new PartySerializer(this._mega, this._kappa, this._partyManager);
 
-    // Register kappa views.
-    this.registerViews();
+    //
+    // Kappa views
+    //
+
+    // Map of views indexed by name.
+    // TODO(burdon): Remove partyManager dependency.
+    this._viewManager = new ViewManager(this._mega, this._kappa, this._db, this._partyManager)
+      .registerTypes(ViewTypes)
+      .registerViews(Views);
   }
 
   //
@@ -114,17 +118,20 @@ class DSuite extends EventEmitter {
     return this._conf;
   }
 
-  // TODO(burdon): Rename kappa.
-  get core() {
-    return this._kappa;
-  }
-
   get mega() {
     return this._mega;
   }
 
   get swarm() {
     return this._swarm;
+  }
+
+  get kappa() {
+    return this._kappa;
+  }
+
+  get viewManager() {
+    return this._viewManager;
   }
 
   get partyManager() {
@@ -134,10 +141,6 @@ class DSuite extends EventEmitter {
   get serializer() {
     return this._serializer;
   }
-
-  //
-  // API
-  //
 
   async initialize() {
 
@@ -188,42 +191,6 @@ class DSuite extends EventEmitter {
     }
 
     this.emit('ready');
-  }
-
-  //
-  // Kappa views.
-  //
-
-  registerViews() {
-    // TODO(burdon): Remove plurals.
-    // TODO(burdon): Prefer uniform core.api['view-id'] to access (makes it clearer this is a named extension).
-    Views.forEach(view => this.registerView(view));
-  }
-
-  registerView({ name, view }) {
-    if (this.hasView(name)) {
-      return this._views.get(name);
-    }
-
-    const viewConstructor = (typeof view === 'string') ? ViewTypes[view] : view;
-
-    const adapter = {
-      db: this._db,
-      core: this._kappa,
-      mega: this._mega,
-      partyManager: this._partyManager
-    };
-
-    // TODO(burdon): Pass individual params (not {}).
-    this._kappa.use(name, viewConstructor(adapter, { viewId: name }));
-
-    this._views.set(name, this._kappa.api[name]);
-    return this._views.get(name);
-  }
-
-  // TODO(burdon): Used by apollo (factor out ViewManager).
-  hasView(name) {
-    return this._views.has(name);
   }
 }
 
