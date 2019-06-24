@@ -2,8 +2,8 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const discoverySwarmWebrtc = require('@geut/discovery-swarm-webrtc');
 const createDebug = require('debug');
+const discoverySwarmWebrtc = require('@geut/discovery-swarm-webrtc');
 
 const Metric = require('../utils/metric');
 const Config = require('../config');

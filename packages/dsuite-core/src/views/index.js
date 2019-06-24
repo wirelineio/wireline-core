@@ -34,7 +34,7 @@ module.exports.Views = [
     view: 'ItemsView'
   },
 
-  // Dsuite views.
+  // Custom views.
 
   {
     name: 'documents',

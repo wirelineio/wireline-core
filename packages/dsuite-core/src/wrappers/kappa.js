@@ -36,7 +36,7 @@ class Adapter {
     this._dsuite = dsuite;
 
     const methods = [
-      'on',                 // connectionStatusChange
+      'on',                 // connectionStatusChange => connection
       'removeListener',     // cleanupSubscription => connection
     ];
 

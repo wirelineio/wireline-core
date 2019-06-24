@@ -89,37 +89,31 @@ class DSuite extends EventEmitter {
     this._db = db || levelup(memdown());
 
     // Create kapp views.
-    // TODO(burdon): Rename kappa.
-    this._core = createKappa(this._mega, createKappaViewAdapter(this));
+    this._kappa = createKappa(this._mega, createKappaViewAdapter(this));
 
     //
     // Parties
     //
 
     // Manages parties.
-    this._partyManager = new PartyManager(this, this._mega, this._core);
+    this._partyManager = new PartyManager(this, this._mega, this._kappa);
 
     // Import/export
-    this._serializer = new PartySerializer(this._core, this._mega, this._partyManager);
+    this._serializer = new PartySerializer(this._kappa, this._mega, this._partyManager);
   }
 
   //
   // Accessors
   //
 
-  // TODO(burdon): Remove (pass options as required).
+  // TODO(burdon): Remove (pass specific options as required).
   get conf() {
     return this._conf;
   }
 
-  // TODO(burdon): Required by views.
-  get db() {
-    return this._db;
-  }
-
   // TODO(burdon): Rename kappa.
   get core() {
-    return this._core;
+    return this._kappa;
   }
 
   get mega() {
@@ -153,7 +147,7 @@ class DSuite extends EventEmitter {
     await this._mega.loadFeeds('control-feed/*');
 
     // Wait for kappa to initialize.
-    await pify(this._core.ready.bind(this._core))();
+    await pify(this._kappa.ready.bind(this._kappa))();
 
     // Connect to the swarm.
     this._swarm = createSwarm(this._mega, this._conf);
@@ -162,7 +156,7 @@ class DSuite extends EventEmitter {
     addSwarmHandlers(this._swarm, this._mega, this);
 
     const replicationRules = [
-      documentPartyRules({ core: this._core, mega: this._mega, partyManager: this._partyManager }),
+      documentPartyRules({ core: this._kappa, mega: this._mega, partyManager: this._partyManager }),
       botPartyRules({ conf: this._conf, swarm: this._swarm, partyManager: this._partyManager })
     ];
 
@@ -186,9 +180,9 @@ class DSuite extends EventEmitter {
     // Set Profile if name is provided.
     const { name } = this._conf;
     if (name) {
-      const profile = await this._core.api['contacts'].getProfile();
+      const profile = await this._kappa.api['contacts'].getProfile();
       if (!profile || profile.data.username !== name) {
-        await this._core.api['contacts'].setProfile({ data: { username: name } });
+        await this._kappa.api['contacts'].setProfile({ data: { username: name } });
       }
     }
 
@@ -212,22 +206,17 @@ class DSuite extends EventEmitter {
 
     const viewConstructor = (typeof view === 'string') ? ViewTypes[view] : view;
 
-    // TODO(burdon): Remove dependency on this. Pass individual params.
     const adapter = {
-
-      // TODO(burdon): Event bubbling?
-      on: this.on.bind(this),
-
-      core: this._core,
-      mega: this._mega,
       db: this._db,
-
+      core: this._kappa,
+      mega: this._mega,
       partyManager: this._partyManager
     };
 
-    this._core.use(name, viewConstructor(adapter, { viewId: name }));
+    // TODO(burdon): Pass individual params (not {}).
+    this._kappa.use(name, viewConstructor(adapter, { viewId: name }));
 
-    this._views.set(name, this._core.api[name]);
+    this._views.set(name, this._kappa.api[name]);
     return this._views.get(name);
   }
 

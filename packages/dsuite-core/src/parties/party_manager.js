@@ -110,8 +110,7 @@ class PartyManager extends EventEmitter {
       this._currentPartyKey = key;
       const feed = this.getLocalPartyFeed(key);
 
-      // TODO(burdon): Document events. Prefer Typed map of event names.
-      this._dsuite.emit('party-changed', { partyKey: key, feed });
+      this.emit('party-changed', { partyKey: key, feed });
     }
   }
 }

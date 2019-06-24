@@ -12,10 +12,7 @@ const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
 const { append } = require('../protocol/messages');
 
-// TODO(burdon): Remove dsuite (events).
-module.exports = function DocumentsView(dsuite, { viewId }) {
-  const { core, db, partyManager } = dsuite;
-
+module.exports = function DocumentsView({ core, db, partyManager }, { viewId }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
@@ -33,9 +30,9 @@ module.exports = function DocumentsView(dsuite, { viewId }) {
     getDocumentContent
   } = automergeWorker;
 
+  // TODO(burdon): ???
   automergeWorker.on('status', () => {
-    // TODO(burdon): Move to local events?
-    dsuite.emit('metric.kappa.document.status');
+    events.emit('metric.kappa.document.status');
   });
 
   return view(viewDB, {

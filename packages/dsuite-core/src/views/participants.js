@@ -10,15 +10,12 @@ const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
 const { append } = require('../protocol/messages');
 
-module.exports = function ParticipantsView(dsuite) {
-  const { core, mega, db, partyManager } = dsuite;
-
+module.exports = function ParticipantsView({ core, mega, partyManager, db }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
   let currentPartyKey;
-  // TODO(burdon): Events.
-  dsuite.on('party-changed', ({ partyKey: newPartyKey }) => {
+  partyManager.on('party-changed', ({ partyKey: newPartyKey }) => {
     currentPartyKey = newPartyKey.toString('hex');
   });
 
@@ -64,8 +61,6 @@ module.exports = function ParticipantsView(dsuite) {
     // TODO(burdon): Standardize method names.
 
     api: {
-
-      // TODO(burdon): Comment.
       key() {
         return mega.key.toString('hex');
       },

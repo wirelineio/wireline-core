@@ -13,14 +13,12 @@ const { append } = require('../protocol/messages');
 
 const createId = hyperid({ urlSafe: true });
 
-module.exports = function ItemsView(dsuite) {
-  const { core, db, partyManager } = dsuite;
-
+module.exports = function ItemsView({ core, db, partyManager }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
   let currentPartyKey;
-  dsuite.on('party-changed', ({ partyKey: newPartyKey }) => {
+  partyManager.on('party-changed', ({ partyKey: newPartyKey }) => {
     currentPartyKey = newPartyKey.toString('hex');
   });
 
@@ -66,8 +64,9 @@ module.exports = function ItemsView(dsuite) {
         });
     },
 
+    // TODO(burdon): Standardize method names.
+
     api: {
-      // TODO(burdon): Consistent createItems.
       async create(core, { type, title = 'Untitled', partyKey }) {
         const itemId = createId();
 
