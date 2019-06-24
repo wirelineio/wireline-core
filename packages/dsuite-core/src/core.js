@@ -14,7 +14,7 @@ const { ViewTypes, Views } = require('./views/defs');
 const ViewManager = require('./views/view_manager');
 
 const PartyManager = require('./parties/party_manager.js');
-const PartySerializer = require('./parties/serializer.js');
+const PartySerializer = require('./parties/party_serializer.js');
 
 const botPartyRules = require('./parties/bots.js');
 const documentPartyRules = require('./parties/documents.js');
@@ -96,7 +96,7 @@ class DSuite extends EventEmitter {
     this._partyManager = new PartyManager(this._mega, this._kappa);
 
     // Import/export
-    this._serializer = new PartySerializer(this._mega, this._kappa, this._partyManager);
+    this._partySerializer = new PartySerializer(this._mega, this._kappa, this._partyManager);
 
     //
     // Kappa views
@@ -113,17 +113,12 @@ class DSuite extends EventEmitter {
   // Accessors
   //
 
-  // TODO(burdon): Remove (pass specific options as required).
-  get conf() {
-    return this._conf;
+  get swarm() {
+    return this._swarm;
   }
 
   get mega() {
     return this._mega;
-  }
-
-  get swarm() {
-    return this._swarm;
   }
 
   get kappa() {
@@ -138,8 +133,8 @@ class DSuite extends EventEmitter {
     return this._partyManager;
   }
 
-  get serializer() {
-    return this._serializer;
+  get partySerializer() {
+    return this._partySerializer;
   }
 
   async initialize() {

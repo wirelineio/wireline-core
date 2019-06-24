@@ -24,7 +24,8 @@ exports.createKappa = (mega, adapter) => {
     }
   });
 
-  // TODO(burdon): Pass additional properties to KappaLink instead.
+  // TODO(burdon): Pass additional properties to (appkit) KappaLink instead (swarm)
+  // TODO(burdon): Event bus to trigger other methods?
   instance.dsuite = adapter;
 
   return instance;
@@ -37,16 +38,22 @@ class Adapter {
 
     const methods = [
       // TODO(burdon): Events
-      'on',                     // connectionStatusChange => connection
-      'removeListener',         // cleanupSubscription => connection
+      'on',                     // appkit.connection.connectionStatusChange (swarm events?)
+      'removeListener',         // appkit.connection.cleanupSubscription
+      'connectToBot'            // appkit.contact
     ];
 
     methods.forEach((method) => { this[method] = this._frameowrk[method].bind(this._frameowrk); });
   }
 
-  // connectionStatusChange => swarm.signal
+  // appkit.connection
   get swarm() {
     return this._frameowrk.swarm;
+  }
+
+  // appkit.party
+  get partySerializer() {
+    return this._frameowrk.partySerializer;
   }
 }
 
