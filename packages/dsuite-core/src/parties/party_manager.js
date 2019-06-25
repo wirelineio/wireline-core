@@ -23,14 +23,13 @@ class PartyManager extends EventEmitter {
     return `party-feed/${partyKeyHex}/${feedKeyHex}`;
   }
 
-  constructor(mega, core) {
+  constructor(mega, kappa) {
     super();
-
     console.assert(mega);
-    console.assert(core);
+    console.assert(kappa);
 
     this._mega = mega;
-    this._core = core;
+    this._kappa = kappa;
 
     this._currentPartyKey = null;
   }
@@ -67,7 +66,7 @@ class PartyManager extends EventEmitter {
     await this.createLocalPartyFeed(partyKey);
 
     // Bind the control profile with the party that we are going to connect to.
-    await this._core.api['participants'].bindControlProfile({ partyKey });
+    await this._kappa.api['participants'].bindControlProfile({ partyKey });
 
     return this._mega.addParty({
       rules: 'dsuite:documents',

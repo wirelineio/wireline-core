@@ -20,21 +20,18 @@ const botPartyRules = require('./parties/bots.js');
 const documentPartyRules = require('./parties/documents.js');
 
 const { createMega } = require('./wrappers/mega');
-const { createKappa, createKappaViewAdapter } = require('./wrappers/kappa');
+const { createKappa } = require('./wrappers/kappa');
 const { createSwarm, addSwarmHandlers } = require('./wrappers/swarm');
 
 /**
  * App framework.
  */
-class DSuite extends EventEmitter {
-
-  // TODO(burdon): Remove all external dependencies (passing "this")
-  // TODO(burdon): Rename Framework (separate repo or move to appkit?)
+class Framework extends EventEmitter {
 
   /**
-   * DSuite core. Creates kappa views and configs swarming.
-   *
+   * TODO(burdon): Remove.
    * @param [conf.name] {String} Name. If provided, profile will be set on contacts view.
+   *
    * @param conf.storage {Function} A random-access-* implementation for storage.
    * @param conf.keys {Object}
    * @param conf.key.publicKey {Buffer}
@@ -44,7 +41,7 @@ class DSuite extends EventEmitter {
    * @param conf.partyKey {Buffer} Sefines initial party key.
    * @param conf.maxPeers {Number} Maximum connections on swarm. Optional. Defaults: If isBot is true it is set to 64 otherwise 2.
    */
-  // TODO(burdon): Non-options variables should be actual params.
+  // TODO(burdon): Non-optional variables (e.g., storage) should be actual params.
   constructor(conf = {}) {
     super();
 
@@ -86,7 +83,7 @@ class DSuite extends EventEmitter {
     this._db = db || levelup(memdown());
 
     // Create kapp views.
-    this._kappa = createKappa(this._mega, createKappaViewAdapter(this));
+    this._kappa = createKappa(this._mega);
 
     //
     // Parties
@@ -103,10 +100,11 @@ class DSuite extends EventEmitter {
     //
 
     // Map of views indexed by name.
-    // TODO(burdon): Remove partyManager dependency.
     this._viewManager = new ViewManager(this._mega, this._kappa, this._db, this._partyManager)
       .registerTypes(ViewTypes)
       .registerViews(Views);
+
+    this._initialized = false;
   }
 
   //
@@ -138,6 +136,7 @@ class DSuite extends EventEmitter {
   }
 
   async initialize() {
+    console.assert(!this._initialized);
 
     // Initialize control feed of the user.
     await this._mega.addFeed({ name: 'control' });
@@ -151,18 +150,18 @@ class DSuite extends EventEmitter {
     // Connect to the swarm.
     this._swarm = createSwarm(this._mega, this._conf);
 
-    // TODO(burdon): Remove (event bubbling).
+    // TODO(burdon): Remove (use event bubbling?)
     addSwarmHandlers(this._swarm, this._mega, this);
 
     const replicationRules = [
-      documentPartyRules({ core: this._kappa, mega: this._mega, partyManager: this._partyManager }),
+      documentPartyRules({ mega: this._mega, kappa: this._kappa, partyManager: this._partyManager }),
       botPartyRules({ conf: this._conf, swarm: this._swarm, partyManager: this._partyManager })
     ];
 
     replicationRules.forEach(rule => this._mega.setRules(rule));
 
-    // TODO(burdon): ???
-    bubblingEvents(this, this.partyManager, ['rule-handshake', 'rule-ephemeral-message']);
+    // TODO(burdon): Remove need for bubbling?
+    bubblingEvents(this, this._partyManager, ['rule-handshake', 'rule-ephemeral-message']);
 
     // TODO(burdon): Really needs a comment.
     if (this._conf.isBot) {
@@ -172,8 +171,9 @@ class DSuite extends EventEmitter {
     }
 
     // TODO(burdon): Need to re-initialize if changed?
-    if (this._conf.partyKey) {
-      await this._partyManager.setParty({ key: this._conf.partyKey });
+    const { partyKey } = this._conf;
+    if (partyKey) {
+      await this._partyManager.setParty({ key: partyKey });
     }
 
     // Set Profile if name is provided.
@@ -185,8 +185,10 @@ class DSuite extends EventEmitter {
       }
     }
 
+    this._initialized = true;
     this.emit('ready');
+    return this;
   }
 }
 
-module.exports = DSuite;
+module.exports = Framework;

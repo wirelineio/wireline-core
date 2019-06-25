@@ -5,7 +5,7 @@
 const PartyManager = require('../parties/party_manager');
 const { encodeFeedKey, decodeFeedKey } = require('../protocol/feeds');
 
-module.exports = ({ core, mega, partyManager }) => {
+module.exports = ({ kappa, mega, partyManager }) => {
   return {
     name: 'dsuite:documents',
 
@@ -15,7 +15,7 @@ module.exports = ({ core, mega, partyManager }) => {
     },
 
     async getParticipantKeys(partyKey) {
-      const participants = await core.api['participants'].getParticipants({ partyKey });
+      const participants = await kappa.api['participants'].getParticipants({ partyKey });
 
       return participants.reduce((prev, participant) => (
         [
@@ -69,9 +69,9 @@ module.exports = ({ core, mega, partyManager }) => {
         });
       };
 
-      core.api['participants'].events.on('participant', onParticipant);
+      kappa.api['participants'].events.on('participant', onParticipant);
       peer.on('destroy', () => {
-        core.api['participants'].events.removeListener('participant', onParticipant);
+        kappa.api['participants'].events.removeListener('participant', onParticipant);
       });
     },
 

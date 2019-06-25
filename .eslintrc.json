@@ -29,6 +29,7 @@
     ],
     "no-console": "off",
     "no-multi-spaces": "off",
+    "no-param-reassign": "off",
     "no-shadow": "off",
     "no-underscore-dangle": "off",
     "object-curly-newline": "off",

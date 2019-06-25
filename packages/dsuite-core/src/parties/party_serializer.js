@@ -18,19 +18,23 @@ class PartySerializer {
 
   // TODO(burdon): Refactor into party module.
 
-  constructor(mega, core, partyManager) {
+  constructor(mega, kappa, partyManager) {
     this._mega = mega;
-    this._core = core;
+    this._kappa = kappa;
     this._partyManager = partyManager;
   }
 
   /**
    * Serialize party to buffer.
    *
-   * @param partyKey
+   * @param [partyKey]
    * @return {Promise<Buffer>}
    */
-  async serializeParty(partyKey = this._partyManager.currentPartyKey) {
+  async serializeParty(partyKey) {
+    // TODO(burdon): Why would this not be set?
+    if (!partyKey) {
+      partyKey = this._partyManager.currentPartyKey;
+    }
 
     // TODO(burdon): Change FeedMap abstraction so that it doesn't trigger kappa by default.
     // Load the feeds `({ silent: true })` without notifying kappa.
@@ -39,32 +43,33 @@ class PartySerializer {
     // Read the messages from all party feeds.
     const reader = multi.obj(partyFeeds.map(feed => feed.createReadStream()));
 
-    return new Promise((resolve, reject) => {
-      const writable = pump(
-        reader,
-        sorter({
-          count: Infinity,
-          compare: (a, b) => a.timestamp - b.timestamp
-        }),
-        (err) => {
-          if (err) {
-            return reject(err);
-          }
+    // TODO(burdon): Timestamp is a hack.
+    const timestampSorter = sorter({ count: Infinity, compare: (a, b) => a.timestamp - b.timestamp });
 
-          return resolve(Buffer.from(JSON.stringify(writable.get())));
+    return new Promise((resolve, reject) => {
+      const writable = pump(reader, timestampSorter, (err) => {
+        if (err) {
+          return reject(err);
         }
-      );
+
+        const buffer = Buffer.from(JSON.stringify(writable.get()));
+        return resolve(buffer);
+      });
     });
   }
 
   /**
    * Deserialize buffer to rehydrate party.
    *
-   * @param partyKey
    * @param buffer
+   * @param [partyKey]
    * @return {Promise<{}>}
    */
-  async deserializeParty({ partyKey = crypto.randomBytes(32), buffer }) {
+  async deserializeParty(buffer, partyKey) {
+    if (!partyKey) {
+      partyKey = crypto.randomBytes(32);
+    }
+
     const messages = JSON.parse(buffer);
 
     const feed = await this._mega.addFeed({
@@ -79,7 +84,7 @@ class PartySerializer {
         .map(message => feed.pAppend(message))
     );
 
-    await this._core.api['participants'].bindControlProfile({ partyKey: keyToHex(partyKey) });
+    await this._kappa.api['participants'].bindControlProfile({ partyKey: keyToHex(partyKey) });
 
     await this._mega.addParty({
       rules: 'dsuite:documents',

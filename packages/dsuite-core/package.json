@@ -1,7 +1,7 @@
 {
   "name": "@wirelineio/dsuite-core",
-  "version": "0.1.27",
-  "description": "Wireline wrapper for kappa.",
+  "version": "0.1.31",
+  "description": "Application Framework.",
   "homepage": "https://github.com/wirelineio/dsuite#readme",
   "bugs": {
     "url": "https://github.com/wirelineio/dsuite/issues"

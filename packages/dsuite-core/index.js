@@ -2,12 +2,9 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const DSuite = require('./src/core');
-
-require('@wirelineio/wire-inspect');
-
-// TODO(burdon): Determine external APIs.
+const Framework = require('./src/framework');
 
 module.exports = {
-  DSuite
+  DSuite: Framework,  // TODO(burdon): Remove.
+  Framework
 };
