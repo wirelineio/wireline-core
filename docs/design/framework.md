@@ -49,10 +49,9 @@ const mf = new Megafeed();
 const kf = new KappaFactory();
 const kappa = kf.create(mf, "topic");
 
-const view = new LogView();
-kappa.user(view);
+const view = kappa.use(new LogView());
 
-const app = new LogPad(view);
+const app = new LogPad(view, { itemId });
 
 const hypercore = mf.addFeed("topic");
 
