@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/megafeed",
-  "version": "0.1.21",
+  "version": "0.1.32",
   "description": "Manage multiple hypercore feeds.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/megafeed#readme",
   "bugs": {
@@ -18,9 +18,9 @@
     "test": "jest --verbose"
   },
   "dependencies": {
-    "@wirelineio/codec-protobuf": "^0.1.21",
-    "@wirelineio/party": "^0.1.21",
-    "@wirelineio/utils": "^0.1.21",
+    "@wirelineio/codec-protobuf": "^0.1.32",
+    "@wirelineio/party": "^0.1.32",
+    "@wirelineio/utils": "^0.1.32",
     "debug": "^4.1.1",
     "end-of-stream": "^1.4.1",
     "hypercore": "^6.24.0",
