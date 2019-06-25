@@ -44,19 +44,19 @@ The Framework's Party Manager uses these Credentials in conjunction with Policie
 
 TODO(burdon): Work in progress:
 
-```
-const mf = new Megafeed()
-const kf = new KappaFactory()
-const kappa = kf.create(mf, "topic")
+```javascript
+const mf = new Megafeed();
+const kf = new KappaFactory();
+const kappa = kf.create(mf, "topic");
 
-const view = new LogView()
-kappa.user(view)
+const view = new LogView();
+kappa.user(view);
 
-const app = new LogPad(view)
+const app = new LogPad(view);
 
-const hypercore = mf.addFeed("topic")
+const hypercore = mf.addFeed("topic");
 
-hypercore.add({ title: 'hello' })
+hypercore.add({ title: 'hello' });
 
 // App displays "hello"
 ```
