@@ -34,26 +34,25 @@ exports.createKappa = (mega, adapter) => {
 class Adapter {
 
   constructor(framework) {
-    this._frameowrk = framework;
+    this._framework = framework;
 
     const methods = [
       // TODO(burdon): Events
       'on',                     // appkit.connection.connectionStatusChange (swarm events?)
       'removeListener',         // appkit.connection.cleanupSubscription
-      'connectToBot'            // appkit.contact
     ];
 
-    methods.forEach((method) => { this[method] = this._frameowrk[method].bind(this._frameowrk); });
+    methods.forEach((method) => { this[method] = this._framework[method].bind(this._framework); });
   }
 
   // appkit.connection
   get swarm() {
-    return this._frameowrk.swarm;
+    return this._framework.swarm;
   }
 
   // appkit.party
   get partySerializer() {
-    return this._frameowrk.partySerializer;
+    return this._framework.partySerializer;
   }
 }
 
