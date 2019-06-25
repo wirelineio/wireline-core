@@ -19,6 +19,7 @@ exports.createKappa = (mega) => {
       on: (...args) => mega._mega.on(...args),
       ready: (...args) => mega._mega.ready(...args),
       feeds: (...args) => mega._mega.feeds(...args),
+      destroy: (...args) => mega._mega.destroy(...args)
     }
   });
 };
