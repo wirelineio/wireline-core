@@ -38,3 +38,25 @@ The Framework also manages Access Control (Authorization) for the Participants (
 It maintains a set of Credentials (for each Participant) that confer specific access rights (e.g., read, write, User administration).
 Users bestow Credentials on other Participants by writing Credentials on their Feeds.
 The Framework's Party Manager uses these Credentials in conjunction with Policies that instruct the Database's Feed Replication mechanism. This is used to control access to the shared Data set.
+
+
+## API
+
+TODO(burdon): Work in progress:
+
+```
+const mf = new Megafeed()
+const kf = new KappaFactory()
+const kappa = kf.create(mf, "topic")
+
+const view = new LogView()
+kappa.user(view)
+
+const app = new LogPad(view)
+
+const hypercore = mf.addFeed("topic")
+
+hypercore.add({ title: 'hello' })
+
+// App displays "hello"
+```
