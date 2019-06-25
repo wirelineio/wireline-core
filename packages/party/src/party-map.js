@@ -130,7 +130,7 @@ class PartyMap extends EventEmitter {
 
     const partiesLoaded = this.list().map(party => keyToHex(party.key));
 
-    const partiesPersisted = (await this.storage.list())
+    const partiesPersisted = (await this._repository.list())
       .filter(party => !partiesLoaded.includes(keyToHex(party.key)));
 
     const partiesToLoad = partiesPersisted.filter((party) => {
