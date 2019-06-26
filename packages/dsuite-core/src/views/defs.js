@@ -7,13 +7,15 @@ const DocumentsView = require('./documents');
 const ItemsView = require('./items');
 const LogsView = require('./logs');
 const ParticipantsView = require('./participants');
+const ChatLogsView = require('./chat_logs');
 
 module.exports.ViewTypes = {
   ContactsView,
   DocumentsView,
   ItemsView,
   LogsView,
-  ParticipantsView
+  ParticipantsView,
+  ChatLogsView
 };
 
 // TODO(burdon): Remove plurals.
@@ -71,5 +73,9 @@ module.exports.Views = [
   {
     name: 'chess',
     view: 'LogsView'
+  },
+  {
+    name: 'chat',
+    view: 'ChatLogsView'
   }
 ];
