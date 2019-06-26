@@ -45,17 +45,30 @@ The Framework's Party Manager uses these Credentials in conjunction with Policie
 TODO(burdon): Work in progress:
 
 ```javascript
-const mf = new Megafeed();
-const kf = new KappaFactory();
-const kappa = kf.create(mf, "topic");
+// Create framework objects.
+const megafeed = new Megafeed({ node });
+const viewFactory = new ViewFactory(megafeed);
 
-const view = kappa.use(new LogView());
+// Get or create a unique kappa core instance for the given topic and view ID.
+// This instance is "bound" to a closure that retrieves a set of feeds with the given topic.
+const kappa = viewFactory.getOrCreateView({ topic, viewId });
 
-const app = new LogPad(view, { itemId });
+// Add a view type.
+kappa.use('log', new LogView());
 
-const hypercore = mf.addFeed("topic");
+// Create an app (state machine) with the given view.
+// TODO(burdon): @elmasse, how is the view configured with the query (i.e., itemId).
+const view = kappa.api['log'];
+const app = new LogApp(view);
 
-hypercore.add({ title: 'hello' });
+// Create feeds.
+const hypercore1 = megafeed.addFeed({ topic });
+const hypercore2 = megafeed.addFeed({ topic });
 
-// App displays "hello"
+// Append to feeds.
+hypercore1.append({ title: 'hello' });
+hypercore2.append({ title: 'world' });
+
+// Check results.
+expect(app.list()).toBe(['hello', 'world']);
 ```
