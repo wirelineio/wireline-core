@@ -36,6 +36,7 @@ class MegaWrapper {
       'setRules',       // DSuite.initialize
       'addParty',       // PartyManager.connectToParty
       'party',          // PartyManager.setParty
+      'loadParties',    // botkit-core Factory.createBot
     ];
 
     methods.forEach((method) => { this[method] = this._mega[method].bind(this._mega); });
@@ -44,6 +45,10 @@ class MegaWrapper {
   // DSuite.initialize => swarm.js
   get id() {
     return this._mega.id;
+  }
+
+  get key() {
+    return this._mega.key;
   }
 }
 

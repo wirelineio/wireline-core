@@ -36,6 +36,10 @@ class ViewManager {
     return this;
   }
 
+  hasView(name) {
+    return this._views.has(name);
+  }
+
   // TODO(burdon): Const for LogsView.
   // TODO(burdon): Disallow polymorphic viewType. Why pass in non-string?
   registerView({ name, view: viewType = 'LogsView' }) {
