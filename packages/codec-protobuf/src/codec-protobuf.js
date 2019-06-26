@@ -2,49 +2,78 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const { AnyType } = require('./schema.js');
+const protobuf = require('protobufjs/light');
 
-/**
- * encode / decode protobuffers
- *
- * mapping {
- *   'Message1': 1,
- *   'Message2': 2
- * }
- */
-function codecProtobuf(root) {
-  return {
-    encode: function encodeProtobuf(obj) {
-      if (typeof obj !== 'object') {
-        throw new Error('CodecProtobuf: The encode message needs to be an object { type, message }.');
-      }
+protobuf.util.Buffer = Buffer;
+protobuf.util.isNode = true;
+protobuf.configure();
 
-      const { type, message } = obj;
+const { Root } = protobuf;
 
-      const Message = root[type];
+const AnyType = Root.fromJSON(require('./schema.json')).lookupType('codecprotobuf.AnyType');
 
-      const value = Message.encode(message);
+class Codec {
+  constructor(options = {}) {
+    const { verify = false } = options;
 
-      return AnyType.encode({ type, value });
-    },
+    this._verify = verify;
 
-    decode: function decodeProtobuf(buffer, onlyMessage = true) {
-      const { type, value } = AnyType.decode(buffer);
+    this._root = new Root();
+  }
 
-      const Message = root[type];
+  async loadFromJSON(schema) {
+    const root = Root.fromJSON(schema);
 
-      const message = Message.decode(value);
+    this._root.addJSON(root.nested);
+  }
 
-      if (onlyMessage) {
-        return message;
-      }
+  getType(typeName) {
+    const type = this._root.lookupType(typeName);
 
-      return {
-        type,
-        message
-      };
+    if (!type) {
+      throw new Error(`CodecProtobuf: Message type ${typeName} not found.`);
     }
-  };
+
+    return type;
+  }
+
+  encode(obj) {
+    if (typeof obj !== 'object' || obj.type === undefined || obj.message === undefined) {
+      throw new Error('CodecProtobuf: The encode message needs to be an object { type, message }.');
+    }
+
+    const { type: typeName, message } = obj;
+
+    const type = this.getType(typeName);
+
+    if (this._verify) {
+      const err = type.verify(message);
+
+      if (err) {
+        throw new Error(`CodecProtobuf: Verify error by ${err.message}`);
+      }
+    }
+
+    const value = type.encode(message).finish();
+
+    return AnyType.encode({ type: typeName, value }).finish();
+  }
+
+  decode(buffer) {
+    const { message } = this.decodeWithType(buffer);
+
+    return message;
+  }
+
+  decodeWithType(buffer) {
+    const { type: typeName, value } = AnyType.toObject(AnyType.decode(buffer));
+
+    const type = this.getType(typeName);
+
+    const message = type.toObject(type.decode(value));
+
+    return { type: typeName, message };
+  }
 }
 
-module.exports = codecProtobuf;
+module.exports = Codec;
