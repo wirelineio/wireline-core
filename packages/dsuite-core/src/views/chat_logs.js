@@ -12,7 +12,7 @@ const { streamToList } = require('../utils/stream');
 
 const serializeChanges = change => (typeof change === 'string' ? change : JSON.stringify(change));
 
-const hierarhySort = (arr, cmp) => {
+const hierarchySort = (arr, cmp) => {
   if (!arr) {
     return arr;
   }
@@ -143,7 +143,7 @@ module.exports = function ChatLogsView({ core, db, partyManager }, { viewId }) {
         const reader = viewDB.createValueStream(query);
         const changes = await streamToList(reader);
 
-        hierarhySort(changes, (a, b) => a.author.localeCompare(b.author));
+        hierarchySort(changes, (a, b) => a.author.localeCompare(b.author));
 
         return changes;
       },
