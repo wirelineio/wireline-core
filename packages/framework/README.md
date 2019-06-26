@@ -1,14 +1,14 @@
-# dsuite-core
+# framework
 
 ## Install
 
 ```
-yarn add @wirelineio/dsuite-core
+yarn add @wirelineio/framework
 ```
 
 ## Usage
 
-`DSuite` is an abstraction to provide access to messages, connect to a feed and exchange data over the megafeed implementation. It abstract the model (called views) for a better interaction with the DAT layer.
+`Framework` is an abstraction to provide access to messages, connect to a feed and exchange data over the megafeed implementation. It abstract the model (called views) for a better interaction with the DAT layer.
 
 In order to exchange message a peer has to connect to a swarm first where it publishes peer information as the discoveryKey. We have to distinct 2 different types of peers: bots and non-bots (or just peers).
 
@@ -18,17 +18,17 @@ The concept of a "party" comes from megafeed. The important idea here is to see 
 
 ### Peer Example
 
-We need to create a DSuite instance where we can establish a set of configurations that has to be shared among other peers so they can "see" each other: 
+We need to create a Framework instance where we can establish a set of configurations that has to be shared among other peers so they can "see" each other: 
 
 - Signal Server: In order to be able to see other peers all of them have to be in the same signal server (hub).
 - PartyKey: A partyKey is important to be able to read or sync messages. One peer can specify a partyKey where it will publish all feeds. Then in order to get another peer to receive those messages and share its own, both have to be in the same party. This can be done by setting the same `partyKey` in the configuration or using a `setParty` method.
 
 ```js
 
-import { DSuite } from '@wirelineio/dsuite-core';
+import { Framework } from '@wirelineio/framework';
 
 // Create and initialize peer1
-const peer1 = DSuite({
+const peer1 = Framework({
   keys: {
     hub: 'https://my-signal-server.com',
     partyKey: Buffer.form(PARTY_KEY_1, 'hex'),
@@ -39,7 +39,7 @@ const peer1 = DSuite({
 await peer1.initialize();
 
 // Create and initialize peer2
-const peer2 = DSuite({
+const peer2 = Framework({
   keys: {
     hub: 'https://my-signal-server.com',
     partyKey: Buffer.form(PARTY_KEY_2, 'hex'),
@@ -50,7 +50,7 @@ const peer2 = DSuite({
 await peer2.initialize();
 
 // Make peer2 join party from peer1
-peer2.setParty({ key: PARTY_KEY_1 });
+peer2.partyManager.setParty({ key: PARTY_KEY_1 });
 
 ```
 
@@ -70,7 +70,7 @@ As mentioned before, the bots requires an extra configuration and they have some
 ```js
 // Bot.js
 
-const bot = DSuite({
+const bot = Framework({
   keys: {
     isBot: true
     hub: 'https://my-signal-server.com',    
@@ -104,15 +104,15 @@ peer1.connectToBot({ key: BOT_PUBLIC_KEY });
 ## API
 
 
-### DSuite(conf)
+### Framework(conf)
 
-Construct a new DSuite instance. Sets configuration for `kappa`, `megafeed` and `swarm`.
+Construct a new Framework instance. Sets configuration for `kappa`, `megafeed` and `swarm`.
 
 ```
-  new DSuite(conf)
+  new Framework(conf)
 
   /**
-   * DSuite core. Creates kappa views and configs swarming.
+   * Framework core. Creates kappa views and configs swarming.
    *
    * @param conf.name {String} Name. If provided, profile will be set on contacts view. Optional.
    * @param conf.storage {Function} A random-access-* implementation for storage.
@@ -120,7 +120,7 @@ Construct a new DSuite instance. Sets configuration for `kappa`, `megafeed` and 
    * @param conf.key.publicKey {Buffer}
    * @param conf.key.secretKey {Buffer}
    * @param conf.hub {String} Signalhub url for swarm connection.
-   * @param conf.isBot {Boolean} Sefines if dsuite is for a bot.
+   * @param conf.isBot {Boolean} Sefines if framework is for a bot.
    * @param conf.partyKey {Buffer} Sefines initial party key.
    * @param conf.maxPeers {Number} Maximum connections on swarm. Optional. Defaults: If isBot is true it is set to 64 otherwise 2.
    */
@@ -132,16 +132,18 @@ Construct a new DSuite instance. Sets configuration for `kappa`, `megafeed` and 
 Await for connection in `swarm`, `setProfile` and other async operations that have to be done before ready state. 
 
 ``` 
-  const dsuite = new DSuite(config);
-  await dsuite.initialize();
+  const framework = new Framework(config);
+  await framework.initialize();
 ```
 
-### async connectToBot(opts)
+### partyManager
+
+#### async connectToBot(opts)
 
 Send the currentParty information to a bot in the same `swarm`.
 
 ```
-await dsuite.connectToBot(opts)
+await framework.partyManager.connectToBot(opts)
 
   /**
    * @param opts {Object}
@@ -150,12 +152,12 @@ await dsuite.connectToBot(opts)
 
 ```
 
-### async setParty(opts)
+#### async setParty(opts)
 
 Switches currentParty.
 
 ```
-await dsuite.setParty(opts);
+await framework.partyManager.setParty(opts);
 
   /**
    * @param opts {Object}
@@ -164,9 +166,14 @@ await dsuite.setParty(opts);
 
 ```
 
-### currentPartyKey
+#### currentPartyKey
 
 Returns the current `partyKey`.
+
+```
+framework.partyManager.currentPartyKey
+
+```
 
 ## Views
 
@@ -190,19 +197,19 @@ The contacts view gives you access to handle `profile` and `contacts` operations
 #### contacts.getProfile()
 
 ```js
-async dsuite.core.api['contacts'].getProfile({ key })
+async framework.kappa.api['contacts'].getProfile({ key })
 ```
 
 #### contacts.setProfile()
 
 ```js
-async dsuite.core.api['contacts'].setProfile({ key, data })
+async framework.kappa.api['contacts'].setProfile({ key, data })
 ```
 
 #### contacts.getContacts()
 
 ```js
-async dsuite.core.api['contacts'].getContacts()
+async framework.kappa.api['contacts'].getContacts()
 ```
 
 ## Pad Views
@@ -219,18 +226,18 @@ The documents view provides operations for handling collaborative text documents
 #### documents.create(opts)
 
 ```js
-async dsuite.core.api['documents'].create({ type, title = 'Untitled', partyKey })
+async framework.kappa.api['documents'].create({ type, title = 'Untitled', partyKey })
 ```
 
 Creates a new document.
 
-- `type`: This is the `pad` type. For creating a text document the type should be set to `document`. Note that this is driven from the pad code so it cannot be set by default in `dsuite-core`.
-- `partyKey`: Optional. If not provided it will use the `dsuite.currentPartyKey`.
+- `type`: This is the `pad` type. For creating a text document the type should be set to `document`. Note that this is driven from the pad code so it cannot be set by default in `framework-core`.
+- `partyKey`: Optional. If not provided it will use the `framework.currentPartyKey`.
 
 #### documents.getById(itemId)
 
 ```js
-async dsuite.core.api['documents'].getById(itemId)
+async framework.kappa.api['documents'].getById(itemId)
 ```
 
 Retrieves a document by itemId.
@@ -238,7 +245,7 @@ Retrieves a document by itemId.
 #### documents.appendChange(itemId, changes)
 
 ```js
-async dsuite.core.api['documents'].appendChange(itemId, changes)
+async framework.kappa.api['documents'].appendChange(itemId, changes)
 ```
 
 Append a new change message on the document with `itemId`.
@@ -246,13 +253,13 @@ Append a new change message on the document with `itemId`.
 #### documents.getChanges(itemId, opts)
 
 ```js
-async dsuite.core.api['documents'].getChanges(itemId, { reverse, lastChange })
+async framework.kappa.api['documents'].getChanges(itemId, { reverse, lastChange })
 ```
 
 #### documents.onChange(itemId, cb)
 
 ```js
-async dsuite.core.api['documents'].onChange(itemId, cb)
+async framework.kappa.api['documents'].onChange(itemId, cb)
 ```
 
 TBC

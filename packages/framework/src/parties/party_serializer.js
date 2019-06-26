@@ -9,7 +9,7 @@ const sorter = require('stream-sort');
 
 const { keyToBuffer, keyToHex } = require('@wirelineio/utils');
 
-const PartyManager = require('../parties/party_manager');
+const PartyManager = require('./party_manager');
 
 /**
  * Import/export parties.

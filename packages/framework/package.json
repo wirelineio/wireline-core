@@ -1,14 +1,14 @@
 {
-  "name": "@wirelineio/dsuite-core",
+  "name": "@wirelineio/framework",
   "version": "0.1.33",
   "description": "Application Framework.",
-  "homepage": "https://github.com/wirelineio/dsuite#readme",
+  "homepage": "https://github.com/wirelineio/wireline-core#readme",
   "bugs": {
-    "url": "https://github.com/wirelineio/dsuite/issues"
+    "url": "https://github.com/wirelineio/wireline-core/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wirelineio/dsuite.git"
+    "url": "git+https://github.com/wirelineio/wireline-core.git"
   },
   "license": "GPL-3.0",
   "main": "index.js",

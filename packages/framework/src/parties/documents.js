@@ -2,7 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const PartyManager = require('../parties/party_manager');
+const PartyManager = require('./party_manager');
 const { encodeFeedKey, decodeFeedKey } = require('../protocol/feeds');
 
 module.exports = ({ kappa, mega, partyManager }) => {
