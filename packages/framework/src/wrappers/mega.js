@@ -19,21 +19,21 @@ class MegaWrapper {
     // TODO(burdon): Evolve API for gravity?
 
     const methods = [
-      'on',             // DSuite
+      'on',             // Framework
 
       // Kappa/Multifeed (see createMultifeedWrapper below).
       // 'ready',          // Kappa Indexer
       // 'feeds',          // Multifeed Index? levelup => _logs.feeds
 
       // FeedMap
-      'feed',           // DSuite.initialize => swarm.js
-      'addFeed',        // DSuite.initialize
-      'loadFeeds',      // DSuite.initialize
+      'feed',           // Framework.initialize => swarm.js
+      'addFeed',        // Framework.initialize
+      'loadFeeds',      // Framework.initialize
       'feedByDK',       // PartyManager.getPartyKeyFromFeedKey
       'replicate',      // DiscoverySwarmWebrtc.stream
 
       // Party
-      'setRules',       // DSuite.initialize
+      'setRules',       // Framework.initialize
       'addParty',       // PartyManager.connectToParty
       'party',          // PartyManager.setParty
       'loadParties',    // botkit-core Factory.createBot
@@ -42,7 +42,7 @@ class MegaWrapper {
     methods.forEach((method) => { this[method] = this._mega[method].bind(this._mega); });
   }
 
-  // DSuite.initialize => swarm.js
+  // Framework.initialize => swarm.js
   get id() {
     return this._mega.id;
   }
