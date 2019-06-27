@@ -28,6 +28,8 @@ codec.loadFromJSON(schema);
 
 const STORE_NAMESPACE = 'feed';
 
+const STORE_NAMESPACE = 'feed';
+
 /**
  * FeedMap
  *
