@@ -6,7 +6,7 @@ const { filterFeedByPattern, parsePartyPattern } = require('./src/glob');
 const { keyToHex, getDiscoveryKey, parseToKeys, keyToBuffer } = require('./src/keys');
 const Locker = require('./src/locker');
 const { callbackPromise } = require('./src/promise-help');
-const Repository = require('./src/repository');
+const MessageStore = require('./src/message-store');
 const bubblingEvents = require('./src/bubbling-events');
 
 module.exports = {
@@ -23,7 +23,7 @@ module.exports = {
 
   callbackPromise,
 
-  Repository,
+  MessageStore,
 
   bubblingEvents
 };
