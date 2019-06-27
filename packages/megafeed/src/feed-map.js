@@ -106,7 +106,7 @@ class FeedMap extends EventEmitter {
       'feeds',
       {
         encode: message => codec.encode({ type: 'Feed', message }),
-        decode: codec.decode
+        decode: codec.decode.bind(codec)
       }
     );
 

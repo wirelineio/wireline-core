@@ -5,7 +5,6 @@
 const protobuf = require('protobufjs/light');
 
 protobuf.util.Buffer = Buffer;
-protobuf.util.isNode = true;
 protobuf.configure();
 
 const { Root } = protobuf;
@@ -55,7 +54,6 @@ class Codec {
     }
 
     const value = type.encode(message).finish();
-
     return AnyType.encode({ type: typeName, value }).finish();
   }
 
