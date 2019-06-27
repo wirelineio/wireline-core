@@ -18,13 +18,15 @@ const {
   keyToBuffer,
   Locker,
   filterFeedByPattern,
-  Repository,
+  MessageStore
 } = require('@wirelineio/utils');
 
 const schema = require('./schema.json');
 
 const codec = new Codec({ verify: true });
 codec.loadFromJSON(schema);
+
+const STORE_NAMESPACE = 'feed';
 
 /**
  * FeedMap
@@ -89,8 +91,8 @@ class FeedMap extends EventEmitter {
   /**
    * constructor
    *
+   * @params {HyperTrie} db
    * @param {RandomAccessStorage} storage RandomAccessStorage to use by default by the feeds.
-   * @param {Repository} repository Repository to persist the feeds.
    * @param {Object} options
    * @param {Object} options.types Types of constructor to create custom feeds.
    * @param {Object} options.feedOptions Default options for each feed.
@@ -101,9 +103,8 @@ class FeedMap extends EventEmitter {
 
     const { types = {}, feedOptions = {} } = options;
 
-    this._repository = new Repository(
+    this._messageStore = new MessageStore(
       db,
-      'feeds',
       {
         encode: message => codec.encode({ type: 'Feed', message }),
         decode: codec.decode.bind(codec)
@@ -127,7 +128,7 @@ class FeedMap extends EventEmitter {
    * @returns {Promise}
    */
   async initialize() {
-    const feeds = await this._repository.list({ codec });
+    const feeds = await this._messageStore.list(STORE_NAMESPACE);
 
     await Promise.all(
       feeds.map((opts) => {
@@ -261,8 +262,6 @@ class FeedMap extends EventEmitter {
    * @returns {Promise}
    */
   async deleteFeed(key) {
-    const repository = this._repository;
-
     const feed = this.feed(key);
 
     if (!feed) {
@@ -272,7 +271,7 @@ class FeedMap extends EventEmitter {
     const release = await this._locker.pLock(feed.name);
 
     try {
-      await repository.delete(feed.name);
+      await this._messageStore.delete(`${STORE_NAMESPACE}/${feed.name}`);
       this._feeds.delete(keyToHex(getDiscoveryKey(feed.key)));
 
       this.emit('feed-remove', feed);
@@ -293,10 +292,10 @@ class FeedMap extends EventEmitter {
    * @returns {Promise}
    */
   async updateFeed(key, transform) {
-    const repository = this._repository;
+    const hexKey = `${STORE_NAMESPACE}/${keyToHex(key)}`;
 
     try {
-      const feed = await repository.get(key, { codec });
+      const feed = await this._messageStore.get(hexKey);
 
       if (!feed) {
         return null;
@@ -304,7 +303,7 @@ class FeedMap extends EventEmitter {
 
       const update = transform(feed.value);
 
-      await repository.put(feed.name, update, { encode: FeedMap.encodeFeed });
+      await this._messageStore.put(hexKey, update);
     } catch (err) {
       debug(err);
       throw err;
@@ -347,15 +346,13 @@ class FeedMap extends EventEmitter {
   }
 
   async persistFeed(feed, options = {}) {
-    const repository = this._repository;
-
     const discoveryKey = keyToHex(feed.discoveryKey);
 
     const opts = Object.assign({}, options, { persist: true });
 
     try {
       const formatFeed = FeedMap.formatToRepository(feed, opts);
-      await repository.put(formatFeed.name, formatFeed, { encode: FeedMap.encodeFeed });
+      await this._messageStore.put(`${STORE_NAMESPACE}/${formatFeed.name}`, formatFeed);
       this._feeds.set(discoveryKey, feed);
       return feed;
     } catch (err) {
