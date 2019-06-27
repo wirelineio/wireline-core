@@ -20,10 +20,14 @@ class Codec {
     this._root = new Root();
   }
 
-  async loadFromJSON(schema) {
+  load(root) {
+    this._root.addJSON(root.nested);
+  }
+
+  loadFromJSON(schema) {
     const root = Root.fromJSON(schema);
 
-    this._root.addJSON(root.nested);
+    this.load(root);
   }
 
   getType(typeName) {

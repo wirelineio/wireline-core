@@ -1,6 +1,6 @@
 {
   "nested": {
-    "Message": {
+    "MessageOne": {
       "fields": {
         "subject": {
           "rule": "required",
