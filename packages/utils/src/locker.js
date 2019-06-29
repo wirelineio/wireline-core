@@ -26,8 +26,8 @@ class Locker {
   }
 
   pLock(resource) {
-    return new Promise(resolve => {
-      this.lock(resource, release => {
+    return new Promise((resolve) => {
+      this.lock(resource, (release) => {
         const pRelease = () => new Promise(resolve => release(resolve));
         resolve(pRelease);
       });
