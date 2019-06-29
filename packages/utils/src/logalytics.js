@@ -29,7 +29,7 @@ const LogalyticsLevel = {
 
   fromValue: (value) => {
     let ret = null;
-    LogalyticsLevel.keys.forEach((key) => {
+    Object.keys(LogalyticsLevel).forEach((key) => {
       const lv = LogalyticsLevel[key];
       if (!_.isFunction(lv)) {
         if (value === lv || value.toString() === lv.toString()) {
@@ -265,7 +265,7 @@ class LogalyticsLogger {
 
   toString() {
     const counts = [];
-    LogalyticsLevel.keys.forEach((key) => {
+    Object.keys(LogalyticsLevel).forEach((key) => {
       if (!_.isFunction(LogalyticsLevel[key])) {
         const count = this._counts[LogalyticsLevel[key]] || 0;
         counts.push(`${key}: ${count}`);
