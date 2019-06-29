@@ -180,7 +180,6 @@ class LogalyticsLogger {
     this.addWriter(new ConsoleWriter({ consoleFn: console.log, max: LogalyticsLevel.WARN }));
     this.addWriter(new ConsoleWriter({ consoleFn: console.error, min: LogalyticsLevel.WARN }));
 
-    console.log(process.env);
     if (process.env.LOGGLY_KEY) {
       this.addWriter(new LogglyWriter(process.env.LOGGLY_KEY));
     }
