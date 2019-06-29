@@ -11,6 +11,9 @@ const isBrowser = typeof window !== 'undefined';
 
 const Loggly = isBrowser ? require('loggly-jslogger').LogglyTracker : require('loggly');
 
+const envOrStorage = (key) => {
+  return process.env[key] || (isBrowser && _.get(window, `localStorage['${key}']`));
+};
 
 const LogalyticsLevel = {
   PRINT: Number.MAX_SAFE_INTEGER,
@@ -22,6 +25,17 @@ const LogalyticsLevel = {
   DEBUG: 2000,
   TRACE: 1000,
 
+  levels: () => {
+    const ret = [];
+    Object.keys(LogalyticsLevel).forEach((key) => {
+      const v = LogalyticsLevel[key];
+      if (!_.isFunction(v)) {
+        ret.push(key);
+      }
+    });
+    return ret;
+  },
+
   fromName: (name) => {
     name = name.toUpperCase();
     return LogalyticsLevel[name];
@@ -29,31 +43,46 @@ const LogalyticsLevel = {
 
   fromValue: (value) => {
     let ret = null;
-    Object.keys(LogalyticsLevel).forEach((key) => {
+    LogalyticsLevel.levels().forEach((key) => {
       const lv = LogalyticsLevel[key];
-      if (!_.isFunction(lv)) {
-        if (value === lv || value.toString() === lv.toString()) {
-          ret = key;
-        }
+      if (value === lv || value.toString() === lv.toString()) {
+        ret = key;
       }
     });
     return ret;
   },
 
   currentLevel: (name) => {
-    let level = LogalyticsLevel.INFO;
+    let defLevel = LogalyticsLevel.INFO;
 
-    const def = process.env.LOGALYTICS || (isBrowser && _.get(window, 'localStorage.LOGALYTICS'));
+    const def = envOrStorage('LOGALYTICS');
     if (def) {
-      level = LogalyticsLevel.fromName(def) || LogalyticsLevel.fromValue(def);
+      defLevel = LogalyticsLevel.fromName(def) || LogalyticsLevel.fromValue(def);
     }
 
-    // TODO(telackey): check a per-name setting here
-    if (name) {
-      name += '';
-    }
+    let specLevel = null;
+    LogalyticsLevel.levels().forEach((level) => {
+      const value = envOrStorage(`LOGALYTICS_${level}`);
+      if (value) {
+        if (value === '*') {
+          if (specLevel == null || LogalyticsLevel[level] < specLevel) {
+            specLevel = LogalyticsLevel[level];
+          }
+        } else {
+          const parts = value.split(',');
+          parts.forEach((part) => {
+            const re = new RegExp(`^${part.replace(/\*/g, '.*?')}$`);
+            if (re.test(name)) {
+              if (specLevel == null || LogalyticsLevel[level] < specLevel) {
+                specLevel = LogalyticsLevel[level];
+              }
+            }
+          });
+        }
+      }
+    });
 
-    return level || LogalyticsLevel.INFO;
+    return specLevel || defLevel || LogalyticsLevel.INFO;
   }
 };
 
@@ -197,6 +226,12 @@ class LogalyticsLogger {
     return this._counts;
   }
 
+  extend(name) {
+    const ret = new LogalyticsLogger(`${this.name}:${name}`);
+    ret._writers = this._writers.slice();
+    return ret;
+  }
+
   addWriter(writer) {
     if (!_.isFunction(writer.write)) {
       writer = new LogalyticsWriter(writer);
@@ -265,11 +300,9 @@ class LogalyticsLogger {
 
   toString() {
     const counts = [];
-    Object.keys(LogalyticsLevel).forEach((key) => {
-      if (!_.isFunction(LogalyticsLevel[key])) {
-        const count = this._counts[LogalyticsLevel[key]] || 0;
-        counts.push(`${key}: ${count}`);
-      }
+    LogalyticsLevel.levels().forEach((level) => {
+      const count = this._counts[LogalyticsLevel[level]] || 0;
+      counts.push(`${level}: ${count}`);
     });
     return `${this.name}: ${counts.join(', ')}`;
   }
