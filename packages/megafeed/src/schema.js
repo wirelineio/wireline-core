@@ -32,8 +32,13 @@ function defineFeed () {
 
   function encodingLength (obj) {
     var length = 0
+<<<<<<< HEAD
     if (!defined(obj.name)) throw new Error("name is required")
     var len = enc[0].encodingLength(obj.name)
+=======
+    if (!defined(obj.path)) throw new Error("path is required")
+    var len = enc[0].encodingLength(obj.path)
+>>>>>>> Added FeedDescriptor, refactor FeedMap -> FeedStore.
     length += 1 + len
     if (!defined(obj.key)) throw new Error("key is required")
     var len = enc[1].encodingLength(obj.key)
@@ -46,10 +51,13 @@ function defineFeed () {
       var len = enc[2].encodingLength(obj.load)
       length += 1 + len
     }
+<<<<<<< HEAD
     if (defined(obj.persist)) {
       var len = enc[2].encodingLength(obj.persist)
       length += 1 + len
     }
+=======
+>>>>>>> Added FeedDescriptor, refactor FeedMap -> FeedStore.
     if (defined(obj.valueEncoding)) {
       var len = enc[0].encodingLength(obj.valueEncoding)
       length += 1 + len
@@ -58,10 +66,13 @@ function defineFeed () {
       var len = enc[1].encodingLength(obj.metadata)
       length += 1 + len
     }
+<<<<<<< HEAD
     if (defined(obj.type)) {
       var len = enc[0].encodingLength(obj.type)
       length += 1 + len
     }
+=======
+>>>>>>> Added FeedDescriptor, refactor FeedMap -> FeedStore.
     return length
   }
 
@@ -69,9 +80,15 @@ function defineFeed () {
     if (!offset) offset = 0
     if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
     var oldOffset = offset
+<<<<<<< HEAD
     if (!defined(obj.name)) throw new Error("name is required")
     buf[offset++] = 10
     enc[0].encode(obj.name, buf, offset)
+=======
+    if (!defined(obj.path)) throw new Error("path is required")
+    buf[offset++] = 10
+    enc[0].encode(obj.path, buf, offset)
+>>>>>>> Added FeedDescriptor, refactor FeedMap -> FeedStore.
     offset += enc[0].encode.bytes
     if (!defined(obj.key)) throw new Error("key is required")
     buf[offset++] = 18
@@ -87,6 +104,7 @@ function defineFeed () {
       enc[2].encode(obj.load, buf, offset)
       offset += enc[2].encode.bytes
     }
+<<<<<<< HEAD
     if (defined(obj.persist)) {
       buf[offset++] = 40
       enc[2].encode(obj.persist, buf, offset)
@@ -94,10 +112,15 @@ function defineFeed () {
     }
     if (defined(obj.valueEncoding)) {
       buf[offset++] = 50
+=======
+    if (defined(obj.valueEncoding)) {
+      buf[offset++] = 42
+>>>>>>> Added FeedDescriptor, refactor FeedMap -> FeedStore.
       enc[0].encode(obj.valueEncoding, buf, offset)
       offset += enc[0].encode.bytes
     }
     if (defined(obj.metadata)) {
+<<<<<<< HEAD
       buf[offset++] = 58
       enc[1].encode(obj.metadata, buf, offset)
       offset += enc[1].encode.bytes
@@ -107,6 +130,12 @@ function defineFeed () {
       enc[0].encode(obj.type, buf, offset)
       offset += enc[0].encode.bytes
     }
+=======
+      buf[offset++] = 50
+      enc[1].encode(obj.metadata, buf, offset)
+      offset += enc[1].encode.bytes
+    }
+>>>>>>> Added FeedDescriptor, refactor FeedMap -> FeedStore.
     encode.bytes = offset - oldOffset
     return buf
   }
@@ -117,6 +146,7 @@ function defineFeed () {
     if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
     var oldOffset = offset
     var obj = {
+<<<<<<< HEAD
       name: "",
       key: null,
       secretKey: null,
@@ -125,6 +155,14 @@ function defineFeed () {
       valueEncoding: "",
       metadata: null,
       type: ""
+=======
+      path: "",
+      key: null,
+      secretKey: null,
+      load: false,
+      valueEncoding: "",
+      metadata: null
+>>>>>>> Added FeedDescriptor, refactor FeedMap -> FeedStore.
     }
     var found0 = false
     var found1 = false
@@ -139,7 +177,11 @@ function defineFeed () {
       var tag = prefix >> 3
       switch (tag) {
         case 1:
+<<<<<<< HEAD
         obj.name = enc[0].decode(buf, offset)
+=======
+        obj.path = enc[0].decode(buf, offset)
+>>>>>>> Added FeedDescriptor, refactor FeedMap -> FeedStore.
         offset += enc[0].decode.bytes
         found0 = true
         break
@@ -157,6 +199,7 @@ function defineFeed () {
         offset += enc[2].decode.bytes
         break
         case 5:
+<<<<<<< HEAD
         obj.persist = enc[2].decode(buf, offset)
         offset += enc[2].decode.bytes
         break
@@ -172,6 +215,15 @@ function defineFeed () {
         obj.type = enc[0].decode(buf, offset)
         offset += enc[0].decode.bytes
         break
+=======
+        obj.valueEncoding = enc[0].decode(buf, offset)
+        offset += enc[0].decode.bytes
+        break
+        case 6:
+        obj.metadata = enc[1].decode(buf, offset)
+        offset += enc[1].decode.bytes
+        break
+>>>>>>> Added FeedDescriptor, refactor FeedMap -> FeedStore.
         default:
         offset = skip(prefix & 7, buf, offset)
       }

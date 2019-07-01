@@ -5,11 +5,9 @@
 const assert = require('assert');
 const { EventEmitter } = require('events');
 
-const pump = require('pump');
 const hypertrie = require('hypertrie');
 const multi = require('multi-read-stream');
 const eos = require('end-of-stream');
-const through = require('through2');
 const pify = require('pify');
 
 const { PartyMap, Party } = require('@wirelineio/party');
@@ -17,12 +15,11 @@ const {
   callbackPromise,
   keyToHex,
   keyToBuffer,
-  parsePartyPattern,
-  filterFeedByPattern,
+  filterDescriptorByPattern,
   bubblingEvents
 } = require('@wirelineio/utils');
 
-const FeedMap = require('./feed-map');
+const FeedMap = require('./feed-store');
 
 class Megafeed extends EventEmitter {
 
@@ -60,8 +57,7 @@ class Megafeed extends EventEmitter {
     this._db = hypertrie(storage, rootKey, { secretKey: opts.secretKey });
 
     // Feeds manager instance
-    this._feeds = new FeedMap(this._db, storage, {
-      types: opts.types,
+    this._feedStore = new FeedMap(this._db, storage, {
       feedOptions: {
         valueEncoding: opts.valueEncoding
       }
@@ -74,7 +70,7 @@ class Megafeed extends EventEmitter {
     });
 
     // Bubble events.
-    bubblingEvents(this, this._feeds, ['append', 'download', 'feed-add', 'feed', 'feed-remove']);
+    bubblingEvents(this, this._feedStore, ['append', 'download', 'feed-add', 'feed', 'feed-remove']);
     bubblingEvents(this, this._parties, ['party', 'peer-add', 'peer-remove']);
 
     // everything is ready
@@ -106,56 +102,48 @@ class Megafeed extends EventEmitter {
 
   /** * Feeds API ** */
 
-  feed(...args) {
-    return this._feeds.feed(...args);
+  feed(path) {
+    return this._feedStore.find(descriptor => descriptor.path === path);
   }
 
-  feedByDK(...args) {
-    return this._feeds.feedByDK(...args);
+  feedByDK(key) {
+    assert(Buffer.isBuffer(key), 'Key should be a Buffer instance.');
+
+    return this._feedStore.find(descriptor => descriptor.discoveryKey.equals(key));
   }
 
-  feeds(...args) {
-    return this._feeds.feeds(...args);
+  feeds() {
+    return this._feedStore.feeds();
   }
 
-  async addFeed(options) {
+  async addFeed({ path, ...stat }) {
     await this.ready();
 
-    return this._feeds.addFeed(options);
+    return this._feedStore.open(path, stat);
   }
 
-  async deleteFeed(key) {
+  async deleteFeed(path) {
     await this.ready();
 
-    return this._feeds.deleteFeed(key);
+    return this._feedStore.del(path);
   }
 
-  async updateFeed(key, transform) {
+  async loadFeeds(pattern) {
     await this.ready();
 
-    return this._feeds.updateFeed(key, transform);
-  }
+    if (Array.isArray(pattern)) {
+      pattern = pattern.filter(Boolean).map(value => keyToHex(value));
+    } else {
+      pattern = keyToHex(pattern);
+    }
 
-  async loadFeeds(pattern, options) {
-    await this.ready();
-
-    return this._feeds.loadFeeds(pattern, options);
-  }
-
-  async persistFeed(feed, options) {
-    await this.ready();
-
-    return this._feeds.persistFeed(feed, options);
+    return this._feedStore.load(descriptor => filterDescriptorByPattern(descriptor, pattern));
   }
 
   async closeFeed(key) {
     await this.ready();
 
-    return this._feeds.closeFeed(key);
-  }
-
-  announceFeed(feed) {
-    this._feeds.announce(feed);
+    return this._feedStore.close(key);
   }
 
   /** * Parties API ** */
@@ -265,49 +253,10 @@ class Megafeed extends EventEmitter {
     ]);
   }
 
-  watch(opts, cb) {
-    let options = opts;
-    let onMessage = cb;
-
-    if (typeof options === 'function') {
-      onMessage = options;
-      options = {};
-    }
-
-    const stream = this.createReadStream(Object.assign({}, options, { live: true }));
-
-    pump(stream, through.obj((data, _, next) => {
-      try {
-        const result = onMessage(data);
-        if (result && result.then) {
-          result
-            .then(() => {
-              next(null, data);
-            })
-            .catch((err) => {
-              next(err);
-            });
-        } else {
-          next(null, data);
-        }
-      } catch (err) {
-        next(err);
-      }
-    }), () => {});
-
-    return () => stream.destroy();
-  }
-
   createReadStream(opts = {}) {
     const streams = [];
 
-    let feeds = this.feeds();
-
-    const { filter } = opts;
-
-    if (filter) {
-      feeds = feeds.filter(feed => filterFeedByPattern(feed, filter));
-    }
+    const feeds = this.feeds();
 
     feeds.forEach((feed) => {
       streams.push(feed.createReadStream(opts));
@@ -317,10 +266,6 @@ class Megafeed extends EventEmitter {
 
     const onFeed = (feed) => {
       feed.ready(() => {
-        if (filter && !filterFeedByPattern(feed, filter)) {
-          return;
-        }
-
         multiReader.add(feed.createReadStream(opts));
       });
     };
@@ -334,7 +279,7 @@ class Megafeed extends EventEmitter {
   _initialize() {
     this._parties.setRules(this._defineDefaultPartyRules());
 
-    this._feeds.initialize()
+    this._feedStore.initialize()
       .then(() => {
         this._isReady = true;
         this.emit('ready');
@@ -350,11 +295,7 @@ class Megafeed extends EventEmitter {
       name: 'megafeed:default',
 
       handshake: async ({ peer }) => {
-        const { party } = peer;
-
-        const pattern = parsePartyPattern(party);
-
-        const feeds = this.feeds().filter(feed => filterFeedByPattern(feed, pattern));
+        const feeds = this.feeds();
 
         await peer.introduceFeeds({
           keys: feeds.map(feed => feed.key)
@@ -363,10 +304,6 @@ class Megafeed extends EventEmitter {
         feeds.forEach(feed => peer.replicate(feed));
 
         this.on('feed', async (feed) => {
-          if (!filterFeedByPattern(feed, pattern)) {
-            return;
-          }
-
           await peer.introduceFeeds({
             keys: [feed.key]
           });
@@ -379,7 +316,9 @@ class Megafeed extends EventEmitter {
         const { keys } = message;
 
         return Promise.all(
-          keys.map(key => this.addFeed({ name: `feed/${keyToHex(partyKey)}/${keyToHex(key)}`, key }))
+          keys.map(key => this
+            .addFeed({ path: `feed/${keyToHex(partyKey)}/${keyToHex(key)}`, key })
+            .catch(() => {}))
         );
       }
     };

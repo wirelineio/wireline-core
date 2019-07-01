@@ -1,12 +1,9 @@
 syntax = "proto3";
 
 message Feed {
-  required string name = 1;
+  required string path = 1;
   required bytes key = 2;
   bytes secretKey = 3;
-  bool load = 4;
-  bool persist = 5;
-  string valueEncoding = 6;
-  bytes metadata = 7;
-  string type = 8;
+  string valueEncoding = 4;
+  bytes metadata = 5;
 }

@@ -6,30 +6,14 @@ const mutexify = require('mutexify');
 
 class Locker {
   constructor() {
-    this._locks = new Map();
+    this._lock = mutexify();
   }
 
-  lock(resource, cb) {
-    if (typeof resource !== 'string') {
-      cb = resource;
-      resource = 'global';
-    }
-
-    let lock = this._locks.get(resource);
-
-    if (!lock) {
-      lock = mutexify();
-      this._locks.set(resource, lock);
-    }
-
-    return lock(cb);
-  }
-
-  pLock(resource) {
+  lock() {
     return new Promise((resolve) => {
-      this.lock(resource, (release) => {
-        const pRelease = () => new Promise(resolve => release(resolve));
-        resolve(pRelease);
+      this._lock((cbRelease) => {
+        const release = () => new Promise(resolve => cbRelease(resolve));
+        resolve(release);
       });
     });
   }
