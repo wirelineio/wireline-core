@@ -12,40 +12,31 @@ const { streamToList } = require('../utils/stream');
 
 const serializeChanges = change => (typeof change === 'string' ? change : JSON.stringify(change));
 
-const hierarchySort = (arr, cmp) => {
-  if (!arr) {
-    return arr;
-  }
-  const makeTree = (arr) => {
-    const tree = {};
-    arr.forEach((item) => {
-      const { data: { changes: { payload } } } = item;
-      const parent = payload && payload.previous;
-      if (!tree[parent]) {
-        tree[parent] = [];
-      }
-      tree[parent].push(item);
-    });
-    return tree;
-  };
-
-  function makeSort(tree, id, cmp, callback) {
-    const children = tree[id];
-    if (children) {
-      children.sort(cmp);
-      children.forEach((item) => {
-        callback(item);
-        const { data: { changes: { payload } } } = item;
-        makeSort(tree, payload.id, cmp, callback);
-      });
+const makeTree = (items) => {
+  const tree = {};
+  items.forEach((item) => {
+    const { data: { changes: { payload } } } = item;
+    const parent = payload && payload.previous;
+    if (!tree[parent]) {
+      tree[parent] = [];
     }
+    tree[parent].push(item);
+  });
+
+  return tree;
+};
+
+const hierarchicalSort = (tree, id, comparator, result) => {
+  const children = tree[id];
+  if (children) {
+    children.sort(comparator).forEach((item) => {
+      result.push(item);
+      const { data: { changes: { payload } } } = item;
+      hierarchicalSort(tree, payload.id, comparator, result);
+    });
   }
 
-  let i = 0;
-  makeSort(makeTree(arr), undefined, cmp, (node) => {
-    arr[i] = node;
-    i += 1;
-  });
+  return result;
 };
 
 // TODO(burdon): Rename ChatLogView.
@@ -143,9 +134,8 @@ module.exports = function ChatLogsView({ core, db, partyManager }, { viewId }) {
         const reader = viewDB.createValueStream(query);
         const changes = await streamToList(reader);
 
-        hierarchySort(changes, (a, b) => a.author.localeCompare(b.author));
-
-        return changes;
+        const sort = (a, b) => a.author.localeCompare(b.author);
+        return hierarchicalSort(makeTree(changes), undefined, sort, []);
       },
 
       async appendChange(core, itemId, changes) {
