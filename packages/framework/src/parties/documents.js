@@ -10,8 +10,7 @@ module.exports = ({ kappa, mega, partyManager }) => {
     name: 'dsuite:documents',
 
     replicateOptions: {
-      live: true,
-      timeout: 0
+      live: true
     },
 
     async getParticipantKeys(partyKey) {

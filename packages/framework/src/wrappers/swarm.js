@@ -72,6 +72,18 @@ exports.addSwarmHandlers = (sw, mega, dsuite) => {
   // TODO(burdon): Removing control feed.
   const id = mega.feed('control').discoveryKey.toString('hex');
 
+  mega.on('party', (party) => {
+    const value = { key: party.key.toString('hex'), dk: party.discoveryKey.toString('hex') };
+
+    sw.join(value.dk);
+
+    dsuite.emit('metric.swarm.party', { value });
+  });
+
+  if (!sw.signal) {
+    return sw;
+  }
+
   sw.on('connection', (peer, info) => {
     sw.signal.info({ type: 'connection', channel: info.channel, peers: [id, info.id] });
 
@@ -132,14 +144,6 @@ exports.addSwarmHandlers = (sw, mega, dsuite) => {
       info,
       swarm: sw
     });
-  });
-
-  mega.on('party', (party) => {
-    const value = { key: party.key.toString('hex'), dk: party.discoveryKey.toString('hex') };
-
-    sw.join(value.dk);
-
-    dsuite.emit('metric.swarm.party', { value });
   });
 
   return sw;
