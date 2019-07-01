@@ -6,6 +6,7 @@ const path = require('path');
 const assert = require('assert');
 
 const hypercore = require('hypercore');
+const crypto = require('hypercore-crypto');
 const raf = require('random-access-file');
 const pify = require('pify');
 
