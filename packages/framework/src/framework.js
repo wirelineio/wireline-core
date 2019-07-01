@@ -13,11 +13,11 @@ const { bubblingEvents } = require('@wirelineio/utils');
 const { ViewTypes, Views } = require('./views/defs');
 const ViewManager = require('./views/view_manager');
 
-const PartyManager = require('./parties/party_manager.js');
-const PartySerializer = require('./parties/party_serializer.js');
+const PartyManager = require('./parties/party_manager');
+const PartySerializer = require('./parties/party_serializer');
 
-const botPartyRules = require('./parties/bots.js');
-const documentPartyRules = require('./parties/documents.js');
+const botPartyRules = require('./parties/bots');
+const documentPartyRules = require('./parties/documents');
 
 const { createMega } = require('./wrappers/mega');
 const { createKappa } = require('./wrappers/kappa');

@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/utils",
-  "version": "0.1.33",
+  "version": "0.1.35",
   "description": "Wireline core utilities.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/utils",
   "bugs": {
@@ -19,6 +19,9 @@
   "dependencies": {
     "debug": "^4.1.1",
     "hypercore-crypto": "^1.0.0",
+    "lodash": "^4.17.11",
+    "loggly": "segmentio/loggly",
+    "loggly-jslogger": "^2.2.2",
     "micromatch": "^3.1.10",
     "mutexify": "^1.2.0",
     "pify": "^4.0.1"

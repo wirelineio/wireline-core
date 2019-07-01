@@ -72,3 +72,7 @@ hypercore2.append({ title: 'world' });
 // Check results.
 expect(app.list()).toBe(['hello', 'world']);
 ```
+
+## References
+
+* [Appendix](./appendix.md)

@@ -4,11 +4,13 @@
 
 const { EventEmitter } = require('events');
 const crypto = require('crypto');
-const debug = require('debug')('party-map:peer');
+const { Logalytics } = require('@wirelineio/utils');
 
 const { keyToBuffer } = require('@wirelineio/utils');
 
 const codec = require('./codec');
+
+const logalytics = Logalytics.get('party-map:peer');
 
 class Peer extends EventEmitter {
   static _parseTransactionMessages(type, message = {}) {
@@ -75,7 +77,7 @@ class Peer extends EventEmitter {
       return false;
     }
 
-    debug('replicate', { peerId: this.peerId.toString('hex'), replicate: feed.key.toString('hex') });
+    logalytics.debug('replicate', { peerId: this.peerId.toString('hex'), replicate: feed.key.toString('hex') });
 
     const replicateOptions = Object.assign({}, this.opts, opts);
 
@@ -151,7 +153,7 @@ class Peer extends EventEmitter {
 
       const message = Object.assign({ transaction: { id } }, data);
 
-      debug(`--> ${type}`, message);
+      logalytics.debug(`--> ${type}`, message);
 
       this.feed.extension('party', Peer.codec.encode({
         type,
@@ -191,7 +193,7 @@ class Peer extends EventEmitter {
     if (transaction && transaction.return) {
       // answer
       const { resolve } = this.transactions.get(transaction.id);
-      debug(`<-- ${type}`, message);
+      logalytics.debug(`<-- ${type}`, message);
       return resolve && resolve(message);
     }
 

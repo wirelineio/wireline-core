@@ -62,6 +62,8 @@ class Socket extends Duplex {
    * @returns {undefined}
    */
   _write(data, enc, cb) {
+    if (this.destroyed) return;
+
     setTimeout(() => {
       this._endpoint.send(data);
       cb(null, data);
@@ -69,6 +71,13 @@ class Socket extends Duplex {
   }
 
   _read() {} // eslint-disable-line
+
+  _destroy(err, cb) {
+    if (!this._readableState.ended) this.push(null);
+    if (!this._writableState.finished) this.end();
+
+    cb(err);
+  }
 }
 
 export default Socket;

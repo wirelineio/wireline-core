@@ -2,7 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const PartyManager = require('../parties/party_manager');
+const PartyManager = require('./party_manager');
 const { encodeFeedKey, decodeFeedKey } = require('../protocol/feeds');
 
 module.exports = ({ kappa, mega, partyManager }) => {
@@ -10,8 +10,7 @@ module.exports = ({ kappa, mega, partyManager }) => {
     name: 'dsuite:documents',
 
     replicateOptions: {
-      live: true,
-      timeout: 0
+      live: true
     },
 
     async getParticipantKeys(partyKey) {

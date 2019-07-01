@@ -48,7 +48,7 @@ class DiscoverySwarm extends EventEmitter {
 
       socket.setMaxListeners(Infinity);
 
-      const conn = this._stream(details);
+      const conn = this._stream(info);
       conn.on('handshake', () => {
         this.emit('connection', conn, info);
       });
@@ -95,7 +95,7 @@ class DiscoverySwarm extends EventEmitter {
    * @returns {undefined}
    */
   join(key) {
-    const topic = Buffer.isBuffer(key) ? key : Buffer.from(key);
+    const topic = Buffer.isBuffer(key) ? key : Buffer.from(key, 'hex');
     this._network.join(topic);
   }
 
@@ -106,7 +106,7 @@ class DiscoverySwarm extends EventEmitter {
    * @returns {undefined}
    */
   leave(key) {
-    const topic = Buffer.isBuffer(key) ? key : Buffer.from(key);
+    const topic = Buffer.isBuffer(key) ? key : Buffer.from(key, 'hex');
     this._network.leave(topic);
   }
 }
