@@ -20,8 +20,7 @@ const discovery = new Discovery();
 class Network extends EventEmitter {
 
   /**
-   * constructor
-   *
+   * @constructor
    * @param {Buffer|string} args.id The peer-id for user.
    * @returns {undefined}
    */
@@ -71,7 +70,7 @@ class Network extends EventEmitter {
   }
 
   /**
-   * Private method called after a new connection happen.
+   * Called after connecting.
    *
    * Check if the connection belongs to an old connection, in that case destroy the old one.
    * Store the new connection inside of the _connections map.
@@ -99,7 +98,7 @@ class Network extends EventEmitter {
   }
 
   /**
-   * Private method called after a disconnection happen.
+   * Called after disconnecting.
    *
    * Delete the connection from the _connections map.
    * Emit the disconnection event.

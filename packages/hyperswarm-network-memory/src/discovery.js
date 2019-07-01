@@ -8,7 +8,7 @@ import Socket from './socket';
  * Discovery
  *
  * Class in charge to do the lookup (in memory) of peers in the network with a topic in common.
- *
+
  */
 class Discovery {
 
@@ -27,7 +27,7 @@ class Discovery {
    * When a new peer joins to a topic the lookup get the list of peers for that topic
    * and for each peer is going to try to establish a connection with the new peer.
    *
-   *
+   * @param {Object} info
    * @param {Buffer} info.peerId
    * @param {Buffer} info.topic
    * @param {function(socket, details)} cb
@@ -35,9 +35,10 @@ class Discovery {
    */
   lookup(info, cb) {
     const { peerId, topic: bufferTopic } = info;
-    let peers;
+
     const hexTopic = bufferTopic.toString('hex');
 
+    let peers;
     if (this._peersByTopic.has(hexTopic)) {
       peers = this._peersByTopic.get(hexTopic);
     } else {
@@ -87,6 +88,7 @@ class Discovery {
   /**
    * Delete a peer from the lookup for a specific topic.
    *
+   * @param {Object} info
    * @param {Buffer} info.peerId
    * @param {Buffer} info.topic
    * @returns {undefined}

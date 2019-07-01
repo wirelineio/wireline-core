@@ -31,9 +31,10 @@ class MegaWrapper {
       'loadFeeds',      // DSuite.initialize
       'feedByDK',       // PartyManager.getPartyKeyFromFeedKey
       'replicate',      // DiscoverySwarmWebrtc.stream
+      'setRules',       // DSuite.initialize
 
       // Party
-      'setRules',       // DSuite.initialize
+      // TODO(burdon): Remove.
       'addParty',       // PartyManager.connectToParty
       'party',          // PartyManager.setParty
     ];
