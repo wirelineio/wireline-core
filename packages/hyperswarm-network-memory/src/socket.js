@@ -72,15 +72,11 @@ class Socket extends Duplex {
 
   _read() {} // eslint-disable-line
 
-  _destroy(err) {
-    if (err) {
-      this.emit('error', err);
-    }
-
-    if (!this._readableState.ended) this.push('');
+  _destroy(err, cb) {
+    if (!this._readableState.ended) this.push(null);
     if (!this._writableState.finished) this.end();
 
-    this.emit('close');
+    cb(err);
   }
 }
 
