@@ -4,6 +4,7 @@
 
 const ContactsView = require('./contacts');
 const DocumentsView = require('./documents');
+const CRDTDocumentsView = require('./crdt-documents');
 const ItemsView = require('./items');
 const LogsView = require('./logs');
 const ParticipantsView = require('./participants');
@@ -12,6 +13,7 @@ const ChatLogsView = require('./chat_logs');
 module.exports.ViewTypes = {
   ContactsView,
   DocumentsView,
+  CRDTDocumentsView,
   ItemsView,
   LogsView,
   ParticipantsView,
@@ -45,6 +47,10 @@ module.exports.Views = [
   {
     name: 'presentations',
     view: 'DocumentsView'
+  },
+  {
+    name: 'crdt-documents',
+    view: 'CRDTDocumentsView'
   },
 
   // TODO(burdon): Convert to LogView.

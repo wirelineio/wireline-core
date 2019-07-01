@@ -5550,6 +5550,11 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
+lib0@0.0.5:
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/lib0/-/lib0-0.0.5.tgz#a051a949212de7733122a9cac3cc6ba6ce095515"
+  integrity sha512-3ElV6/t5Lv0Eczlnh/05q+Uq3RxQ/Q0zdN6LVtaUERQIDDZsP/CUXEGLsV8KZTgZwVFNCPGXNWYE+3WTOo+SHw==
+
 lint-staged@^8.1.0:
   version "8.2.1"
   resolved "https://registry.yarnpkg.com/lint-staged/-/lint-staged-8.2.1.tgz#752fcf222d9d28f323a3b80f1e668f3654ff221f"
@@ -9071,6 +9076,13 @@ yeast@0.1.2:
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/yeast/-/yeast-0.1.2.tgz#008e06d8094320c372dbc2f8ed76a0ca6c8ac419"
   integrity sha1-AI4G2AlDIMNy28L47XagymyKxBk=
+
+yjs@13.0.0-93:
+  version "13.0.0-93"
+  resolved "https://registry.yarnpkg.com/yjs/-/yjs-13.0.0-93.tgz#046287e81b42f3b00ed8d67ed205935e2efad8d4"
+  integrity sha512-eI+qamhP3FmtFNZU2Sr2kfjOdFDp0XszFOnP8oNupiTrwLnYqtNVbOeVTPa5PZrIieRWly9lAvto2T3qDO/3fA==
+  dependencies:
+    lib0 "0.0.5"
 
 yup@^0.27.0:
   version "0.27.0"
