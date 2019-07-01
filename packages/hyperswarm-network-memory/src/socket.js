@@ -77,7 +77,7 @@ class Socket extends Duplex {
       this.emit('error', err);
     }
 
-    if (!this._readableState.ended) this.push(null);
+    if (!this._readableState.ended) this.push('');
     if (!this._writableState.finished) this.end();
 
     this.emit('close');
