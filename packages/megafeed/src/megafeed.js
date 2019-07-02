@@ -103,29 +103,29 @@ class Megafeed extends EventEmitter {
   /** * Feeds API ** */
 
   feed(path) {
-    return this._feedStore.find(descriptor => descriptor.path === path);
+    return this._feedStore.findFeed(descriptor => descriptor.path === path);
   }
 
   feedByDK(key) {
     assert(Buffer.isBuffer(key), 'Key should be a Buffer instance.');
 
-    return this._feedStore.find(descriptor => descriptor.discoveryKey.equals(key));
+    return this._feedStore.findFeed(descriptor => descriptor.discoveryKey.equals(key));
   }
 
   feeds() {
-    return this._feedStore.feeds();
+    return this._feedStore.getFeeds();
   }
 
   async addFeed({ path, ...stat }) {
     await this.ready();
 
-    return this._feedStore.open(path, stat);
+    return this._feedStore.openFeed(path, stat);
   }
 
   async deleteFeed(path) {
     await this.ready();
 
-    return this._feedStore.del(path);
+    return this._feedStore.deleteFeed(path);
   }
 
   async loadFeeds(pattern) {
@@ -137,13 +137,13 @@ class Megafeed extends EventEmitter {
       pattern = keyToHex(pattern);
     }
 
-    return this._feedStore.load(descriptor => filterDescriptorByPattern(descriptor, pattern));
+    return this._feedStore.loadFeeds(descriptor => filterDescriptorByPattern(descriptor, pattern));
   }
 
   async closeFeed(key) {
     await this.ready();
 
-    return this._feedStore.close(key);
+    return this._feedStore.closeFeed(key);
   }
 
   /** * Parties API ** */
