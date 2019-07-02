@@ -10,10 +10,6 @@ const isBrowser = typeof window !== 'undefined';
 
 const Loggly = isBrowser ? require('loggly-jslogger').LogglyTracker : require('loggly');
 
-const envOrStorage = (key, def) => {
-  return process.env[key] || (isBrowser && _.get(window, `localStorage['${key}']`)) || def;
-};
-
 class LogalyticsWriter {
   constructor(writeFn, opts = {}) {
     this._writeFn = writeFn;
@@ -79,9 +75,9 @@ class Logalytics {
     const writers = [new DebugWriter()];
 
     // Optionally do remote reporting.
-    const remoteReporting = envOrStorage('REMOTE_REPORTING', false).toString() === 'true';
-    const logglyKey = envOrStorage('LOGGLY_KEY');
-    if (remoteReporting && logglyKey) {
+    const remoteReporting = process.env.REMOTE_REPORTING || (isBrowser && _.get(window, 'localStorage.REMOTE_REPORTING\']')) || 'false';
+    const logglyKey = process.env.LOGGLY_KEY || (isBrowser && _.get(window, 'localStorage.LOGGLY_KEY'));
+    if (remoteReporting === 'true' && logglyKey) {
       writers.push(new LogglyWriter(logglyKey));
     }
 

@@ -2,6 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+const _ = require('lodash');
 const { Logalytics } = require('./logalytics');
 
 const isBrowser = typeof window !== 'undefined';
@@ -13,28 +14,21 @@ const logUnhandled = () => {
   }
 
   if (isBrowser) {
-    window.onerror = (message, file, line, col, error) => {
-      Logalytics.report('UnhandledException', message, file, line, col, error);
-      console.error(message, file, line, col, error);
-      return false;
+    const errReporter = (name, e) => {
+      const message = _.get(e, 'reason.stack') || _.get(e, 'reason.message') || e.reason.toString();
+      Logalytics.report(name, e.type, message);
+      console.error(e);
     };
-    window.addEventListener('error', (e) => {
-      Logalytics.report('UnhandledException', e);
-      console.error(e);
-      return false;
-    });
-    window.addEventListener('unhandledrejection', (e) => {
-      Logalytics.report('UnhandledRejection', e);
-      console.error(e);
-      return false;
-    });
+
+    window.addEventListener('error', _.partial(errReporter, 'browser:error'));
+    window.addEventListener('unhandledrejection', _.partial(errReporter, 'browser:unhandledrejection'));
   } else {
     process.on('unhandledException', (e) => {
-      Logalytics.report('UnhandledException', e);
+      Logalytics.report('node:unhandledException', e);
       console.error(e);
     });
     process.on('unhandledRejection', (reason, promise) => {
-      Logalytics.report('UnhandledRejection', reason, promise);
+      Logalytics.report('node:unhandledRejection', reason, promise);
       console.error(reason, promise);
     });
   }
