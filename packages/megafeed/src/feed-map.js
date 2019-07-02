@@ -5,6 +5,7 @@
 const { EventEmitter } = require('events');
 const path = require('path');
 
+const debug = require('debug')('megafeed:feed-map');
 const hypercore = require('hypercore');
 const raf = require('random-access-file');
 const crypto = require('hypercore-crypto');
@@ -18,13 +19,11 @@ const {
   Locker,
   filterFeedByPattern,
   Repository,
-  Logalytics
 } = require('@wirelineio/utils');
 
 const schema = require('./schema.js');
 
 const codec = codecProtobuf(schema);
-const logalytics = Logalytics.get('megafeed:feed-map');
 
 /**
  * FeedMap
@@ -279,7 +278,7 @@ class FeedMap extends EventEmitter {
 
       await release();
     } catch (err) {
-      logalytics.error(err);
+      debug(err);
       await release();
       throw err;
     }
@@ -306,7 +305,7 @@ class FeedMap extends EventEmitter {
 
       await repository.put(feed.name, update, { encode: FeedMap.encodeFeed });
     } catch (err) {
-      logalytics.error(err);
+      debug(err);
       throw err;
     }
   }
@@ -341,7 +340,7 @@ class FeedMap extends EventEmitter {
         }),
       );
     } catch (err) {
-      logalytics.error(err);
+      debug(err);
       throw err;
     }
   }
@@ -359,7 +358,7 @@ class FeedMap extends EventEmitter {
       this._feeds.set(discoveryKey, feed);
       return feed;
     } catch (err) {
-      logalytics.error(err);
+      debug(err);
       throw err;
     }
   }
@@ -454,7 +453,7 @@ class FeedMap extends EventEmitter {
 
       return feed;
     } catch (err) {
-      logalytics.error(err);
+      debug(err);
       await release();
       throw err;
     }

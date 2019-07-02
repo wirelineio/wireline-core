@@ -8,15 +8,8 @@ const Locker = require('./src/locker');
 const { callbackPromise } = require('./src/promise-help');
 const Repository = require('./src/repository');
 const bubblingEvents = require('./src/bubbling-events');
-const {
-  Logalytics,
-  LogalyticsLevel,
-  LogalyticsLogger,
-  LogalyticsWriter,
-  ConsoleWriter,
-  DebugWriter,
-  LogglyWriter,
-} = require('./src/logalytics');
+const { Logalytics } = require('./src/logalytics');
+const { logUnhandled } = require('./src/unhandled');
 
 module.exports = {
 
@@ -36,11 +29,6 @@ module.exports = {
 
   bubblingEvents,
 
-  ConsoleWriter,
-  DebugWriter,
-  LogglyWriter,
-  LogalyticsWriter,
-  LogalyticsLevel,
-  LogalyticsLogger,
-  Logalytics
+  Logalytics,
+  logUnhandled
 };

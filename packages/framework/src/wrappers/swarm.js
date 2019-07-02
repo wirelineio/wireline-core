@@ -3,12 +3,10 @@
 //
 
 const discoverySwarmWebrtc = require('@geut/discovery-swarm-webrtc');
-const { Logalytics } = require('@wirelineio/utils');
+const debug = require('debug')('dsuite:swarm');
 
 const Metric = require('../utils/metric');
 const Config = require('../config');
-
-const logalytics = Logalytics.get('dsuite:swarm');
 
 const isBrowser = typeof window !== 'undefined';
 
@@ -29,8 +27,8 @@ exports.createSwarm = (mega, conf) => {
   const signalhub = conf.hub || process.env.SIGNALHUB || Config.SIGNALHUB;
   const ice = JSON.parse(conf.ice || process.env.ICE_SERVERS || Config.ICE_SERVERS);
 
-  logalytics.debug('Connecting:', JSON.stringify({ signalhub, ice }));
-  logalytics.debug('PeerId:', mega.id.toString('hex'));
+  debug('Connecting:', JSON.stringify({ signalhub, ice }));
+  debug('PeerId:', mega.id.toString('hex'));
 
   const swarm = conf.swarm || discoverySwarmWebrtc;
 
@@ -87,7 +85,7 @@ exports.addSwarmHandlers = (sw, mega, dsuite) => {
   sw.on('connection', (peer, info) => {
     sw.signal.info({ type: 'connection', channel: info.channel, peers: [id, info.id] });
 
-    logalytics.debug('Connection open:', info.id);
+    debug('Connection open:', info.id);
     dsuite.emit('metric.swarm.connection-open', {
       value: sw.peers(info.channel).filter(peer => peer.connected).length,
       peer,
@@ -99,7 +97,7 @@ exports.addSwarmHandlers = (sw, mega, dsuite) => {
   sw.on('connection-closed', (peer, info) => {
     sw.signal.info({ type: 'disconnection', channel: info.channel, peers: [id, info.id] });
 
-    logalytics.debug('Connection closed:', info.id);
+    debug('Connection closed:', info.id);
     dsuite.emit('metric.swarm.connection-closed', {
       value: sw.peers(info.channel).filter(peer => peer.connected).length,
       peer,
@@ -111,9 +109,9 @@ exports.addSwarmHandlers = (sw, mega, dsuite) => {
   sw.on('connection-error', (err, info) => {
     // If we have info.id the error is just an already closed connection.
     if (info && info.id) {
-      logalytics.info(`Unreachable peer: ${info.id}. Peer might have disconnected.`);
+      debug(`Unreachable peer: ${info.id}. Peer might have disconnected.`);
     } else {
-      logalytics.error('Connection error:', err);
+      debug('Connection error:', err);
     }
 
     dsuite.emit('metric.swarm.connection-error', {
@@ -124,7 +122,7 @@ exports.addSwarmHandlers = (sw, mega, dsuite) => {
   });
 
   sw.on('reconnecting', (info) => {
-    logalytics.debug('Reconnecting:', info);
+    debug('Reconnecting:', info);
 
     dsuite.emit('metric.swarm.reconnecting', {
       info,

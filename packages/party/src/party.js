@@ -5,17 +5,14 @@
 const { EventEmitter } = require('events');
 
 const crypto = require('hypercore-crypto');
+const debug = require('debug')('party-map:party');
 const protocol = require('hypercore-protocol');
 const eos = require('end-of-stream');
-
-const { Logalytics } = require('@wirelineio/utils');
 
 const { keyToHex, keyToBuffer, getDiscoveryKey } = require('@wirelineio/utils');
 
 const Peer = require('./peer');
 const Rule = require('./rule');
-
-const logalytics = Logalytics.get('party-map:party');
 
 /**
  * TODO(burdon): Move into MegaFeed?
@@ -149,17 +146,17 @@ class Party extends EventEmitter {
 
     this._peers.add(peer);
 
-    logalytics.debug('peer-add', peer);
+    debug('peer-add', peer);
     this.emit('peer-add', peer);
 
     eos(stream, (err) => {
       peer.emit('destroy', err, peer);
 
-      logalytics.debug('peer-destroy', err);
+      debug('peer-destroy', err);
 
       this._peers.delete(peer);
 
-      logalytics.debug('peer-remove', peer);
+      debug('peer-remove', peer);
       this.emit('peer-remove', peer);
     });
 
