@@ -3,14 +3,17 @@
 //
 
 const { EventEmitter } = require('events');
+const assert = require('assert');
+
+const crypto = require('hypercore-crypto');
 
 const debug = require('debug')('megafeed:feed-map');
 
 const codecProtobuf = require('@wirelineio/codec-protobuf');
 const {
   keyToHex,
-  MessageStore,
-  getDiscoveryKey
+  keyToBuffer,
+  MessageStore
 } = require('@wirelineio/utils');
 
 const { FeedDescriptor } = require('./feed-descriptor');
@@ -31,13 +34,28 @@ const STORE_NAMESPACE = 'feed';
 class FeedStore extends EventEmitter {
 
   /**
-   * constructor
+   * Create and initialize a new FeedStore
    *
-   * @params {HyperTrie} db
+   * @static
+   * @param {HyperTrie} db
    * @param {RandomAccessStorage} storage RandomAccessStorage to use by default by the feeds.
    * @param {Object} options
    * @param {Object} options.feedOptions Default options for each feed.
-   * @returns {FeedMap}
+   * @returns {Promise<FeedStore>}
+   */
+  static async create(db, storage, options = {}) {
+    const feedStore = new FeedStore(db, storage, options);
+    await feedStore.initialize();
+    return feedStore;
+  }
+
+  /**
+   * constructor
+   *
+   * @param {HyperTrie} db
+   * @param {RandomAccessStorage} storage RandomAccessStorage to use by default by the feeds.
+   * @param {Object} options
+   * @param {Object} options.feedOptions Default options for each feed.
    */
   constructor(db, storage, options = {}) {
     super();
@@ -60,7 +78,7 @@ class FeedStore extends EventEmitter {
   }
 
   /**
-   * Wait for FeedMap being initialized.
+   * Initialized FeedStore reading the persisted stats and created each FeedDescriptor.
    *
    * @returns {Promise}
    */
@@ -85,20 +103,34 @@ class FeedStore extends EventEmitter {
     return Array.from(this._descriptors.values());
   }
 
+  /**
+   * Get the list of the opened descriptors.
+   *
+   * @returns {FeedDescriptor[]}
+   */
   getOpenedDescriptors() {
     return this.getDescriptors()
       .filter(descriptor => descriptor.opened);
   }
 
   /**
-   * Get a descriptor by a key or the path.
+   * Get a descriptor by a key.
    *
-   * @param {Buffer|String} key
+   * @param {Buffer} key
    * @returns {FeedDescriptor}
    */
-  getDescriptor(key) {
-    const hexKey = keyToHex(key);
-    return this.getDescriptors().find(d => keyToHex(d.key) === hexKey || d.path === hexKey);
+  getDescriptorByKey(key) {
+    return this.getDescriptors().find(descriptor => descriptor.key.equals(key));
+  }
+
+  /**
+   * Get a descriptor by a path.
+   *
+   * @param {String} path
+   * @returns {FeedDescriptor}
+   */
+  getDescriptorByPath(path) {
+    return this.getDescriptors().find(descriptor => descriptor.path === path);
   }
 
   /**
@@ -106,12 +138,18 @@ class FeedStore extends EventEmitter {
    *
    * @returns {Hypercore[]}
    */
-  feeds() {
+  getFeeds() {
     return this.getOpenedDescriptors()
       .map(descriptor => descriptor.feed);
   }
 
-  find(cb) {
+  /**
+   * Find a feed using a filter callback.
+   *
+   * @param {FeedStore~descriptorCallback} callback
+   * @returns {Hypercore}
+   */
+  findFeed(cb) {
     const descriptor = this.getOpenedDescriptors()
       .find(descriptor => cb(descriptor));
 
@@ -120,14 +158,26 @@ class FeedStore extends EventEmitter {
     }
   }
 
-  filter(cb) {
+  /**
+   * Filter feeds using a filter callback.
+   *
+   * @param {FeedStore~descriptorCallback} callback
+   * @returns {Hypercore[]}
+   */
+  filterFeeds(cb) {
     const descriptors = this.getOpenedDescriptors()
       .filter(descriptor => cb(descriptor));
 
     return descriptors.map(descriptor => descriptor.feed);
   }
 
-  async load(cb) {
+  /**
+   * Load feeds using a filter callback.
+   *
+   * @param {FeedStore~descriptorCallback} callback
+   * @returns {Promise<Hypercore[]>}
+   */
+  async loadFeeds(cb) {
     const descriptors = this.getOpenedDescriptors()
       .filter(descriptor => cb(descriptor));
 
@@ -135,9 +185,12 @@ class FeedStore extends EventEmitter {
   }
 
   /**
-   * Open a feed to FeedMap.
+   * Open a feed to FeedStore.
+   *
    * If the feed already exists but is not loaded it will load the feed instead of
    * create a new one.
+   *
+   * Similar to fs.open
    *
    * @param {String} path
    * @param {Object} stat
@@ -147,48 +200,50 @@ class FeedStore extends EventEmitter {
    * @param {Object} stat.metadata
    * @returns {Hypercore}
    */
-  async open(path, stat) {
-    let descriptor = this.getDescriptor(path);
+  async openFeed(path, stat) {
+    const { key } = stat;
 
-    if (descriptor) {
-      if (stat.key && keyToHex(stat.key) !== keyToHex(descriptor.key)) {
-        throw new Error(`FeedMap: You are trying to open a feed with a different public key "${keyToHex(stat.key)}".`);
-      }
-    } else {
-      if (stat.key && this._descriptors.get(keyToHex(getDiscoveryKey(stat.key)))) {
-        throw new Error(`FeedMap: There is already a feed register with the public key "${keyToHex(stat.key)}"`);
-      }
+    let descriptor = this.getDescriptorByPath(path);
 
+    if (descriptor && key && !keyToBuffer(key).equals(descriptor.key)) {
+      throw new Error(`FeedStore: You are trying to open a feed with a different public key "${keyToHex(stat.key)}".`);
+    }
+
+    if (!descriptor && key && this.getDescriptorByKey(keyToBuffer(key))) {
+      throw new Error(`FeedStore: There is already a feed register with the public key "${keyToHex(stat.key)}"`);
+    }
+
+    if (!descriptor) {
       descriptor = this._createDescriptor(path, stat);
     }
 
     return this._openFeed(descriptor);
   }
 
-  async close(key) {
-    const descriptor = this.getDescriptor(key);
+  /**
+   * Close a feed by the path.
+   *
+   * @param {String} path
+   * @returns {Promise}
+   */
+  async closeFeed(path) {
+    const descriptor = this.getDescriptorByPath(path);
 
     if (!descriptor) {
-      return null;
+      throw new Error('Feed not found to close.');
     }
 
     return descriptor.close();
   }
 
   /**
-   * Remove a feed from FeedMap.
+   * Remove a feed by the path.
    *
-   * @param {Buffer} key
+   * @param {String} path
    * @returns {Promise}
    */
-  async del(key) {
-    const descriptor = this.getDescriptor(key);
-
-    if (!descriptor) {
-      return null;
-    }
-
-    const release = await descriptor.lock();
+  async deleteFeed(path) {
+    const descriptor = this.getDescriptorByPath(path);
 
     try {
       await this._messageStore.delete(`${STORE_NAMESPACE}/${keyToHex(descriptor.key)}`);
@@ -196,53 +251,87 @@ class FeedStore extends EventEmitter {
       this._descriptors.delete(keyToHex(descriptor.discoveryKey));
 
       this.emit('feed-remove', descriptor.feed, descriptor.stat);
-
-      await release();
     } catch (err) {
       debug(err);
-      await release();
       throw err;
     }
   }
 
+  /**
+   * Factory to create a new FeedDescriptor.
+   *
+   * @private
+   * @param path
+   * @param {Object} stat
+   * @param {Buffer|String} stat.key
+   * @param {Buffer|String} stat.secretKey
+   * @param {String} stat.valueEncoding
+   * @param {Object} stat.metadata
+   * @returns {FeedDescriptor}
+   */
   _createDescriptor(path, stat) {
-    const descriptor = new FeedDescriptor(path, stat, this._defaultStorage, this._defaultFeedOptions);
+    const defaultOptions = this._defaultFeedOptions;
+
+    let { key, secretKey, metadata } = stat;
+
+    assert(!secretKey || (secretKey && key), 'You cannot have a secretKey without a publicKey.');
+
+    if (!key) {
+      ({ publicKey: key, secretKey } = crypto.keyPair());
+    }
+
+    metadata = Buffer.isBuffer(metadata) ? JSON.parse(metadata) : metadata;
+
+    const descriptor = new FeedDescriptor({
+      path,
+      key: keyToBuffer(key),
+      secretKey: keyToBuffer(secretKey),
+      valueEncoding: stat.valueEncoding || defaultOptions.valueEncoding,
+      metadata: Object.assign({}, defaultOptions.metadata || {}, metadata)
+    }, this._defaultStorage);
+
     this._descriptors.set(
       keyToHex(descriptor.discoveryKey),
       descriptor
     );
+
     return descriptor;
   }
 
+  /**
+   * Atomic operation to open or create a feed referenced by the FeedDescriptor.
+   *
+   * @private
+   * @param {FeedDescriptor} descriptor
+   * @returns {Promise<Hypercore>}
+   */
   async _openFeed(descriptor) {
     // Fast return without need to lock the descriptor.
     if (descriptor.opened) {
       return descriptor.feed;
     }
 
-    const release = await descriptor.lock();
-
     try {
-      if (descriptor.opened) {
-        await release();
-        return descriptor.feed;
-      }
+      await descriptor.open();
 
       await this._persistFeed(descriptor);
 
-      await descriptor.open();
-
       this._defineFeedEvents(descriptor);
 
-      await release();
       return descriptor.feed;
     } catch (err) {
       debug(err);
-      await release();
       throw err;
     }
   }
 
+  /**
+   * Persist in the db the stats of a FeedDescriptor.
+   *
+   * @private
+   * @param {FeedDescriptor} descriptor
+   * @returns {Promise}
+   */
   async _persistFeed(descriptor) {
     const key = `${STORE_NAMESPACE}/${keyToHex(descriptor.key)}`;
     const data = await this._messageStore.get(key);
@@ -252,6 +341,13 @@ class FeedStore extends EventEmitter {
     }
   }
 
+  /**
+   * Bubblings events from each feed to FeedStore.
+   *
+   * @private
+   * @param {FeedDescriptor} descriptor
+   * @returns {undefined}
+   */
   _defineFeedEvents(descriptor) {
     const { stat, feed } = descriptor;
 
@@ -261,5 +357,13 @@ class FeedStore extends EventEmitter {
     process.nextTick(() => this.emit('feed', feed, stat));
   }
 }
+
+/**
+ * Callback to filter and/or find descriptors.
+ *
+ * @callback FeedStore~descriptorCallback
+ * @param {number} responseCode
+ * @param {string} responseMessage
+ */
 
 module.exports = FeedStore;
