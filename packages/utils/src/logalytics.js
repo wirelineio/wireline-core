@@ -20,15 +20,15 @@ class LogalyticsWriter {
     return this._opts;
   }
 
-  write(name, type, timestamp, message) {
-    this._writeFn(name, type, timestamp, message);
+  write(name, type, timestamp, count, message) {
+    this._writeFn(name, type, timestamp, count, message);
   }
 }
 
 class DebugWriter extends LogalyticsWriter {
   constructor(opts = {}) {
     // TODO(telackey): Will this create a mess of debug objects?
-    const writeFn = (name, type, timestamp, message) => {
+    const writeFn = (name, type, timestamp, count, message) => {
       debug(`logalytics:${type}:${name}`)(message);
     };
     super(writeFn, opts);
@@ -48,15 +48,15 @@ class LogglyWriter extends LogalyticsWriter {
       const loggly = new Loggly();
       loggly.push(logglyParams);
 
-      writeFn = (name, type, timestamp, message) => {
-        loggly.push({ type, message, name, tag: name });
+      writeFn = (name, type, timestamp, count, message) => {
+        loggly.push({ type, message, name, count, tag: name });
       };
     } else {
       logglyParams = _.defaults(logglyParams, { bufferSize: 20, flushInterval: 1000 });
       const loggly = new Loggly(logglyKey, logglyParams);
 
-      writeFn = (name, type, timestamp, message) => {
-        loggly.send({ type, message, name });
+      writeFn = (name, type, timestamp, count, message) => {
+        loggly.send({ type, message, count, name });
       };
     }
 
@@ -94,16 +94,16 @@ class Logalytics {
   }
 
   static report(name, ...args) {
-    Logalytics._send(name, 'REPORT', ...args);
+    Logalytics._send(name, 'REPORT', null, ...args);
   }
 
-  static _send(name, type, ...args) {
+  static _send(name, type, count, ...args) {
     Logalytics._init();
 
     const formatted = util.format(...args);
     const timestamp = Date.now();
     Logalytics.__writers.forEach((writer) => {
-      writer.write(name, type, timestamp, formatted);
+      writer.write(name, type, timestamp, count, formatted);
     });
   }
 }
