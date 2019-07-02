@@ -55,6 +55,9 @@ class PartyMap extends EventEmitter {
     return Array.from(this._parties.values());
   }
 
+  findFeed(...args) {
+    return this._findFeed(...args);
+  }
 
   setRules(options = {}) {
     const { name, ready = this._ready, findFeed = this._findFeed, ...opts } = options;
