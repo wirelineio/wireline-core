@@ -90,7 +90,7 @@ class Framework extends EventEmitter {
     //
 
     // Manages parties.
-    this._partyManager = new PartyManager(this._mega, this._kappa);
+    this._partyManager = new PartyManager(this._mega, this._mega.partyMap, this._kappa);
 
     // Import/export
     this._partySerializer = new PartySerializer(this._mega, this._kappa, this._partyManager);
@@ -158,7 +158,7 @@ class Framework extends EventEmitter {
       botPartyRules({ conf: this._conf, swarm: this._swarm, partyManager: this._partyManager })
     ];
 
-    replicationRules.forEach(rule => this._mega.setRules(rule));
+    replicationRules.forEach(rule => this._partyManager.setRules(rule));
 
     // TODO(burdon): Remove need for bubbling?
     bubblingEvents(this, this._partyManager, ['rule-handshake', 'rule-ephemeral-message']);

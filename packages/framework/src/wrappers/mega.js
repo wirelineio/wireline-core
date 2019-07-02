@@ -26,14 +26,15 @@ class MegaWrapper {
       // 'feeds',          // Multifeed Index? levelup => _logs.feeds
 
       // FeedMap
-      'feed',           // Framework.initialize => swarm.js
-      'addFeed',        // Framework.initialize
-      'loadFeeds',      // Framework.initialize
+      'feed',           // Framework.initialize => swarm.js, PartyManager.getLocalPartyFeed
+      'addFeed',        // Framework.initialize, PartyManager.createLocalPartyFeed
+      'loadFeeds',      // Framework.initialize, PartyManager.setParty
       'feedByDK',       // PartyManager.getPartyKeyFromFeedKey
       'replicate',      // DiscoverySwarmWebrtc.stream
       'setRules',       // DSuite.initialize
 
       // Party
+<<<<<<< HEAD
 <<<<<<< HEAD
       // TODO(burdon): Remove.
 =======
@@ -42,6 +43,12 @@ class MegaWrapper {
       'addParty',       // PartyManager.connectToParty
       'party',          // PartyManager.setParty
       'loadParties',    // botkit-core Factory.createBot
+=======
+      // 'setRules',       // Framework.initialize
+      // 'addParty',       // PartyManager.connectToParty
+      // 'party',          // PartyManager.setParty
+      // 'loadParties',    // botkit-core Factory.createBot
+>>>>>>> Remove party methods from mega wrapper.
     ];
 
     methods.forEach((method) => { this[method] = this._mega[method].bind(this._mega); });
@@ -54,6 +61,12 @@ class MegaWrapper {
 
   get key() {
     return this._mega.key;
+  }
+
+  // Get access to partyMap impl for PartyManager.
+  // TODO(elmasse): Remove when megafeed2 is ready.
+  get partyMap() {
+    return this._mega._parties;
   }
 }
 
