@@ -1673,6 +1673,59 @@
     universal-user-agent "^2.0.0"
     url-template "^2.0.8"
 
+"@protobufjs/aspromise@^1.1.1", "@protobufjs/aspromise@^1.1.2":
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/@protobufjs/aspromise/-/aspromise-1.1.2.tgz#9b8b0cc663d669a7d8f6f5d0893a14d348f30fbf"
+  integrity sha1-m4sMxmPWaafY9vXQiToU00jzD78=
+
+"@protobufjs/base64@^1.1.2":
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/@protobufjs/base64/-/base64-1.1.2.tgz#4c85730e59b9a1f1f349047dbf24296034bb2735"
+  integrity sha512-AZkcAA5vnN/v4PDqKyMR5lx7hZttPDgClv83E//FMNhR2TMcLUhfRUBHCmSl0oi9zMgDDqRUJkSxO3wm85+XLg==
+
+"@protobufjs/codegen@^2.0.4":
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/@protobufjs/codegen/-/codegen-2.0.4.tgz#7ef37f0d010fb028ad1ad59722e506d9262815cb"
+  integrity sha512-YyFaikqM5sH0ziFZCN3xDC7zeGaB/d0IUb9CATugHWbd1FRFwWwt4ld4OYMPWu5a3Xe01mGAULCdqhMlPl29Jg==
+
+"@protobufjs/eventemitter@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@protobufjs/eventemitter/-/eventemitter-1.1.0.tgz#355cbc98bafad5978f9ed095f397621f1d066b70"
+  integrity sha1-NVy8mLr61ZePntCV85diHx0Ga3A=
+
+"@protobufjs/fetch@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@protobufjs/fetch/-/fetch-1.1.0.tgz#ba99fb598614af65700c1619ff06d454b0d84c45"
+  integrity sha1-upn7WYYUr2VwDBYZ/wbUVLDYTEU=
+  dependencies:
+    "@protobufjs/aspromise" "^1.1.1"
+    "@protobufjs/inquire" "^1.1.0"
+
+"@protobufjs/float@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@protobufjs/float/-/float-1.0.2.tgz#5e9e1abdcb73fc0a7cb8b291df78c8cbd97b87d1"
+  integrity sha1-Xp4avctz/Ap8uLKR33jIy9l7h9E=
+
+"@protobufjs/inquire@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@protobufjs/inquire/-/inquire-1.1.0.tgz#ff200e3e7cf2429e2dcafc1140828e8cc638f089"
+  integrity sha1-/yAOPnzyQp4tyvwRQIKOjMY48Ik=
+
+"@protobufjs/path@^1.1.2":
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/@protobufjs/path/-/path-1.1.2.tgz#6cc2b20c5c9ad6ad0dccfd21ca7673d8d7fbf68d"
+  integrity sha1-bMKyDFya1q0NzP0hynZz2Nf79o0=
+
+"@protobufjs/pool@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@protobufjs/pool/-/pool-1.1.0.tgz#09fd15f2d6d3abfa9b65bc366506d6ad7846ff54"
+  integrity sha1-Cf0V8tbTq/qbZbw2ZQbWrXhG/1Q=
+
+"@protobufjs/utf8@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
+  integrity sha1-p3c2C1s5oaLlEG+OhY8v0tBgxXA=
+
 "@samverschueren/stream-to-observable@^0.3.0":
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/@samverschueren/stream-to-observable/-/stream-to-observable-0.3.0.tgz#ecdf48d532c58ea477acfcab80348424f8d0662f"
@@ -1732,6 +1785,16 @@
   dependencies:
     "@types/istanbul-lib-coverage" "*"
     "@types/istanbul-lib-report" "*"
+
+"@types/long@^4.0.0":
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/@types/long/-/long-4.0.0.tgz#719551d2352d301ac8b81db732acb6bdc28dbdef"
+  integrity sha512-1w52Nyx4Gq47uuu0EVcsHBxZFJgurQ+rTKS3qMHxR1GY2T8c2AJYd6vZoZ9q1rupaDjU0yT+Jc2XTyXkjeMA+Q==
+
+"@types/node@^10.1.0":
+  version "10.14.10"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-10.14.10.tgz#e491484c6060af8d461e12ec81c0da8a3282b8de"
+  integrity sha512-V8wj+w2YMNvGuhgl/MA5fmTxgjmVHVoasfIaxMMZJV6Y8Kk+Ydpi1z2whoShDCJ2BuNVoqH/h1hrygnBxkrw/Q==
 
 "@types/stack-utils@^1.0.1":
   version "1.0.1"
@@ -2551,6 +2614,11 @@ charwise@^3.0.1:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/charwise/-/charwise-3.0.1.tgz#8706f3cf6a1166f46cbc8b2a5174f11cc96753c7"
   integrity sha512-RcdumNsM6fJZ5HHbYunqj2bpurVRGsXour3OR+SlLEHFhG6ALm54i6Osnh+OvO7kEoSBzwExpblYFH8zKQiEPw==
+
+chess.js@^0.10.2:
+  version "0.10.2"
+  resolved "https://registry.yarnpkg.com/chess.js/-/chess.js-0.10.2.tgz#eacefa2067155f87f046e80cc12d2019eef1b81a"
+  integrity sha1-6s76IGcVX4fwRugMwS0gGe7xuBo=
 
 chokidar@^2.0.4:
   version "2.1.6"
@@ -4443,6 +4511,37 @@ hypercore@^7.0.0, hypercore@^7.2.0:
   optionalDependencies:
     fd-lock "^1.0.2"
 
+hypercore@^7.4.0:
+  version "7.4.0"
+  resolved "https://registry.yarnpkg.com/hypercore/-/hypercore-7.4.0.tgz#8848eee75b1e518b56168bebeb695480c34f9ede"
+  integrity sha512-e6Pk9+Htaurt7ed2C4J6/uQnEXIZmuiQDzYYZw0RVGs+hQOp8zak4H9dK88OJW5Rqkb+7GD9mylMekEWneyZBw==
+  dependencies:
+    array-lru "^1.1.0"
+    atomic-batcher "^1.0.2"
+    bitfield-rle "^2.2.1"
+    bulk-write-stream "^1.1.3"
+    codecs "^2.0.0"
+    fast-bitfield "^1.2.2"
+    flat-tree "^1.6.0"
+    from2 "^2.3.0"
+    hypercore-crypto "^1.0.0"
+    hypercore-protocol "^6.4.1"
+    inherits "^2.0.3"
+    inspect-custom-symbol "^1.1.0"
+    last-one-wins "^1.0.4"
+    memory-pager "^1.0.2"
+    merkle-tree-stream "^3.0.3"
+    pretty-hash "^1.0.1"
+    random-access-file "^2.1.0"
+    sodium-universal "^2.0.0"
+    sparse-bitfield "^3.0.0"
+    thunky "^1.0.1"
+    uint64be "^2.0.1"
+    unordered-array-remove "^1.0.2"
+    unordered-set "^2.0.0"
+  optionalDependencies:
+    fd-lock "^1.0.2"
+
 hyperid@^2.0.2:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/hyperid/-/hyperid-2.0.2.tgz#f56d898f810f0b737c81475803ea4b63515a92d5"
@@ -4594,6 +4693,11 @@ inherits@2, inherits@^2.0.1, inherits@^2.0.3, inherits@~2.0.1, inherits@~2.0.3:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.3.tgz#633c2c83e3da42a502f52466022480f4208261de"
   integrity sha1-Yzwsg+PaQqUC9SRmAiSA9CCCYd4=
+
+inherits@^2.0.4:
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.4.tgz#0fa2c64f932917c3433a0ded55363aae37416b7c"
+  integrity sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==
 
 ini@^1.3.2, ini@^1.3.4, ini@^1.3.5, ini@~1.3.0:
   version "1.3.5"
@@ -5507,6 +5611,16 @@ kappa-core@^2.6.2:
     multifeed "^3.0.3"
     multifeed-index "^3.2.2"
 
+kappa-core@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/kappa-core/-/kappa-core-4.0.0.tgz#fc23b3208c3e5f21222f42f4be023eba2f034e0d"
+  integrity sha512-w7ZgD89liYDVk23OL2kuN+Exfc7XrIU93yBepX8uET6z1Dxw6yeca1sTC3mm2J8ZSRLpdCYbJm4nKJVLbalklw==
+  dependencies:
+    hypercore "^7.4.0"
+    inherits "^2.0.4"
+    multifeed "^4.0.0"
+    multifeed-index "^3.3.2"
+
 kappa-view-level@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/kappa-view-level/-/kappa-view-level-1.1.0.tgz#bd7f1eee45df794207e8beebaa7c0e5c5499a44b"
@@ -5879,6 +5993,11 @@ loggly@segmentio/loggly:
     debug "^0.8.1"
     request "^2.36.0"
 
+long@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/long/-/long-4.0.0.tgz#9a7b71cfb7d361a194ea555241c92f7468d5bf28"
+  integrity sha512-XsP+KhQif4bjX1kbuSiySJFNAehNxgLb6hPRGJ9QsUr8ajHkuXGdrHmFUTUUXhDwVX2R5bY4JNZEwbUiMhV+MA==
+
 loose-envify@^1.0.0, loose-envify@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/loose-envify/-/loose-envify-1.4.0.tgz#71ee51fa7be4caec1a63839f7e682d8132d30caf"
@@ -6241,7 +6360,7 @@ multi-read-stream@^2.0.0:
   dependencies:
     readable-stream "^2.0.1"
 
-multifeed-index@^3.2.2:
+multifeed-index@^3.2.2, multifeed-index@^3.3.2:
   version "3.3.2"
   resolved "https://registry.yarnpkg.com/multifeed-index/-/multifeed-index-3.3.2.tgz#cec16c618b761c801eab9afe92acb38d0f62daf1"
   integrity sha512-UPEpvca/hx0UqanoMs9uMEpTrFbmW8CV9V4Oww44fQxLj/m6eAqhFyVMCanKjS4daL9K8hvfPtWj5V4KsKat+Q==
@@ -6252,6 +6371,18 @@ multifeed@^3.0.3:
   version "3.0.8"
   resolved "https://registry.yarnpkg.com/multifeed/-/multifeed-3.0.8.tgz#31c623cbb79d0b72fd4d9dec01c8cd907ba82e74"
   integrity sha512-OsNz8PFD3YUiPycZo093a/FnO88lc5xoFUgtie3loyfsR85cn6Ui4rvYTiJWpfhJk4AruditvoyX0Rx6Z513SQ==
+  dependencies:
+    debug "^4.1.0"
+    hypercore-protocol "^6.8.0"
+    inherits "^2.0.3"
+    mutexify "^1.2.0"
+    random-access-file "^2.0.1"
+    through2 "^3.0.0"
+
+multifeed@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/multifeed/-/multifeed-4.0.0.tgz#f40a7950d1a7a184c0f9509c0c38a98fe20f2485"
+  integrity sha512-F5Pb9FfgNAU7LIATJVUFP/0TY2bYKtYfxdWnlu4cZNGfw7u6998iZKnBhCKpSqELefT4LMddU0ADeMqLjGFAuQ==
   dependencies:
     debug "^4.1.0"
     hypercore-protocol "^6.8.0"
@@ -7227,6 +7358,25 @@ proto-list@~1.2.1:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/proto-list/-/proto-list-1.2.4.tgz#212d5bfe1318306a420f6402b8e26ff39647a849"
   integrity sha1-IS1b/hMYMGpCD2QCuOJv85ZHqEk=
+
+protobufjs@^6.8.8:
+  version "6.8.8"
+  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-6.8.8.tgz#c8b4f1282fd7a90e6f5b109ed11c84af82908e7c"
+  integrity sha512-AAmHtD5pXgZfi7GMpllpO3q1Xw1OYldr+dMUlAnffGTAhqkg72WdmSY71uKBF/JuyiKs8psYbtKrhi0ASCD8qw==
+  dependencies:
+    "@protobufjs/aspromise" "^1.1.2"
+    "@protobufjs/base64" "^1.1.2"
+    "@protobufjs/codegen" "^2.0.4"
+    "@protobufjs/eventemitter" "^1.1.0"
+    "@protobufjs/fetch" "^1.1.0"
+    "@protobufjs/float" "^1.0.2"
+    "@protobufjs/inquire" "^1.1.0"
+    "@protobufjs/path" "^1.1.2"
+    "@protobufjs/pool" "^1.1.0"
+    "@protobufjs/utf8" "^1.1.0"
+    "@types/long" "^4.0.0"
+    "@types/node" "^10.1.0"
+    long "^4.0.0"
 
 protocol-buffers-encodings@^1.1.0:
   version "1.1.0"

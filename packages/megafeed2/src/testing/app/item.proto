@@ -1,0 +1,18 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
+syntax = "proto3";
+
+package item;
+
+//
+// Item definition.
+//
+message Item {
+
+  string key = 1;
+  string type = 2;
+
+  // TODO(burdon): Signed proof.
+}
