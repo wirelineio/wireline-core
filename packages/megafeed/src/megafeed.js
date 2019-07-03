@@ -19,7 +19,7 @@ const {
   bubblingEvents
 } = require('@wirelineio/utils');
 
-const FeedMap = require('./feed-store');
+const FeedStore = require('./feed-store');
 
 class Megafeed extends EventEmitter {
 
@@ -57,7 +57,7 @@ class Megafeed extends EventEmitter {
     this._db = hypertrie(storage, rootKey, { secretKey: opts.secretKey });
 
     // Feeds manager instance
-    this._feedStore = new FeedMap(this._db, storage, {
+    this._feedStore = new FeedStore(this._db, storage, {
       feedOptions: {
         valueEncoding: opts.valueEncoding
       }
