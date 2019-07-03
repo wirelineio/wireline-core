@@ -60,8 +60,8 @@ export class Protocol extends EventEmitter {
   _userData = undefined;
 
   /**
-   * https://github.com/mafintosh/hypercore
-   * @type {{ on }}
+   * https://github.com/mafintosh/hypercore-protocol#var-feed--streamfeedkey
+   * @type {Feed}
    */
   _feed = undefined;
 
@@ -176,8 +176,8 @@ export class Protocol extends EventEmitter {
     // See https://github.com/wirelineio/wireline-core/blob/master/docs/design/appendix.md#swarming--dat-protocol-handshake for details.
 
     // Initialize extensions.
-    this._extensionMap.forEach((extension, name) => {
-      extension.init(this, name);
+    this._extensionMap.forEach(extension => {
+      extension.init(this);
     });
 
     // Create the Dat stream.
@@ -188,9 +188,13 @@ export class Protocol extends EventEmitter {
     });
 
     // Handshake.
-    this._stream.on('handshake', () => {
+    this._stream.once('handshake', () => {
       log(`handshake: ${keyName(this._stream.id)} <=> ${keyName(this._stream.remoteId)}`);
       this.emit('handshake', this);
+
+      this._extensionMap.forEach(extension => {
+        extension.onHandshake(this.getContext());
+      });
     });
 
     // If this protocol stream is being created via a swarm connection event,
@@ -243,16 +247,23 @@ export class Protocol extends EventEmitter {
   /**
    * Handles extension messages.
    */
-  _extensionHandler = async (type, message) => {
-    const handler = this._extensionMap.get(type);
-    if (!handler) {
-      console.warn('Missing extension: ' + type);
-      this.emit('error');
+  _extensionHandler = async (extensionName, message) => {
+    if (!this._hasExtension(extensionName)) {
       return;
     }
 
-    const context = this._codec.decode(this._stream.remoteUserData);
+    const extension = this._extensionMap.get(extensionName);
 
-    await handler.onMessage(context, message);
+    await extension.onMessage(this.getContext(), message);
+  }
+
+  _hasExtension(extensionName) {
+    if (this._extensionMap.has(extensionName)) {
+      return true;
+    }
+
+    console.warn('Missing extension: ' + extensionName);
+    this.emit('error');
+    return false;
   }
 }
