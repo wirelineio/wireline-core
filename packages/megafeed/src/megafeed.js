@@ -10,6 +10,7 @@ const multi = require('multi-read-stream');
 const eos = require('end-of-stream');
 const pify = require('pify');
 
+const { FeedStore } = require('@wirelineio/feed-store');
 const { PartyMap, Party } = require('@wirelineio/party');
 const {
   callbackPromise,
@@ -19,7 +20,6 @@ const {
   bubblingEvents
 } = require('@wirelineio/utils');
 
-const FeedStore = require('./feed-store');
 
 class Megafeed extends EventEmitter {
 
