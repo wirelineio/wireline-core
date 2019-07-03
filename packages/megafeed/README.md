@@ -142,25 +142,7 @@ Creates a ReadableStream to read the messages of the entire collection of the lo
 
 #### `options`
 
-* `filter: glob`: Glob pattern to filter messages from specific feeds.
-*  `...optionsHypercore`: [hypercore.createReadStream](https://github.com/mafintosh/hypercore#var-stream--feedcreatereadstreamoptions)
-
-### `mega.watch(options, callback) -> DisposeFunction`
-
-Watch for new messages in megafeed.
-
-#### `options`
-
-* `filter: glob`: Glob pattern to filter messages from specific feeds.
-*  `...optionsHypercore`: [hypercore.createReadStream](https://github.com/mafintosh/hypercore#var-stream--feedcreatereadstreamoptions)
-
-#### `callback: function`
-
-Function to iterate over the messages.
-
-#### `DisposeFunction`
-
-Function to destroy the current watcher.
+[hypercore.createReadStream](https://github.com/mafintosh/hypercore#var-stream--feedcreatereadstreamoptions)
 
 ### `await mega.loadFeeds(pattern) -> [Feed]`
 
@@ -197,19 +179,7 @@ The rules are simple:
 1. `Share` and `replicate` every feed in your megafeed.
 1. `Receive` and `replicate` every feed from others.
 
-But if you want to do a selective replication of your feeds you can create your own rules or use the `metadata.filter`.
-
-In the next example we are replicating only the feeds with the name `db/books` and `db/movies`:
-
-```javascript
-const party = await mega.addParty({
-  metadata: {
-    filter: 'db/{books,movies}'
-  }
-})
-
-// pump(party.replicate(), ...)
-```
+But if you want to do a selective replication of your feeds you can create your own `rules`.
 
 ### `mega.replicate(options)`
 

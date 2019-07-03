@@ -2,7 +2,7 @@
   "nested": {
     "Feed": {
       "fields": {
-        "name": {
+        "path": {
           "rule": "required",
           "type": "string",
           "id": 1
@@ -16,25 +16,13 @@
           "type": "bytes",
           "id": 3
         },
-        "load": {
-          "type": "bool",
-          "id": 4
-        },
-        "persist": {
-          "type": "bool",
-          "id": 5
-        },
         "valueEncoding": {
           "type": "string",
-          "id": 6
+          "id": 4
         },
         "metadata": {
           "type": "bytes",
-          "id": 7
-        },
-        "type": {
-          "type": "string",
-          "id": 8
+          "id": 5
         }
       }
     }

@@ -14,8 +14,8 @@ const parseMetadata = (metadata) => {
   }
 };
 
-const filterFeedByPattern = (feed, pattern) => {
-  const list = [feed.name, keyToHex(feed.key), keyToHex(getDiscoveryKey(feed.key))].filter(Boolean);
+const filterDescriptorByPattern = (feed, pattern) => {
+  const list = [feed.path, keyToHex(feed.key), keyToHex(getDiscoveryKey(feed.key))].filter(Boolean);
 
   if (feed.secretKey) {
     list.push(keyToHex(feed.secretKey));
@@ -32,4 +32,4 @@ const parsePartyPattern = (party) => {
   return metadata && metadata.filter ? metadata.filter : '*';
 };
 
-module.exports = { filterFeedByPattern, parsePartyPattern };
+module.exports = { filterDescriptorByPattern, parsePartyPattern };
