@@ -11,7 +11,7 @@ const raf = require('random-access-file');
 const crypto = require('hypercore-crypto');
 const pify = require('pify');
 
-const codecProtobuf = require('@wirelineio/codec-protobuf');
+const Codec = require('@wirelineio/codec-protobuf');
 const {
   keyToHex,
   getDiscoveryKey,
@@ -21,9 +21,10 @@ const {
   Repository,
 } = require('@wirelineio/utils');
 
-const schema = require('./schema.js');
+const schema = require('./schema.json');
 
-const codec = codecProtobuf(schema);
+const codec = new Codec({ verify: true });
+codec.loadFromJSON(schema);
 
 /**
  * FeedMap
@@ -105,7 +106,7 @@ class FeedMap extends EventEmitter {
       'feeds',
       {
         encode: message => codec.encode({ type: 'Feed', message }),
-        decode: codec.decode
+        decode: codec.decode.bind(codec)
       }
     );
 

@@ -122,7 +122,7 @@ class Peer extends EventEmitter {
       if (extensionType !== 'party') return;
 
       try {
-        const { type, message } = Peer.codec.decode(buffer, false);
+        const { type, message } = Peer.codec.decodeWithType(buffer);
 
         switch (type) {
           case 'IntroduceFeeds':
