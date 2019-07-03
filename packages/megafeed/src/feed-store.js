@@ -9,7 +9,7 @@ const crypto = require('hypercore-crypto');
 
 const debug = require('debug')('megafeed:feed-map');
 
-const codecProtobuf = require('@wirelineio/codec-protobuf');
+const Codec = require('@wirelineio/codec-protobuf');
 const {
   keyToHex,
   keyToBuffer,
@@ -17,9 +17,10 @@ const {
 } = require('@wirelineio/utils');
 
 const { FeedDescriptor } = require('./feed-descriptor');
-const schema = require('./schema');
+const schema = require('./schema.json');
 
-const codec = codecProtobuf(schema);
+const codec = new Codec({ verify: true });
+codec.loadFromJSON(schema);
 
 const STORE_NAMESPACE = 'feed';
 
