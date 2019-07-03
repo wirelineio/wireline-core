@@ -648,10 +648,14 @@
     semver "^5.5.0"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 "@babel/runtime@^7.0.0", "@babel/runtime@^7.4.5":
 =======
 "@babel/runtime@^7.0.0", "@babel/runtime@^7.4.3":
 >>>>>>> Megafeed from gravity.
+=======
+"@babel/runtime@^7.0.0", "@babel/runtime@^7.4.3", "@babel/runtime@^7.4.5":
+>>>>>>> Update yarn.lock
   version "7.4.5"
   resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.4.5.tgz#582bb531f5f9dc67d2fcb682979894f75e253f12"
   integrity sha512-TuI4qpWZP6lGOGIuGWtp9sPluqYICmbk8T/1vpSysqJxRPkudh/ofFWyqdcMsDf2s7KvDL4/YHgKyvcS3g9CJQ==
@@ -3600,11 +3604,21 @@ eslint-plugin-react@^7.12.4:
     resolve "^1.10.1"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 eslint-restricted-globals@^0.1.1:
   version "0.1.1"
   resolved "https://registry.yarnpkg.com/eslint-restricted-globals/-/eslint-restricted-globals-0.1.1.tgz#35f0d5cbc64c2e3ed62e93b4b1a7af05ba7ed4d7"
   integrity sha1-NfDVy8ZMLj7WLpO0saevBbp+1Nc=
+=======
+eslint-scope@3.7.1:
+  version "3.7.1"
+  resolved "https://registry.yarnpkg.com/eslint-scope/-/eslint-scope-3.7.1.tgz#3d63c3edfda02e06e01a452ad88caacc7cdcb6e8"
+  integrity sha1-PWPD7f2gLgbgGkUq2IyqzHzctug=
+  dependencies:
+    esrecurse "^4.1.0"
+    estraverse "^4.1.1"
+>>>>>>> Update yarn.lock
 
 eslint-scope@3.7.1:
   version "3.7.1"
@@ -4516,12 +4530,16 @@ hyperid@^2.0.2:
     uuid-parse "^1.0.0"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 hypertrie@^3.6.1, hypertrie@^3.7.0:
   version "3.7.0"
   resolved "https://registry.yarnpkg.com/hypertrie/-/hypertrie-3.7.0.tgz#963e3c736ff2d9c1feecceb1af63dd7312a8b538"
   integrity sha512-+x5y0ATbKn0mHPfRwVJZV243KHl3A0zoQ3y8BSxobj+dYxgBZBe0gNCY6JLuEIcPq9Aehl9kdSySPUpN7XhUig==
 =======
 hypertrie@^3.4.3, hypertrie@^3.7.0:
+=======
+hypertrie@^3.4.3, hypertrie@^3.6.1, hypertrie@^3.7.0:
+>>>>>>> Update yarn.lock
   version "3.7.0"
   resolved "https://registry.yarnpkg.com/hypertrie/-/hypertrie-3.7.0.tgz#963e3c736ff2d9c1feecceb1af63dd7312a8b538"
   integrity sha512-+x5y0ATbKn0mHPfRwVJZV243KHl3A0zoQ3y8BSxobj+dYxgBZBe0gNCY6JLuEIcPq9Aehl9kdSySPUpN7XhUig==
@@ -7835,14 +7853,7 @@ resolve@1.1.7:
   resolved "https://registry.yarnpkg.com/resolve/-/resolve-1.1.7.tgz#203114d82ad2c5ed9e8e0411b3932875e889e97b"
   integrity sha1-IDEU2CrSxe2ejgQRs5ModeiJ6Xs=
 
-resolve@^1.10.0, resolve@^1.10.1, resolve@^1.11.0, resolve@^1.3.2, resolve@^1.5.0:
-  version "1.11.1"
-  resolved "https://registry.yarnpkg.com/resolve/-/resolve-1.11.1.tgz#ea10d8110376982fef578df8fc30b9ac30a07a3e"
-  integrity sha512-vIpgF6wfuJOZI7KKKSP+HmiKggadPQAdsp5HiC1mvqnfp0gF1vdwgBWZIdrVft9pgqoMFQN+R7BSWZiBxx+BBw==
-  dependencies:
-    path-parse "^1.0.6"
-
-resolve@^1.8.1:
+resolve@^1.10.0, resolve@^1.10.1, resolve@^1.11.0, resolve@^1.3.2, resolve@^1.5.0, resolve@^1.8.1:
   version "1.11.1"
   resolved "https://registry.yarnpkg.com/resolve/-/resolve-1.11.1.tgz#ea10d8110376982fef578df8fc30b9ac30a07a3e"
   integrity sha512-vIpgF6wfuJOZI7KKKSP+HmiKggadPQAdsp5HiC1mvqnfp0gF1vdwgBWZIdrVft9pgqoMFQN+R7BSWZiBxx+BBw==
