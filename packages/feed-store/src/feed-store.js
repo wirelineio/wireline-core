@@ -201,7 +201,7 @@ class FeedStore extends EventEmitter {
    * @param {Object} stat.metadata
    * @returns {Hypercore}
    */
-  async openFeed(path, stat) {
+  async openFeed(path, stat = {}) {
     const { key } = stat;
 
     let descriptor = this.getDescriptorByPath(path);

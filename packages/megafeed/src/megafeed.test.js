@@ -13,8 +13,9 @@ const pify = require('pify');
 const ram = require('random-access-memory');
 const crypto = require('hypercore-crypto');
 
+const { getStat } = require('@wirelineio/feed-store');
+
 const megafeed = require('./megafeed');
-const { getStat } = require('./feed-descriptor');
 
 function sortByIndex(a, b) {
   return a.index - b.index;
