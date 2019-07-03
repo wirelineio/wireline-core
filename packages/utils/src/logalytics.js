@@ -198,7 +198,6 @@ class LogglyWriter extends LogalyticsWriter {
   }
 }
 
-
 class LogalyticsLogger {
   constructor(name = 'logalytics') {
     this._name = name.toString();
