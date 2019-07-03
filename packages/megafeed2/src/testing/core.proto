@@ -1,0 +1,20 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
+syntax = "proto3";
+package core;
+
+//
+// Protobufjs doesn't have good support for the native 'Any' type, so we create a similar one.
+// https://github.com/protobufjs/protobuf.js/issues/435
+// TODO(ashwin): Should be removed after protobufjs implements proper support for 'Any'.
+//
+message AnyType {
+
+  // Message type, e.g. 'wrn:app/chess/msg-type/new-game'.
+  string type = 1;
+
+  // Encoded bytes for the type.
+  bytes value = 2;
+}

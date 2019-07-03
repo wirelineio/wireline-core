@@ -12,8 +12,8 @@ import { ViewFactory } from '../megafeed/view_factory';
 import { random } from '../util/debug';
 import { keyStr, keyName } from '../util/keys';
 
-import { LogView, LogApp } from './app/simple';
-import { OrderedLogView, OrderedLogApp } from './app/ordered';
+import { LogView, LogApp } from './log_view';
+import { OrderedLogView, OrderedLogApp } from './ordered_log_view';
 
 const conf = {
   numFeeds: 3,

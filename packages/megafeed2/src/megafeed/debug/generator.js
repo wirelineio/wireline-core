@@ -27,10 +27,13 @@ export const createFeedMap = async (options = {}) => {
   const db = await new MessageStore(hypertrie(ram), new Codec()).ready();
   const feedMap = new FeedMap(db, ram, { map: options.map });
 
+  // Value encoding for feed, if we have to create them.
+  const valueEncoding = options.valueEncoding || 'json';
+
   await Promise.all(topicKeys.map(async (topic) => {
     const feedKeyPairs = createKeyPairs(numFeedsPerTopic);
     await Promise.all(feedKeyPairs.map(async ({ publicKey, secretKey }) => {
-      const { feed, meta } = await FeedMap.createFeed(ram, publicKey, { secretKey, valueEncoding: 'json' });
+      const { feed, meta } = await FeedMap.createFeed(ram, publicKey, { secretKey, valueEncoding });
       await feedMap.upsertFeed(feed, { ...meta, topic: keyStr(topic) });
 
       for (let i = 0; i < numMessagesPerFeed; i++) {

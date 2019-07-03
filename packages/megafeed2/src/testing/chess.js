@@ -2,15 +2,13 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import debug from 'debug';
+import pify from 'pify';
 import { Chess } from 'chess.js';
 
-import { keyName } from '../../util/keys';
-import { ItemStateMachine } from '../app/item';
+import { keyName } from '../util/keys';
+import { ItemStateMachine } from './item';
 
 import { ChessProto } from './chess_proto';
-
-const log = debug('chess');
 
 /**
  * App state machine.
@@ -21,30 +19,30 @@ export class ChessStateMachine {
   static TYPE = 'wrn:type:wireline.io/chess';
 
   // TODO(burdon): Remove static methods: factor out abstraction to create items.
-  static async createItem(megafeed, userKey) {
+  static async createItem(feed, userKey) {
 
     // TODO(burdon): Create item credential.
     const item = await ItemStateMachine.createItem(ChessStateMachine.TYPE, userKey);
-    await megafeed.append(item);
+    await pify(feed.append.bind(feed))(item);
 
     // TODO(burdon): Subscription.
-    return new ChessStateMachine(megafeed, item.key);
+    return new ChessStateMachine(feed, item.key);
   }
 
   // TODO(burdon): Should not be passed a megafeed. Instead should register subscription?
-  constructor(megafeed, key) {
-    this._megafeed = megafeed;
+  constructor(feed, key) {
+    this._feed = feed;
     this._key = key;
 
     this._game = new Chess();
 
     // TODO(burdon): Live vs replay? How is the FSM instantiated?
-    this._subscription = this._megafeed.createSubscription({
-      sort: 'ts',
-      callback: ({ messages }) => {
-        log('updated: ' + messages.length);
-      }
-    });
+    // this._subscription = this._feed.createSubscription({
+    //   sort: 'ts',
+    //   callback: ({ messages }) => {
+    //     log('updated: ' + messages.length);
+    //   }
+    // });
   }
 
   toString() {
@@ -68,7 +66,7 @@ export class ChessStateMachine {
   async setPlayers({ white, black }) {
     const game = ChessProto.Game.create({ white, black });
 
-    await this._megafeed.append(game);
+    await pify(this._feed.append.bind(this._feed))(game);
 
     return game;
   }
@@ -77,7 +75,7 @@ export class ChessStateMachine {
   async addMove({ from, to }) {
     const move = ChessProto.Move.create({ from, to });
 
-    await this._megafeed.append(move);
+    await pify(this._feed.append.bind(this._feed))(move);
 
     return move;
   }
