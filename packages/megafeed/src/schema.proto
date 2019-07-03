@@ -1,5 +1,4 @@
 syntax = "proto3";
-package megafeed;
 
 message Feed {
   required string name = 1;

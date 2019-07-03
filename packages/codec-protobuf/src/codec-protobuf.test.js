@@ -1,20 +1,33 @@
-const codecProtobuf = require('./codec-protobuf');
+const protobufjs = require('protobufjs');
 
-const schema = require('./schema-test.js');
+const Codec = require('./codec-protobuf');
 
-test('encode/decode message', () => {
-  expect.assertions(3);
+const schemaOne = require('./schema-test-one.json');
 
-  const codec = codecProtobuf(schema);
+test('encode/decode message', async () => {
+  const codec = new Codec({ verify: true });
 
-  const message = { subject: 'hi', body: Buffer.from('how are you?') };
+  const testMessage = (type) => {
+    const message = { subject: 'hi', body: Buffer.from('how are you?') };
 
-  const buffer = codec.encode({ type: 'Message', message });
+    const buffer = codec.encode({ type, message });
 
-  expect(Buffer.isBuffer(buffer)).toBe(true);
+    expect(Buffer.isBuffer(buffer)).toBe(true);
 
-  const messageDecoded = codec.decode(buffer);
+    const messageDecoded = codec.decode(buffer);
 
-  expect(messageDecoded).toEqual(message);
-  expect(Buffer.isBuffer(messageDecoded.body)).toBe(true);
+    expect(messageDecoded).toEqual(message);
+    expect(Buffer.isBuffer(messageDecoded.body)).toBe(true);
+  };
+
+  expect.assertions(6);
+
+  // Load from a protobufjs root.
+  codec.load(await protobufjs.load(`${__dirname}/schema-test-two.proto`));
+
+  // Load from JSON.
+  codec.loadFromJSON(schemaOne);
+
+  testMessage('MessageOne');
+  testMessage('MessageTwo');
 });
