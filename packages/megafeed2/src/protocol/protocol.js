@@ -188,13 +188,29 @@ export class Protocol extends EventEmitter {
     });
 
     // Handshake.
-    this._stream.once('handshake', () => {
-      log(`handshake: ${keyName(this._stream.id)} <=> ${keyName(this._stream.remoteId)}`);
-      this.emit('handshake', this);
+    this._stream.once('handshake', async () => {
+      const context = this.getContext();
 
-      this._extensionMap.forEach(extension => {
-        extension.onHandshake(this.getContext());
-      });
+      try {
+        for (const [name, extension] of this._extensionMap) {
+          if (this._stream.destroyed) {
+            return;
+          }
+
+          log(`handshake extension "${name}": ${keyName(this._stream.id)} <=> ${keyName(this._stream.remoteId)}`);
+          await extension.onHandshake(context);
+        }
+
+        if (this._stream.destroyed) {
+          return;
+        }
+
+        log(`handshake: ${keyName(this._stream.id)} <=> ${keyName(this._stream.remoteId)}`);
+        this.emit('handshake', this);
+      } catch (err) {
+        this._stream.destroy();
+        this.emit('error', err);
+      }
     });
 
     // If this protocol stream is being created via a swarm connection event,
@@ -215,8 +231,21 @@ export class Protocol extends EventEmitter {
           return;
         }
 
+        if (this._feed) {
+          console.warn('Protocol already initialized.');
+          return;
+        }
+
         this._discoveryKey = discoveryKey;
         this._initStream(initialKey);
+
+        this._stream.on('feed', (discoveryKey) => {
+          const context = this.getContext();
+
+          this._extensionMap.forEach(extension => {
+            extension.onFeed(context, discoveryKey);
+          });
+        });
       });
     }
 
@@ -247,23 +276,14 @@ export class Protocol extends EventEmitter {
   /**
    * Handles extension messages.
    */
-  _extensionHandler = async (extensionName, message) => {
-    if (!this._hasExtension(extensionName)) {
+  _extensionHandler = async (name, message) => {
+    const extension = this._extensionMap.get(name);
+    if (!extension) {
+      console.warn('Missing extension: ' + name);
+      this.emit('error');
       return;
     }
 
-    const extension = this._extensionMap.get(extensionName);
-
     await extension.onMessage(this.getContext(), message);
-  }
-
-  _hasExtension(extensionName) {
-    if (this._extensionMap.has(extensionName)) {
-      return true;
-    }
-
-    console.warn('Missing extension: ' + extensionName);
-    this.emit('error');
-    return false;
   }
 }

@@ -44,14 +44,15 @@ export class Extension extends EventEmitter {
    */
   _messageHandler = null;
 
+  /**
+   * Feed handler.
+   * @type {Function<{protocol, context, discoveryKey}>}
+   */
+  _feedHandler = null;
+
   _stats = {
-    request: {
-      send: 0,
-      receive: 0
-    },
-    ephemeral: {
-      send: 0
-    },
+    send: 0,
+    receive: 0,
     error: 0
   };
 
@@ -104,6 +105,17 @@ export class Extension extends EventEmitter {
   }
 
   /**
+   * Sets the message handler.
+   * @param {Function<{protocol, context, discoveryKey}>} feedHandler - Async feed handler.
+   * @returns {Extension}
+   */
+  setFeedHandler(feedHandler) {
+    this._feedHandler = feedHandler;
+
+    return this;
+  }
+
+  /**
    * Initializes the extension.
    *
    * @param {Protocol} protocol
@@ -118,7 +130,7 @@ export class Extension extends EventEmitter {
   /**
    * Handshake event.
    *
-   * @param context
+   * @param {Object} context
    */
   onHandshake(context) {
     if (this._handshakeHandler) {
@@ -129,11 +141,11 @@ export class Extension extends EventEmitter {
   /**
    * Receives extension message.
    *
-   * @param context
-   * @param message
+   * @param {Object} context
+   * @param {Buffer} message
    */
   async onMessage(context, message) {
-    const { id, type, error, message: requestData } = this._options.codec.decode(message);
+    const { id, error, message: requestData, options = {} } = this._options.codec.decode(message);
 
     // Check for a pending request.
     // TODO(burdon): Explicitely check code header property?
@@ -155,7 +167,7 @@ export class Extension extends EventEmitter {
       log(`received ${keyName(this._protocol.stream.id, 'node')}: ${keyName(id, 'msg')}`);
       const responseData = await this._messageHandler(this._protocol, context, requestData);
 
-      if (type === 'ephemeral') {
+      if (options.oneway) {
         return;
       }
 
@@ -164,38 +176,60 @@ export class Extension extends EventEmitter {
       log(`responding ${keyName(this._protocol.stream.id, 'node')}: ${keyName(id, 'msg')}`);
       this._protocol.feed.extension(this._name, this._options.codec.encode(response));
     } catch (ex) {
-      if (type === 'ephemeral') {
+      if (options.oneway) {
         return;
       }
 
       // System error.
       const code = (ex instanceof ProtocolError) ? ex.code : 500;
-      const response = { id, type, error: { code, error: ex.message } };
+      const response = { id, error: { code, error: ex.message } };
       this._protocol.feed.extension(this._name, this._options.codec.encode(response));
     }
   }
 
   /**
-   * Request a message to peer.
+   * Feed event.
+   *
+   * @param {Object} context
+   * @param {Buffer} discoveryKey
+   */
+  onFeed(context, discoveryKey) {
+    if (this._feedHandler) {
+      this._feedHandler(this._protocol, context, discoveryKey);
+    }
+  }
+
+  /**
+   * Sends a message to peer.
    * @param {Object} message
+   * @param {Object} options
+   * @param {Boolean} options.oneway
    * @returns {Promise<Object>} Response from peer.
    */
   async send(message, options = {}) {
-    if (options.ephemeral) {
-      return this._sendEphemeral(message);
-    }
+    const { oneway = false } = options;
 
-    const envelope = {
+    const request = {
       id: uuid(),
-      type: 'request',
-      message
+      message,
+      options: {
+        oneway
+      }
     };
 
-    // Set the callback to be called when the response is received.
-    this._pendingMessages.set(envelope.id, async (context, response, error) => {
+    // Send the message.
+    // TODO(burdon): Is it possible to have a stream event, where retrying would be appropriate?
+    this._send(request);
 
-      log(`response ${keyName(this._protocol.stream.id, 'node')}: ${keyName(envelope.id, 'msg')}`);
-      this._stats.request.receive++;
+    if (oneway) {
+      return;
+    }
+
+    // Set the callback to be called when the response is received.
+    this._pendingMessages.set(request.id, async (context, response, error) => {
+
+      log(`response ${keyName(this._protocol.stream.id, 'node')}: ${keyName(request.id, 'msg')}`);
+      this._stats.receive++;
       this.emit('receive', this._stats);
       promise.done = true;
 
@@ -212,10 +246,6 @@ export class Extension extends EventEmitter {
 
       promise.resolve({ context, response });
     });
-
-    // Send the message.
-    // TODO(burdon): Is it possible to have a stream event, where retrying would be appropriate?
-    this._send(envelope);
 
     // Trigger the callback.
     const promise = {};
@@ -237,33 +267,16 @@ export class Extension extends EventEmitter {
   }
 
   /**
-   * Send a ephemeral message to peer.
-   *
-   * @param {Object} message
-   */
-  _sendEphemeral(message) {
-    const envelope = {
-      id: uuid(),
-      type: 'ephemeral',
-      message
-    };
-
-    this._send(envelope);
-  }
-
-  /**
-   * Send a extension message.
+   * Sends a extension message.
    *
    * @param {Buffer} message
    * @returns {Boolean}
    */
-  _send(envelope) {
-    const { type } = envelope;
+  _send(request) {
+    log(`sending a message ${keyName(this._protocol.stream.id, 'node')}: ${keyName(request.id, 'msg')}`);
+    this._protocol.feed.extension(this._name, this._options.codec.encode(request));
 
-    log(`sending a ${type} message ${keyName(this._protocol.stream.id, 'node')}: ${keyName(envelope.id, 'msg')}`);
-    this._protocol.feed.extension(this._name, this._options.codec.encode(envelope));
-
-    this._stats[type].send++;
+    this._stats.send++;
     this.emit('send', this._stats);
   }
 }
