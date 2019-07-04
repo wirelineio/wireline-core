@@ -5,12 +5,13 @@
 const { EventEmitter } = require('events');
 const path = require('path');
 
+const debug = require('debug')('megafeed:feed-map');
 const hypercore = require('hypercore');
 const raf = require('random-access-file');
 const crypto = require('hypercore-crypto');
 const pify = require('pify');
 
-const codecProtobuf = require('@wirelineio/codec-protobuf');
+const Codec = require('@wirelineio/codec-protobuf');
 const {
   keyToHex,
   getDiscoveryKey,
@@ -18,13 +19,12 @@ const {
   Locker,
   filterFeedByPattern,
   Repository,
-  Logalytics
 } = require('@wirelineio/utils');
 
-const schema = require('./schema.js');
+const schema = require('./schema.json');
 
-const codec = codecProtobuf(schema);
-const logalytics = Logalytics.get('megafeed:feed-map');
+const codec = new Codec({ verify: true });
+codec.loadFromJSON(schema);
 
 /**
  * FeedMap
@@ -106,7 +106,7 @@ class FeedMap extends EventEmitter {
       'feeds',
       {
         encode: message => codec.encode({ type: 'Feed', message }),
-        decode: codec.decode
+        decode: codec.decode.bind(codec)
       }
     );
 
@@ -279,7 +279,7 @@ class FeedMap extends EventEmitter {
 
       await release();
     } catch (err) {
-      logalytics.error(err);
+      debug(err);
       await release();
       throw err;
     }
@@ -306,7 +306,7 @@ class FeedMap extends EventEmitter {
 
       await repository.put(feed.name, update, { encode: FeedMap.encodeFeed });
     } catch (err) {
-      logalytics.error(err);
+      debug(err);
       throw err;
     }
   }
@@ -341,7 +341,7 @@ class FeedMap extends EventEmitter {
         }),
       );
     } catch (err) {
-      logalytics.error(err);
+      debug(err);
       throw err;
     }
   }
@@ -359,7 +359,7 @@ class FeedMap extends EventEmitter {
       this._feeds.set(discoveryKey, feed);
       return feed;
     } catch (err) {
-      logalytics.error(err);
+      debug(err);
       throw err;
     }
   }
@@ -454,7 +454,7 @@ class FeedMap extends EventEmitter {
 
       return feed;
     } catch (err) {
-      logalytics.error(err);
+      debug(err);
       await release();
       throw err;
     }

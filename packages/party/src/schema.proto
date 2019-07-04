@@ -1,5 +1,4 @@
 syntax = "proto3";
-package partymap;
 
 message Party {
   required string name = 1;
