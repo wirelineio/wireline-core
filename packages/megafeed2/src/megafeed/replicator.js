@@ -43,7 +43,7 @@ export class Replicator extends EventEmitter {
     return new Extension(Replicator.extension, { timeout: this._options.timeout })
       .on('error', err => this.emit(err))
       .setHandshakeHandler(this._handshakeHandler.bind(this))
-      .setMessageHandler(this._extensionHandler.bind(this));
+      .setMessageHandler(this._messageHandler.bind(this));
   }
 
   /**
@@ -63,8 +63,8 @@ export class Replicator extends EventEmitter {
 
   /**
    * Start replicating topics.
-   * @param protocol
-   * @param topics
+   *
+   * @param {Protocol} protocol
    * @returns {Promise<void>}
    */
   async _handshakeHandler(protocol) {
@@ -99,8 +99,12 @@ export class Replicator extends EventEmitter {
 
   /**
    * Handles key exchange requests.
+   *
+   * @param {Protocol} protocol
+   * @param {Object} context
+   * @param {Object} message
    */
-  async _extensionHandler(protocol, context, message) {
+  async _messageHandler(protocol, context, message) {
     // TODO(burdon): Check credentials. By topic?
     if (!context.user) {
       throw new ProtocolError(401);
