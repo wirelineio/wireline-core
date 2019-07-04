@@ -2,12 +2,16 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+import { EventEmitter } from 'events';
+
 /**
  * Log view.
  * @returns {{api: {logs: (function(): Array)}, map: map}}
  * @constructor
  */
 export const LogView = (type) => {
+  const events = new EventEmitter();
+
   let logsByType = [];
 
   return {
@@ -20,6 +24,12 @@ export const LogView = (type) => {
       next();
     },
 
+    indexed(entries) {
+      entries.forEach(entry => {
+        events.emit('update', entry.value.itemId);
+      });
+    },
+
     api: {
       logs: () => {
         return logsByType;
@@ -28,8 +38,10 @@ export const LogView = (type) => {
       logsByItemId: (core, itemId) => {
         // TODO(ashwin): View should create index.
         return logsByType.filter(item => item.itemId === itemId);
-      }
-    }
+      },
+
+      events
+    },
   }
 };
 

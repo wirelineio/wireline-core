@@ -3,6 +3,7 @@
 //
 
 import debug from 'debug';
+import fs from 'fs';
 import rimraf from 'rimraf';
 import hypertrie from 'hypertrie';
 import ram from 'random-access-memory';
@@ -27,6 +28,7 @@ describe('feed map', () => {
 
   beforeAll(() => {
     rimraf.sync('./out');
+    fs.mkdirSync('./out');
   });
 
   test('create feed map', async () => {
