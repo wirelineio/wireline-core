@@ -21,6 +21,11 @@ test('protocol', async done => {
   const extension = 'keys';
   const timeout = 1000;
 
+  const waitOneWayMessage = {};
+  waitOneWayMessage.promise = new Promise(resolve => {
+    waitOneWayMessage.resolve = resolve;
+  });
+
   const { publicKey } = crypto.keyPair();
 
   const protocol1 = await new Protocol()
@@ -63,6 +68,11 @@ test('protocol', async done => {
             });
           }
 
+          case 'oneway': {
+            waitOneWayMessage.resolve({ topics });
+            break;
+          }
+
           // Timeout.
           case 'timeout': {
             await sleep(timeout * 2);
@@ -103,6 +113,14 @@ test('protocol', async done => {
       const { context, response: { topics } } = await keys.send({ type: 'request', topics: ['zoo'] });
       expect(context.user).toBe('user2');
       expect(topics.find(r => r.topic === 'zoo').keys).toHaveLength(0);
+      log('%o', topics);
+    }
+
+    {
+      const result = await keys.send({ type: 'oneway', topics: ['zoo'] }, { oneway: true });
+      expect(result).toBeUndefined();
+      const { topics } = await waitOneWayMessage.promise;
+      expect(topics[0]).toBe('zoo');
       log('%o', topics);
     }
 
