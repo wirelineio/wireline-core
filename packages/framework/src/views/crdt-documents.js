@@ -100,9 +100,7 @@ module.exports = function CRDTDocumentsView({ core, db, partyManager }, { viewId
       },
 
       async getById(core, itemId) {
-        const {
-          data: { title, type }
-        } = await core.api['items'].getInfo(itemId);
+        const { data: { title, type } } = await core.api['items'].getInfo(itemId);
 
         let doc = documents.get(itemId);
 
@@ -116,7 +114,7 @@ module.exports = function CRDTDocumentsView({ core, db, partyManager }, { viewId
           ({ doc } = await core.api[viewId].init({ itemId }));
 
           updates.forEach(({ data: { update } }) => {
-            // Mark this changes as init changes, so they will not be send on update.
+            // Mark as an initial change so that it's not sent on update.
             Y.applyUpdate(doc, update, 'init');
           });
         }
