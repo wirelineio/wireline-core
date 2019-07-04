@@ -2,11 +2,9 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import bufferFrom from 'buffer-from';
 import { EventEmitter } from 'events';
 
 import { keyStr } from '../util/keys';
-
 import { Extension, ProtocolError } from '../protocol';
 
 /**
@@ -17,18 +15,18 @@ export class Replicator extends EventEmitter {
   static extension = 'replicator';
 
   /**
-   * @param {FeedMap} feedMap
+   * @param {FeedStore} feedStore
    * @param {{ timeout }} [options]
    */
-  constructor(feedMap, options) {
+  constructor(feedStore, options) {
     super();
-    console.assert(feedMap);
+    console.assert(feedStore);
 
     this._options = Object.assign({
       timeout: 1000
     }, options);
 
-    this._feedMap = feedMap;
+    this._feedStore = feedStore;
   }
 
   toString() {
@@ -56,14 +54,19 @@ export class Replicator extends EventEmitter {
       throw new ProtocolError(401);
     }
 
-    const { type, topics } = message;
+    const { type } = message;
     switch (type) {
       //
       // Get all topics.
       //
       case 'get-topics': {
+        const topics = Array.from(new Set(this._feedStore
+          .getDescriptors()
+          .filter(descriptor => !!descriptor.stat.metadata.topic)
+          .map(descriptor => descriptor.stat.metadata.topic)));
+
         return {
-          topics: await this._feedMap.getTopics(context)
+          topics
         };
       }
 
@@ -71,12 +74,16 @@ export class Replicator extends EventEmitter {
       // Get all feed keys by topic.
       //
       case 'get-keys': {
+        const { topics } = message;
         const feedKeysByTopic = await Promise.all(topics.map(async (topic) => {
-          const feeds = await this._feedMap.getFeedsByTopic(topic);
-          const keys = feeds.map(({ feed }) => keyStr(feed.key));
+          const feeds = await this._feedStore.loadFeeds(descriptor => {
+            return descriptor.stat.metadata.topic === topic;
+          });
+
+          const keys = feeds.map(feed => keyStr(feed.key));
 
           // Share and replicate feeds over protocol stream.
-          await Promise.all(feeds.map(async ({ feed }) => {
+          await Promise.all(feeds.map(async (feed) => {
             // Create the feed.
             protocol.stream.feed(feed.key);
 
@@ -131,7 +138,8 @@ export class Replicator extends EventEmitter {
     const { response: { feedKeysByTopic } } = await extension.send({ type: 'get-keys', topics });
     feedKeysByTopic.forEach(async ({ topic, keys }) => {
       await Promise.all(keys.map(async (key) => {
-        const feed = await this._feedMap.getOrCreateFeed(bufferFrom(key, 'hex'), { topic });
+        const path = `feed/${topic}/${key}`;
+        const feed = await this._feedStore.openFeed(path, { key: Buffer.from(key, 'hex'), metadata: { topic } });
 
         // TODO(burdon): Test if already replicating?
         // Share and replicate feeds over protocol stream.
