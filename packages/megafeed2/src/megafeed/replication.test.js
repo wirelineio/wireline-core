@@ -2,38 +2,51 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import bufferFrom from 'buffer-from';
 import debug from 'debug';
-import ram from 'random-access-memory';
 import pump from 'pump';
 import waitForExpect from 'wait-for-expect';
 
 import { keyStr } from '../util/keys';
 import { Extension, Protocol } from '../protocol';
 
-import { createFeedMap, createKeys } from './debug/generator';
-import { FeedMap } from './feedmap';
+import { createFeedStore, createKeys } from './debug/generator';
 
 debug.enable('test,protocol');
 
+const numFeedsPerTopic = 2;
+const numMessagesPerFeed = 5;
+const topicKeys = createKeys(2);
+
+// Rendezvous key for protocol handshake.
+const [ rendezvousKey ] = createKeys(1);
+
+const getTopics = async (feedStore) => {
+  return Array.from(new Set(feedStore
+    .getDescriptors()
+    .filter(descriptor => !!descriptor.stat.metadata.topic)
+    .map(descriptor => descriptor.stat.metadata.topic)));
+};
+
+const getFeedsByTopic = async (feedStore, topic) => {
+  return feedStore.loadFeeds(descriptor => {
+    return descriptor.stat.metadata.topic === topic;
+  });
+};
+
+const getFeed = async (feedStore, key) => {
+  return feedStore.findFeed(descriptor => {
+    return keyStr(descriptor.key) === key;
+  });
+};
+
 // TODO(burdon): Remove test and instead test replicator object.
-test('feed map replication', async (done) => {
-  const numFeedsPerTopic = 2;
-  const numMessagesPerFeed = 5;
+test('feed store replication', async (done) => {
 
-  // Generate feedMap used by the first peer.
-  const topicKeys = createKeys(2);
+  // Generate feedStore used by the first peer.
+  const feedStore1 = await createFeedStore({ topicKeys, numFeedsPerTopic, numMessagesPerFeed });
 
-  // Rendezvous key for protocol handshake.
-  const [ rendezvousKey ] = createKeys(1);
-
-  const map1 = new Map();
-
-  const feedMap1 = await createFeedMap({ map: map1, topicKeys, numFeedsPerTopic, numMessagesPerFeed });
-
-  // Generate an empty feedMap which will be populated after replication.
-  const map2 = new Map();
-  const feedMap2 = await createFeedMap({ map: map2 });
+  // Generate an empty feedStore which will be populated after replication.
+  const feedStore2 = await createFeedStore();
 
   // Extension configuration options.
   const extension = 'keys';
@@ -43,7 +56,7 @@ test('feed map replication', async (done) => {
   let protocol1;
   let protocol2;
 
-  const createRpcHandler = ({ feedMap }) => {
+  const createRpcHandler = ({ feedStore }) => {
     return async (protocol, context, { type, topics }) => {
       // Check credentials.
       if (!context.user) {
@@ -53,19 +66,19 @@ test('feed map replication', async (done) => {
       switch (type) {
         case 'list': {
           return {
-            topics: await feedMap.getTopics()
+            topics: await getTopics(feedStore)
           };
         }
 
         case 'request': {
           const results = await Promise.all(topics.map(async (topic) => {
-            const feeds = await feedMap.getFeedsByTopic(topic);
-            const keys = feeds.map(({ feed }) => keyStr(feed.key)) || [];
+            const feeds = await getFeedsByTopic(feedStore, topic);
+            const keys = feeds.map(feed => keyStr(feed.key)) || [];
 
             // Share and replicate feeds over protocol stream.
             await Promise.all(keys.map(async (key) => {
               protocol.stream.feed(key);
-              const { feed } = await feedMap.getFeed(key);
+              const feed = await getFeed(feedStore, key);
               feed.replicate({ live: true, stream: protocol.stream });
             }));
 
@@ -85,7 +98,7 @@ test('feed map replication', async (done) => {
     }
   };
 
-  const createHandshakeHandler = (feedMap) => {
+  const createHandshakeHandler = (feedStore) => {
     return async (protocol) => {
       const keys = protocol.getExtension(extension);
 
@@ -97,10 +110,8 @@ test('feed map replication', async (done) => {
         const { response: { topics: feedsByTopic } } = await keys.send({ type: 'request', topics });
         feedsByTopic.forEach(async ({ topic, keys }) => {
           await Promise.all(keys.map(async (key) => {
-            const { feed, meta } = await FeedMap.createFeed(
-              ram, bufferFrom(key, 'hex'), { valueEncoding: 'json' });
-
-            await feedMap.upsertFeed(feed, { ...meta, topic });
+            const path = `feed/${topic}/${key}`;
+            const feed = await feedStore.openFeed(path, { key: Buffer.from(key, 'hex'), valueEncoding: 'json', metadata: { topic } });
 
             // Share and replicate feeds over protocol stream.
             protocol.stream.feed(key);
@@ -114,37 +125,34 @@ test('feed map replication', async (done) => {
   {
     protocol1 = await new Protocol()
       .setUserData({ user: 'user1' })
-      .setHandshakeHandler(createHandshakeHandler(feedMap1))
+      .setHandshakeHandler(createHandshakeHandler(feedStore1))
       .setExtension(new Extension(extension, { timeout })
-        .setMessageHandler(createRpcHandler({ topicKeys, feedMap: feedMap1 })))
+        .setMessageHandler(createRpcHandler({ topicKeys, feedStore: feedStore1 })))
       .init(rendezvousKey);
   }
 
   {
     protocol2 = await new Protocol()
       .setUserData({ user: 'user2' })
-      .setHandshakeHandler(createHandshakeHandler(feedMap2))
+      .setHandshakeHandler(createHandshakeHandler(feedStore2))
       .setExtension(new Extension(extension, { timeout })
-        .setMessageHandler(createRpcHandler({ topicKeys, feedMap: feedMap2 })))
+        .setMessageHandler(createRpcHandler({ topicKeys, feedStore: feedStore2 })))
       .init(rendezvousKey);
   }
 
   pump(protocol1.stream, protocol2.stream, protocol1.stream, (err) => { err && done(err); });
 
-  await waitForExpect(() => {
-    const feedMap1Keys = Array.from(map1.keys()).sort();
-    const feedMap2Keys = Array.from(map1.keys()).sort();
+  await waitForExpect(async () => {
+    const feeds1 = await feedStore1.getFeeds().sort((a, b) => keyStr(a.key) < keyStr(b.key) ? -1 : 1);
+    const feeds2 = await feedStore2.getFeeds().sort((a, b) => keyStr(a.key) < keyStr(b.key) ? -1 : 1);
 
-    expect(feedMap1Keys).toEqual(feedMap2Keys);
-    expect(feedMap2Keys).toHaveLength(topicKeys.length * numFeedsPerTopic);
+    expect(feeds1.length).toBe(feeds2.length);
+    expect(feeds2.length).toBe(topicKeys.length * numFeedsPerTopic);
 
-    feedMap1Keys.forEach(key => {
-      const { feed: feed1, meta: meta1 } = map1.get(key);
-      const { feed: feed2, meta: meta2 } = map2.get(key);
-
-      expect(meta1.topic).toBe(meta2.topic);
-      expect(feed1.length).toBe(feed2.length);
-      expect(feed2.length).toBe(numMessagesPerFeed);
+    feeds1.forEach((feed, index) => {
+      expect(keyStr(feed.key)).toBe(keyStr(feeds2[index].key));
+      expect(feeds2[index].length).toBe(feed.length);
+      expect(feeds2[index].length).toBe(numMessagesPerFeed);
     });
 
     done();

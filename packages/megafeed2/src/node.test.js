@@ -3,6 +3,7 @@
 //
 
 import debug from 'debug';
+import ram from 'random-access-memory';
 
 import network from '@wirelineio/hyperswarm-network-memory';
 
@@ -18,8 +19,8 @@ const [ rendezvousKey ] = createKeys(1);
 
 test('broadcast messages between nodes', async (done) => {
 
-  const node1 = new Node(network(), await Megafeed.create({ replicate: false })).joinSwarm(rendezvousKey);
-  const node2 = new Node(network(), await Megafeed.create({ replicate: false })).joinSwarm(rendezvousKey);
+  const node1 = new Node(network(), await Megafeed.create(ram, { replicate: false })).joinSwarm(rendezvousKey);
+  const node2 = new Node(network(), await Megafeed.create(ram, { replicate: false })).joinSwarm(rendezvousKey);
 
   const onHandshake = latch(2, async () => {
     log(String(node1));

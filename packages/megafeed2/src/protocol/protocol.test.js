@@ -37,7 +37,7 @@ test('protocol', async done => {
           throw new Error('Not authorized');
         }
 
-        const feedMap = {
+        const feedStore = {
           'foo': ['f1', 'f2', 'f3'],
           'bar': ['f3', 'f4']
         };
@@ -45,14 +45,14 @@ test('protocol', async done => {
         switch (type) {
           case 'list': {
             return {
-              topics: Object.keys(feedMap)
+              topics: Object.keys(feedStore)
             };
           }
 
           // Async response.
           case 'request': {
             const results = topics.map(topic => {
-              const keys = feedMap[topic] || [];
+              const keys = feedStore[topic] || [];
               return { topic, keys };
             });
 
