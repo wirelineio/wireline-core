@@ -110,15 +110,8 @@ test('feed store replication', async (done) => {
         const { response: { topics: feedsByTopic } } = await keys.send({ type: 'request', topics });
         feedsByTopic.forEach(async ({ topic, keys }) => {
           await Promise.all(keys.map(async (key) => {
-<<<<<<< HEAD
             const path = `feed/${topic}/${key}`;
             const feed = await feedStore.openFeed(path, { key: Buffer.from(key, 'hex'), valueEncoding: 'json', metadata: { topic } });
-=======
-            const { feed, meta } = await FeedMap.createFeed(
-              ram, Buffer.from(key, 'hex'), { valueEncoding: 'json' });
-
-            await feedMap.upsertFeed(feed, { ...meta, topic });
->>>>>>> Added handshake event into Extension. Refactor extension.
 
             // Share and replicate feeds over protocol stream.
             protocol.stream.feed(key);

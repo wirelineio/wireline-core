@@ -138,12 +138,8 @@ export class Replicator extends EventEmitter {
     const { response: { feedKeysByTopic } } = await extension.send({ type: 'get-keys', topics });
     feedKeysByTopic.forEach(async ({ topic, keys }) => {
       await Promise.all(keys.map(async (key) => {
-<<<<<<< HEAD
         const path = `feed/${topic}/${key}`;
         const feed = await this._feedStore.openFeed(path, { key: Buffer.from(key, 'hex'), metadata: { topic } });
-=======
-        const feed = await this._feedMap.getOrCreateFeed(Buffer.from(key, 'hex'), { topic });
->>>>>>> Added handshake event into Extension. Refactor extension.
 
         // TODO(burdon): Test if already replicating?
         // Share and replicate feeds over protocol stream.
