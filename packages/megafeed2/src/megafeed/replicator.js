@@ -28,8 +28,6 @@ export class Replicator extends EventEmitter {
     }, options);
 
     this._feedStore = feedStore;
-
-    this._replicating = new Map();
   }
 
   toString() {
@@ -160,17 +158,11 @@ export class Replicator extends EventEmitter {
   _replicate(protocol, { topic, feed }) {
     const { stream } = protocol;
 
-    if (stream.destroyed) return null;
+    if (stream.destroyed) return false;
 
-    const key = keyStr(feed.key)
-
-    if (this._replicating.has(key)) {
-      return false;
-    }
+    if (stream.has(feed.key)) return false;
 
     const replicateOptions = Object.assign({}, protocol.streamOptions, { stream });
-
-    this._replicating.set(key, feed);
 
     if (!replicateOptions.live && replicateOptions.expectedFeeds === undefined) {
       stream.expectedFeeds = this._replicating.size;
