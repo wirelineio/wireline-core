@@ -10,11 +10,19 @@ import { keyName } from '../util/keys';
 
 const log = debug('chess');
 
+/**
+ * Chess state machine.
+ */
 export class ChessStateMachine {
 
   static WHITE = 'white';
   static BLACK = 'black';
 
+  /**
+   * @constructor
+   * @param {String} gameId
+   * @param {Object} options
+   */
   constructor(gameId, options = {}) {
     this._gameId = gameId;
     this._initialized = false;
@@ -67,6 +75,11 @@ export class ChessStateMachine {
     return `Chess(${JSON.stringify(meta)})`;
   }
 
+  /**
+   * Initialize game.
+   * @param {String} white - identity of White player.
+   * @param {String} black - identity of Black player.
+   */
   initGame({ white, black }) {
     console.assert(white);
     console.assert(black);
@@ -76,6 +89,12 @@ export class ChessStateMachine {
     this._initialized = true;
   }
 
+  /**
+   * Apply a move.
+   * @param {Number} seq
+   * @param {String} from
+   * @param {String} to
+   */
   applyMove({ seq, from, to }) {
     console.assert(seq >= 0);
     console.assert(from);
@@ -94,6 +113,9 @@ export class ChessStateMachine {
   }
 }
 
+/**
+ * Chess App.
+ */
 export class ChessApp {
 
   static TYPE = 'wrn:type:wireline.io/chess';
@@ -102,6 +124,12 @@ export class ChessApp {
   static MOVE_MSG = 'move';
   static GAME_MSG = 'game';
 
+  /**
+   * @constructor
+   * @param {Hypercore} feed
+   * @param {Object} view
+   * @param {String} itemId
+   */
   constructor(feed, view, itemId) {
     console.assert(feed);
     console.assert(view);
@@ -126,7 +154,14 @@ export class ChessApp {
     return this._state.meta;
   }
 
+  /**
+   * Create a game.
+   * @param {String} whitePlayerKey
+   * @param {String} blackPlayerKey
+   * @returns {Promise<void>}
+   */
   async createGame({ whitePlayerKey, blackPlayerKey }) {
+    // TODO(ashwin): Use protocol buffer messages.
     await pify(this._feed.append.bind(this._feed))({
       type: ChessApp.TYPE,
       msgType: ChessApp.GAME_MSG,
@@ -138,7 +173,15 @@ export class ChessApp {
     log(`New game ${keyName(this._itemId)}: ${keyName(this._feed.key)} created the game.`);
   }
 
+  /**
+   * Play a move.
+   * @param {Number} seq
+   * @param {String} from
+   * @param {String} to
+   * @returns {Promise<void>}
+   */
   async addMove({ seq, from, to }) {
+    // TODO(ashwin): Use protocol buffer messages.
     await pify(this._feed.append.bind(this._feed))({
       type: ChessApp.TYPE,
       itemId: this._itemId,
@@ -151,6 +194,12 @@ export class ChessApp {
     log(`Game ${keyName(this._itemId)}: ${keyName(this._feed.key)} played move #${seq + 1}.`);
   }
 
+  /**
+   * Handle view update event.
+   * @param {String} itemId
+   * @returns {void|*}
+   * @private
+   */
   _handleViewUpdate(itemId) {
     // Only handle updates if they're for our itemId.
     if (this._itemId !== itemId) {
@@ -165,6 +214,11 @@ export class ChessApp {
     return this._applyMoves(itemLogs);
   }
 
+  /**
+   * Init game.
+   * @param itemLogs
+   * @private
+   */
   _initGame(itemLogs) {
     // See if we have a game message.
     const gameMessages = itemLogs.filter(obj => obj.msgType === ChessApp.GAME_MSG);
@@ -177,6 +231,11 @@ export class ChessApp {
     this._state.initGame({ white: whitePlayerKey, black: blackPlayerKey });
   }
 
+  /**
+   * Apply moves.
+   * @param itemLogs
+   * @private
+   */
   _applyMoves(itemLogs) {
     const moves = itemLogs
       .filter(obj => obj.msgType === ChessApp.MOVE_MSG)

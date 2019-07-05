@@ -50,6 +50,11 @@ export const LogView = (type) => {
  */
 export class LogApp {
 
+  /**
+   * @constructor
+   * @param {Object} view
+   * @param {String} itemId
+   */
   constructor(view, itemId) {
     console.assert(view);
     console.assert(itemId);

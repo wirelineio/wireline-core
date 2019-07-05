@@ -22,16 +22,25 @@ import { ChessApp } from './chess';
 
 debug.enable('test,chess');
 
-const numPeers = 10;
-const numGames = 25;
-
-const [ gameTopic ] = createKeys(1);
-const peerKeys = createKeys(numPeers);
-
 const TEST_TIMEOUT = 25 * 1000;
 
 jest.setTimeout(TEST_TIMEOUT);
 
+const numPeers = 10;
+const numGames = 25;
+
+// Topic used to find peers interested in chess games.
+const [ gameTopic ] = createKeys(1);
+
+// Used to set identity of white/black side in each game.
+const peerKeys = createKeys(numPeers);
+
+/**
+ * Load moves for a sample game.
+ * "The Immortal Game" (http://www.chessgames.com/perl/chessgame?gid=1018910).
+ *
+ * @returns {{from: *, to: *, seq: number}[]}
+ */
 const loadSampleGameMoves = () => {
   const chess = new Chess();
   chess.load_pgn(fs.readFileSync(path.join(__dirname, 'data/immortal.pgn'), 'utf8'));
@@ -48,9 +57,15 @@ const loadSampleGameMoves = () => {
 };
 
 // Load sample game with lots of moves.
-// "The Immortal Game" (http://www.chessgames.com/perl/chessgame?gid=1018910).
 const gameMoves = loadSampleGameMoves();
 
+/**
+ * Create chess apps for the given itemId.
+ * @param {String} itemId
+ * @param {Object} peer1
+ * @param {Object} peer2
+ * @returns {{app2: ChessApp, app1: ChessApp}}
+ */
 const createChessApps = (itemId, peer1, peer2) => {
   const { feed: feed1, view: view1 } = peer1;
   const { feed: feed2, view: view2 } = peer2;
@@ -64,6 +79,11 @@ const createChessApps = (itemId, peer1, peer2) => {
   };
 };
 
+/**
+ * Play game moves on a timer.
+ * @param {ChessApp} app1
+ * @param {ChessApp} app2
+ */
 const playGameMoves = (app1, app2) => {
   // Players take turns playing their moves.
   let moveNum = 0;
@@ -80,6 +100,11 @@ const playGameMoves = (app1, app2) => {
   }));
 };
 
+/**
+ * Create a peer.
+ * @param {Object} params
+ * @returns {Promise<{feed, view: *}>}
+ */
 const createPeer = async (params) => {
   const feedStore = await createFeedStore({
     topicKeys: [gameTopic],
@@ -103,7 +128,7 @@ const createPeer = async (params) => {
   };
 };
 
-test('chess', async (done) => {
+test('simultaneous chess games between peers', async (done) => {
 
   // Passed from router (or stored in the feed and referenced by a view ID).
   const params = {
@@ -120,7 +145,7 @@ test('chess', async (done) => {
     peers.push({ feed, view, peerKey: peerKeys[i] });
   }
 
-  // Create game between randomly chosen peers.
+  // Create games between randomly chosen peers.
   for (let i = 0; i < numGames; i++) {
     const peer1 = random.pickone(peers);
     const peer2 = random.pickone(peers);
@@ -143,7 +168,7 @@ test('chess', async (done) => {
   }
 
   // TODO(burdon): Wait for event?
-  waitForExpect(async() => {
+  await waitForExpect(async() => {
     apps.forEach(app => {
       // All app instances should finally sync.
       expect(app.moves).toEqual(gameMoves);
