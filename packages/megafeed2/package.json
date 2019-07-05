@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.4.3",
+    "@wirelineio/codec-protobuf": "^0.1.35",
     "@wirelineio/feed-store": "^0.1.35",
     "@wirelineio/hyperswarm-network-memory": "^0.1.35",
     "chance": "^1.0.18",
@@ -34,7 +35,7 @@
     "hypertrie": "^3.4.3",
     "kappa-core": "^4.0.0",
     "pify": "^4.0.1",
-    "protobufjs": "^6.8.8",
+    "protobufjs": "https://github.com/wirelineio/protobuf.js#wireline-dist",
     "pump": "^3.0.0",
     "random-access-memory": "^3.1.1",
     "uuid": "^3.3.2"
