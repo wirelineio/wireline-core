@@ -53,7 +53,7 @@ test('kappa with feedmap', async () => {
 
   // Create view.
   const viewFactory = new ViewFactory(ram, feedStore);
-  const kappa = await viewFactory.getOrCreate('view1', params.topic);
+  const kappa = await viewFactory.getOrCreateView('view1', params.topic);
   kappa.use('log', LogView(params.type));
 
   // Create app from view.
@@ -110,7 +110,7 @@ test('kappa with message order', async () => {
 
   // Create view.
   const viewFactory = new ViewFactory(ram, feedStore);
-  const kappa = await viewFactory.getOrCreate('view1', params.topic);
+  const kappa = await viewFactory.getOrCreateView('view1', params.topic);
   kappa.use('ordered_log', OrderedLogView(params.type));
 
   // Create app from view.

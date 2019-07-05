@@ -35,12 +35,12 @@ export class ViewFactory {
    * @param topic
    * @returns {Promise<Kappa>}
    */
-  async getOrCreate(viewId, topic) {
+  async getOrCreateView(viewId, topic) {
     console.assert(viewId);
     console.assert(topic);
 
     // TODO(ashwin): How is kappa storage configured?
-    let kappaInstance = this._views.get(viewId) || kappa(this._storage, {
+    const kappaInstance = this._views.get(viewId) || kappa(this._storage, {
       multifeed: await createMultifeedAdapter(this._feedStore, topic)
     });
 

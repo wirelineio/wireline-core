@@ -17,7 +17,7 @@ import { keyStr } from '../util';
 import { Node } from '../node';
 
 import { LogView } from './log_view';
-import { ChessApp, ChessStateMachine } from './chess';
+import { ChessApp } from './chess';
 
 const log = debug('test');
 
@@ -71,7 +71,7 @@ test('chess', async (done) => {
   // Create app1.
   {
     const viewFactory1 = new ViewFactory(ram, feedStore1);
-    const kappa1 = await viewFactory1.getOrCreate('view1', params.topic);
+    const kappa1 = await viewFactory1.getOrCreateView('view1', params.topic);
     kappa1.use('log', LogView(params.type));
 
     const view1 = kappa1.api['log'];
@@ -81,7 +81,7 @@ test('chess', async (done) => {
   // Create app2.
   {
     const viewFactory2 = new ViewFactory(ram, feedStore2);
-    const kappa2 = await viewFactory2.getOrCreate('view1', params.topic);
+    const kappa2 = await viewFactory2.getOrCreateView('view1', params.topic);
     kappa2.use('log', LogView(params.type));
 
     const view2 = kappa2.api['log'];
@@ -90,7 +90,10 @@ test('chess', async (done) => {
 
   {
     // Create game.
-    await app1.createGame(keyStr(whitePlayerKey), keyStr(blackPlayerKey));
+    await app1.createGame({
+      whitePlayerKey: keyStr(whitePlayerKey),
+      blackPlayerKey: keyStr(blackPlayerKey)
+    });
   }
 
   // Load sample game with lots of moves.
@@ -113,11 +116,7 @@ test('chess', async (done) => {
   // TODO(burdon): Wait for event?
   waitForExpect(async() => {
 
-    expect(app1.getPlayerKey(ChessStateMachine.WHITE)).toBe(keyStr(whitePlayerKey));
-    expect(app2.getPlayerKey(ChessStateMachine.WHITE)).toBe(keyStr(whitePlayerKey));
-
-    expect(app1.getPlayerKey(ChessStateMachine.BLACK)).toBe(keyStr(blackPlayerKey));
-    expect(app2.getPlayerKey(ChessStateMachine.BLACK)).toBe(keyStr(blackPlayerKey));
+    expect(app1.meta).toEqual(app2.meta);
 
     expect(app1.moves).toEqual(gameMoves);
     expect(app2.moves).toEqual(gameMoves);

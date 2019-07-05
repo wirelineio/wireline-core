@@ -13,7 +13,7 @@ message Game {
 
 message Move {
 
-  int32 move = 1;
+  int32 seq = 1;
   string from = 2;
   string to = 3;
   string promotion = 4;
