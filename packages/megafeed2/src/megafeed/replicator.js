@@ -16,9 +16,10 @@ export class Replicator extends EventEmitter {
 
   /**
    * @param {FeedStore} feedStore
-   * @param {{ timeout }} [options]
+   * @param {Object} options
+   * @param {Number} options.timeout
    */
-  constructor(feedStore, options) {
+  constructor(feedStore, options = {}) {
     super();
     console.assert(feedStore);
 
@@ -27,6 +28,8 @@ export class Replicator extends EventEmitter {
     }, options);
 
     this._feedStore = feedStore;
+
+    this._replicating = new Map();
   }
 
   toString() {
@@ -79,20 +82,13 @@ export class Replicator extends EventEmitter {
     feedKeysByTopic.forEach(async ({ topic, keys }) => {
       await Promise.all(keys.map(async (key) => {
         const path = `feed/${topic}/${key}`;
-        const feed = await this._feedStore.openFeed(path, { key: Buffer.from(key, 'hex'), metadata: { topic } });
-
-        // TODO(burdon): Test if already replicating?
-        // Share and replicate feeds over protocol stream.
-        protocol.stream.feed(key);
+        const feed = await this._feedStore.openFeed(path, {
+          key: Buffer.from(key, 'hex'),
+          metadata: { topic }
+        });
 
         // Start replication.
-        feed.replicate({ live: true, stream: protocol.stream });
-
-        // TODO(burdon): Only add once.
-        // Propagate replication events.
-        feed.on('sync', () => {
-          this.emit('update', { topic, feed });
-        });
+        this._replicate(protocol, { topic, feed });
       }));
     });
   }
@@ -139,13 +135,10 @@ export class Replicator extends EventEmitter {
           const keys = feeds.map(feed => keyStr(feed.key));
 
           // Share and replicate feeds over protocol stream.
-          await Promise.all(feeds.map(async (feed) => {
-            // Create the feed.
-            protocol.stream.feed(feed.key);
-
+          feeds.forEach((feed) => {
             // Start replicating.
-            feed.replicate({ live: true, stream: protocol.stream });
-          }));
+            this._replicate(protocol, { topic, feed });
+          });
 
           return { topic, keys };
         }));
@@ -162,6 +155,37 @@ export class Replicator extends EventEmitter {
         throw new Error('Invalid type: ' + type);
       }
     }
+  }
+
+  _replicate(protocol, { topic, feed }) {
+    const { stream } = protocol;
+
+    if (stream.destroyed) return null;
+
+    const key = keyStr(feed.key)
+
+    if (this._replicating.has(key)) {
+      return false;
+    }
+
+    const replicateOptions = Object.assign({}, protocol.streamOptions, { stream });
+
+    this._replicating.set(key, feed);
+
+    if (!replicateOptions.live && replicateOptions.expectedFeeds === undefined) {
+      console.log('entraaa')
+      stream.expectedFeeds = this._replicating.size;
+    }
+
+    // TODO(burdon): Only add once.
+    // Propagate replication events.
+    feed.on('sync', () => {
+      this.emit('update', { topic, feed });
+    });
+
+    feed.replicate(replicateOptions);
+
+    return true;
   }
 
 }

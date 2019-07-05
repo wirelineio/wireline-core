@@ -13,7 +13,7 @@ import network from '@wirelineio/hyperswarm-network-memory';
 
 import { ViewFactory } from '../megafeed/view_factory';
 import { random } from '../util/debug';
-import { createFeedStore, createKeys, Megafeed } from '../megafeed';
+import { createMegafeed, createKeys } from '../megafeed';
 import { keyStr } from '../util';
 import { Node } from '../node';
 
@@ -106,12 +106,12 @@ const playGameMoves = (app1, app2) => {
  * @returns {Promise<{feed, view: *}>}
  */
 const createPeer = async (params) => {
-  const feedStore = await createFeedStore({
+  const megafeed = await createMegafeed({
     topicKeys: [gameTopic],
     numFeedsPerTopic: 1
   });
+  const { feedStore } = megafeed;
 
-  const megafeed = new Megafeed(feedStore);
   new Node(network(), megafeed).joinSwarm(gameTopic);
 
   const viewFactory = new ViewFactory(ram, feedStore);

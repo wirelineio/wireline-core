@@ -9,26 +9,13 @@ import pify from 'pify';
 
 import { FeedStore } from '@wirelineio/feed-store';
 
+import { Megafeed } from '../megafeed';
 import { keyStr, times } from '../../util';
 
-export const createKeyPairs = (num = 1) => times(num, crypto.keyPair);
+function generateFeedData(feedStore, options = {}) {
+  const { topicKeys=[], numFeedsPerTopic = 0, numMessagesPerFeed = 0, valueEncoding = 'json' } = options;
 
-export const createKeys = (num = 1) => createKeyPairs(num).map(keyPair => keyPair.publicKey);
-
-/**
- * Generate a feed store.
- * @param {object} options
- */
-export const createFeedStore = async (options = {}) => {
-  const { topicKeys=[], numFeedsPerTopic = 0, numMessagesPerFeed = 0 } = options;
-
-  // Value encoding for feed, if we have to create them.
-  const valueEncoding = options.valueEncoding || 'json';
-
-  const db = hypertrie(ram);
-  const feedStore = await FeedStore.create(db, ram, { feedOptions: { valueEncoding } });
-
-  await Promise.all(topicKeys.map(async (topic) => {
+  return Promise.all(topicKeys.map(async (topic) => {
     const feedKeyPairs = createKeyPairs(numFeedsPerTopic);
     await Promise.all(feedKeyPairs.map(async ({ publicKey, secretKey }) => {
       const path = `feed/${keyStr(topic)}/${keyStr(publicKey)}`;
@@ -38,6 +25,38 @@ export const createFeedStore = async (options = {}) => {
       }
     }));
   }));
+}
+
+export const createKeyPairs = (num = 1) => times(num, crypto.keyPair);
+
+export const createKeys = (num = 1) => createKeyPairs(num).map(keyPair => keyPair.publicKey);
+
+/**
+ * Generate a Megafeed.
+ * @param {object} options
+ */
+export const createMegafeed = async (options = {}) => {
+  const { valueEncoding = 'json' } = options;
+
+  const mega = await Megafeed.create(ram, { valueEncoding });
+  const { feedStore } = mega;
+
+  await generateFeedData(feedStore, options);
+
+  return mega;
+};
+
+/**
+ * Generate a feed store.
+ * @param {object} options
+ */
+export const createFeedStore = async (options = {}) => {
+  const { valueEncoding = 'json' } = options;
+
+  const db = hypertrie(ram);
+  const feedStore = await FeedStore.create(db, ram, { feedOptions: { valueEncoding } });
+
+  await generateFeedData(feedStore, options);
 
   return feedStore;
 };

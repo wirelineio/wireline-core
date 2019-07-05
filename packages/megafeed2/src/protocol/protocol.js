@@ -5,7 +5,6 @@
 import debug from 'debug';
 import { EventEmitter } from 'events';
 import protocol from 'hypercore-protocol';
-import crypto from 'hypercore-crypto';
 
 import { keyName, discoveryKey } from '../util/keys';
 
@@ -55,29 +54,38 @@ export class Protocol extends EventEmitter {
   _stream = undefined;
 
   /**
-   * @type {Object}
-   */
-  _userData = undefined;
-
-  /**
    * https://github.com/mafintosh/hypercore-protocol#var-feed--streamfeedkey
    * @type {Feed}
    */
   _feed = undefined;
 
   /**
-   * @param {{ id, codec }} options
+   * @param {Object} options
+   * @param {Buffer} options.id
+   * @param {Boolean} options.live
+   * @param {Number} options.expectedFeeds
+   * @param {Function<{discoveryKey}>} options.discoveryToPublicKey
+   * @param {Codec} options.codec
    */
   constructor(options = {}) {
     super();
 
-    this._id = options.id || crypto.keyPair().publicKey;
-    this._codec = options.codec || new Codec();
+    const { discoveryToPublicKey, codec = new Codec(), ...streamOptions } = options;
+
+    this._discoveryToPublicKey = discoveryToPublicKey;
+
+    this._codec = codec;
+
+    this._streamOptions = streamOptions;
+
+    this._stream = protocol(this._streamOptions);
+
+    this._init = false;
   }
 
   toString() {
     const meta = {
-      id: keyName(this._id),
+      id: keyName(this.id),
       extensions: Array.from(this._extensionMap.keys())
     };
 
@@ -85,7 +93,7 @@ export class Protocol extends EventEmitter {
   }
 
   get id() {
-    return this._id;
+    return this._stream.id;
   }
 
   get stream() {
@@ -104,13 +112,17 @@ export class Protocol extends EventEmitter {
     return Array.from(this._extensionMap.values());
   }
 
+  get streamOptions() {
+    return Object.assign({}, { id: this.id }, this._streamOptions);
+  }
+
   /**
    * Sets user data which is exchanged with the peer during the handshake.
    * @param {Object} data
    * @returns {Protocol}
    */
   setUserData(data) {
-    this._userData = this._codec.encode(data);
+    this._stream.userData = this._codec.encode(data);
 
     return this;
   }
@@ -171,20 +183,16 @@ export class Protocol extends EventEmitter {
    * @returns {Promise<Protocol>}
    */
   async init(initialKey) {
-    console.assert(!this._stream);
+    console.assert(!this._init);
+
+    this._init = true;
 
     // See https://github.com/wirelineio/wireline-core/blob/master/docs/design/appendix.md#swarming--dat-protocol-handshake for details.
 
     // Initialize extensions.
     this._extensionMap.forEach(extension => {
+      this._stream.extensions.push(extension.name);
       extension.init(this);
-    });
-
-    // Create the Dat stream.
-    this._stream = protocol({
-      id: this._id,
-      userData: this._userData,
-      extensions: Array.from(this._extensionMap.keys())
     });
 
     // Handshake.
@@ -221,12 +229,12 @@ export class Protocol extends EventEmitter {
     } else {
       // Wait for the peer to share the initial feed and see if we have the public key for that.
       this._stream.once('feed', (discoveryKey) => {
-        const discoveryToPublicKey = this._options.discoveryToPublicKey;
+        const discoveryToPublicKey = this._discoveryToPublicKey;
 
         initialKey = discoveryToPublicKey && discoveryToPublicKey(discoveryKey);
         if (!initialKey) {
           // Stream will get aborted soon as both sides haven't shared the same initial Dat feed.
-          console.warn('Public key not found for discovery key: ', keyName(this._id, 'node'), keyName(discoveryKey));
+          console.warn('Public key not found for discovery key: ', keyName(this.id, 'node'), keyName(discoveryKey));
 
           return;
         }
@@ -249,7 +257,7 @@ export class Protocol extends EventEmitter {
       });
     }
 
-    log(keyName(this._id, 'node'), 'initialized');
+    log(keyName(this.id, 'node'), 'initialized');
     return this;
   }
 
@@ -268,7 +276,7 @@ export class Protocol extends EventEmitter {
    * @private
    */
   _initStream(key) {
-    log(keyName(this._id, 'node'), 'shared initial feed', keyName(this._discoveryKey));
+    log(keyName(this.id, 'node'), 'shared initial feed', keyName(this._discoveryKey));
     this._feed = this._stream.feed(key);
     this._feed.on('extension', this._extensionHandler);
   }
