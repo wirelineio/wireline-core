@@ -7,7 +7,7 @@ import ram from 'random-access-memory';
 import pify from 'pify';
 import waitForExpect from 'wait-for-expect';
 
-import { createFeedMap, createKeys } from '../megafeed/debug/generator'
+import { createFeedStore, createKeys } from '../megafeed/debug/generator'
 import { ViewFactory } from '../megafeed/view_factory';
 import { random } from '../util/debug';
 import { keyStr, keyName } from '../util/keys';
@@ -36,12 +36,8 @@ test('kappa with feedmap', async () => {
     itemId: 'game1'
   };
 
-  // Create FeedMap.
-  const map = new Map();
-  const feedMap = await createFeedMap({ topicKeys: [ topic ], numFeedsPerTopic: 2, map });
-
-  // Create messages.
-  const [ { feed: feed1 }, { feed: feed2 } ] = Array.from(map.values());
+  const feedStore = await createFeedStore({ topicKeys: [ topic ], numFeedsPerTopic: 2 });
+  const [ feed1, feed2 ] = await feedStore.getFeeds();
 
   // Chess Game 1.
   pify(feed1.append.bind(feed1))({ type: 'chess', itemId: 'game1', move: 'e4', seq: 1 });
@@ -56,7 +52,7 @@ test('kappa with feedmap', async () => {
   pify(feed2.append.bind(feed2))({ type: 'document', itemId: 'doc2', title: 'New Doc 2' });
 
   // Create view.
-  const viewFactory = new ViewFactory(ram, feedMap);
+  const viewFactory = new ViewFactory(ram, feedStore);
   const kappa = await viewFactory.getOrCreate('view1', params.topic);
   kappa.use('log', LogView(params.type));
 
@@ -86,12 +82,8 @@ test('kappa with message order', async () => {
     itemId: `chat${random.timestamp()}`
   };
 
-  // Create FeedMap.
-  const map = new Map();
-  const feedMap = await createFeedMap({ topicKeys: [ chatTopic ], numFeedsPerTopic: numFeeds, map });
-
-  // Create messages.
-  const feeds = Array.from(map.values());
+  const feedStore = await createFeedStore({ topicKeys: [ chatTopic ], numFeedsPerTopic: numFeeds });
+  const feeds = await feedStore.getFeeds();
 
   // Multiple messages from multiple feeds.
   const messages = [];
@@ -106,18 +98,18 @@ test('kappa with message order', async () => {
   };
 
   for (let i = 1; i <= numMessages; i++) {
-    const { feed } = random.pickone(feeds);
+    const feed = random.pickone(feeds);
     const parentId = messages.length ? random.pickone(messages) : undefined;
     addMessage(feed, i, parentId);
 
     if (random.bool({ liklihood: 70 })) {
-      const { feed: concurrentFeed } = random.pickone(feeds);
+      const concurrentFeed = random.pickone(feeds);
       addMessage(concurrentFeed, i, parentId);
     }
   }
 
   // Create view.
-  const viewFactory = new ViewFactory(ram, feedMap);
+  const viewFactory = new ViewFactory(ram, feedStore);
   const kappa = await viewFactory.getOrCreate('view1', params.topic);
   kappa.use('ordered_log', OrderedLogView(params.type));
 

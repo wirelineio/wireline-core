@@ -12,7 +12,7 @@ import { Chess } from 'chess.js';
 import network from '@wirelineio/hyperswarm-network-memory';
 
 import { ViewFactory } from '../megafeed/view_factory';
-import { createFeedMap, createKeys, Megafeed } from '../megafeed';
+import { createFeedStore, createKeys, Megafeed } from '../megafeed';
 import { keyStr } from '../util';
 import { Node } from '../node';
 
@@ -23,7 +23,7 @@ const log = debug('test');
 
 debug.enable('test');
 
-const [ topicKey, gameTopic ] = createKeys(2);
+const [ gameTopic ] = createKeys(2);
 const [ whitePlayerKey, blackPlayerKey ] = createKeys(2);
 
 const TEST_TIMEOUT = 15 * 1000;
@@ -46,8 +46,6 @@ const loadSampleGameMoves = () => {
 };
 
 test('chess', async (done) => {
-  const numFeedsPerTopic = 1;
-
   // Passed from router (or stored in the feed and referenced by a view ID).
   const params = {
     topic: keyStr(gameTopic),
@@ -55,27 +53,24 @@ test('chess', async (done) => {
     itemId: 'game1'
   };
 
-  const map1 = new Map();
-  const map2 = new Map();
+  const feedStore1 = await createFeedStore({ topicKeys: [ gameTopic ], numFeedsPerTopic: 1 });
+  const megafeed1 = new Megafeed(feedStore1);
 
-  const feedMap1 = await createFeedMap({ map: map1, topicKeys: [ gameTopic ], numFeedsPerTopic });
-  const megafeed1 = new Megafeed(feedMap1);
+  const feedStore2 = await createFeedStore({ topicKeys: [ gameTopic ], numFeedsPerTopic: 1 });
+  const megafeed2 = new Megafeed(feedStore2);
 
-  const feedMap2 = await createFeedMap({ map: map2, topicKeys: [ gameTopic ], numFeedsPerTopic });
-  const megafeed2 = new Megafeed(feedMap2);
+  const node1 = new Node(network(), megafeed1).joinSwarm(gameTopic);
+  const node2 = new Node(network(), megafeed2).joinSwarm(gameTopic);
 
-  const node1 = new Node(network(), megafeed1).joinSwarm(topicKey);
-  const node2 = new Node(network(), megafeed2).joinSwarm(topicKey);
-
-  const [{ feed: feed1 }] = Array.from(map1.values());
-  const [{ feed: feed2 }] = Array.from(map2.values());
+  const [ feed1 ] = await feedStore1.getFeeds();
+  const [ feed2 ] = await feedStore2.getFeeds();
 
   let app1;
   let app2;
 
   // Create app1.
   {
-    const viewFactory1 = new ViewFactory(ram, feedMap1);
+    const viewFactory1 = new ViewFactory(ram, feedStore1);
     const kappa1 = await viewFactory1.getOrCreate('view1', params.topic);
     kappa1.use('log', LogView(params.type));
 
@@ -85,7 +80,7 @@ test('chess', async (done) => {
 
   // Create app2.
   {
-    const viewFactory2 = new ViewFactory(ram, feedMap2);
+    const viewFactory2 = new ViewFactory(ram, feedStore2);
     const kappa2 = await viewFactory2.getOrCreate('view1', params.topic);
     kappa2.use('log', LogView(params.type));
 

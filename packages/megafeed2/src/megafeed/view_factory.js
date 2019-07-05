@@ -4,7 +4,7 @@
 
 import kappa from 'kappa-core';
 
-import { createMultifeedAdapter } from './feedmap';
+import { createMultifeedAdapter } from './multifeed_adapter';
 
 /**
  * View factory.
@@ -19,14 +19,14 @@ export class ViewFactory {
   /**
    * @constructor
    * @param storage
-   * @param feedMap
+   * @param feedStore
    */
-  constructor(storage, feedMap) {
+  constructor(storage, feedStore) {
     console.assert(storage);
-    console.assert(feedMap);
+    console.assert(feedStore);
 
     this._storage = storage;
-    this._feedMap = feedMap;
+    this._feedStore = feedStore;
   }
 
   /**
@@ -41,7 +41,7 @@ export class ViewFactory {
 
     // TODO(ashwin): How is kappa storage configured?
     let kappaInstance = this._views.get(viewId) || kappa(this._storage, {
-      multifeed: await createMultifeedAdapter(this._feedMap, topic)
+      multifeed: await createMultifeedAdapter(this._feedStore, topic)
     });
 
     this._views.set(viewId, kappaInstance);

@@ -22,11 +22,11 @@ export const createKeys = (num = 1) => createKeyPairs(num).map(keyPair => keyPai
 export const createFeedStore = async (options = {}) => {
   const { topicKeys=[], numFeedsPerTopic = 0, numMessagesPerFeed = 0 } = options;
 
-  const db = hypertrie(ram);
-  const feedStore = await FeedStore.create(db, ram, { feedOptions: { valueEncoding: 'uft-8' } });
-
   // Value encoding for feed, if we have to create them.
   const valueEncoding = options.valueEncoding || 'json';
+
+  const db = hypertrie(ram);
+  const feedStore = await FeedStore.create(db, ram, { feedOptions: { valueEncoding } });
 
   await Promise.all(topicKeys.map(async (topic) => {
     const feedKeyPairs = createKeyPairs(numFeedsPerTopic);
