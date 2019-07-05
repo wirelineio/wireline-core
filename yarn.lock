@@ -2623,6 +2623,11 @@ charwise@^3.0.1:
   resolved "https://registry.yarnpkg.com/charwise/-/charwise-3.0.1.tgz#8706f3cf6a1166f46cbc8b2a5174f11cc96753c7"
   integrity sha512-RcdumNsM6fJZ5HHbYunqj2bpurVRGsXour3OR+SlLEHFhG6ALm54i6Osnh+OvO7kEoSBzwExpblYFH8zKQiEPw==
 
+chess.js@^0.10.2:
+  version "0.10.2"
+  resolved "https://registry.yarnpkg.com/chess.js/-/chess.js-0.10.2.tgz#eacefa2067155f87f046e80cc12d2019eef1b81a"
+  integrity sha1-6s76IGcVX4fwRugMwS0gGe7xuBo=
+
 chokidar@^2.0.4:
   version "2.1.6"
   resolved "https://registry.yarnpkg.com/chokidar/-/chokidar-2.1.6.tgz#b6cad653a929e244ce8a834244164d241fa954c5"
@@ -4490,7 +4495,7 @@ hypercore@^6.24.0, hypercore@^6.25.2:
   optionalDependencies:
     fd-lock "^1.0.2"
 
-hypercore@^7.0.0, hypercore@^7.2.0:
+hypercore@^7.0.0, hypercore@^7.2.0, hypercore@^7.4.0:
   version "7.4.0"
   resolved "https://registry.yarnpkg.com/hypercore/-/hypercore-7.4.0.tgz#8848eee75b1e518b56168bebeb695480c34f9ede"
   integrity sha512-e6Pk9+Htaurt7ed2C4J6/uQnEXIZmuiQDzYYZw0RVGs+hQOp8zak4H9dK88OJW5Rqkb+7GD9mylMekEWneyZBw==
@@ -4679,7 +4684,7 @@ inflight@^1.0.4:
     once "^1.3.0"
     wrappy "1"
 
-inherits@2, inherits@^2.0.1, inherits@^2.0.3, inherits@~2.0.1, inherits@~2.0.3:
+inherits@2, inherits@^2.0.1, inherits@^2.0.3, inherits@^2.0.4, inherits@~2.0.1, inherits@~2.0.3:
   version "2.0.4"
   resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.4.tgz#0fa2c64f932917c3433a0ded55363aae37416b7c"
   integrity sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==
@@ -5592,6 +5597,16 @@ kappa-core@^2.6.2:
     multifeed "^3.0.3"
     multifeed-index "^3.2.2"
 
+kappa-core@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/kappa-core/-/kappa-core-4.0.0.tgz#fc23b3208c3e5f21222f42f4be023eba2f034e0d"
+  integrity sha512-w7ZgD89liYDVk23OL2kuN+Exfc7XrIU93yBepX8uET6z1Dxw6yeca1sTC3mm2J8ZSRLpdCYbJm4nKJVLbalklw==
+  dependencies:
+    hypercore "^7.4.0"
+    inherits "^2.0.4"
+    multifeed "^4.0.0"
+    multifeed-index "^3.3.2"
+
 kappa-view-level@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/kappa-view-level/-/kappa-view-level-1.1.0.tgz#bd7f1eee45df794207e8beebaa7c0e5c5499a44b"
@@ -6336,7 +6351,7 @@ multi-read-stream@^2.0.0:
   dependencies:
     readable-stream "^2.0.1"
 
-multifeed-index@^3.2.2:
+multifeed-index@^3.2.2, multifeed-index@^3.3.2:
   version "3.3.2"
   resolved "https://registry.yarnpkg.com/multifeed-index/-/multifeed-index-3.3.2.tgz#cec16c618b761c801eab9afe92acb38d0f62daf1"
   integrity sha512-UPEpvca/hx0UqanoMs9uMEpTrFbmW8CV9V4Oww44fQxLj/m6eAqhFyVMCanKjS4daL9K8hvfPtWj5V4KsKat+Q==
@@ -6347,6 +6362,18 @@ multifeed@^3.0.3:
   version "3.0.8"
   resolved "https://registry.yarnpkg.com/multifeed/-/multifeed-3.0.8.tgz#31c623cbb79d0b72fd4d9dec01c8cd907ba82e74"
   integrity sha512-OsNz8PFD3YUiPycZo093a/FnO88lc5xoFUgtie3loyfsR85cn6Ui4rvYTiJWpfhJk4AruditvoyX0Rx6Z513SQ==
+  dependencies:
+    debug "^4.1.0"
+    hypercore-protocol "^6.8.0"
+    inherits "^2.0.3"
+    mutexify "^1.2.0"
+    random-access-file "^2.0.1"
+    through2 "^3.0.0"
+
+multifeed@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/multifeed/-/multifeed-4.0.0.tgz#f40a7950d1a7a184c0f9509c0c38a98fe20f2485"
+  integrity sha512-F5Pb9FfgNAU7LIATJVUFP/0TY2bYKtYfxdWnlu4cZNGfw7u6998iZKnBhCKpSqELefT4LMddU0ADeMqLjGFAuQ==
   dependencies:
     debug "^4.1.0"
     hypercore-protocol "^6.8.0"

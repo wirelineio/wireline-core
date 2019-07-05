@@ -1,0 +1,20 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
+package chess;
+syntax = "proto3";
+
+message Game {
+
+  string white = 1;
+  string black = 2;
+}
+
+message Move {
+
+  int32 seq = 1;
+  string from = 2;
+  string to = 3;
+  string promotion = 4;
+}
