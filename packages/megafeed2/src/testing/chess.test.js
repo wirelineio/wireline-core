@@ -119,7 +119,7 @@ const createPeer = async (params) => {
   kappa.use('log', LogView(params.type));
 
   // Peer info we'll need later for chess games.
-  const [feed] = await feedStore.getFeeds();
+  const [ feed ] = await feedStore.getFeeds();
   const view = kappa.api['log'];
 
   return {
