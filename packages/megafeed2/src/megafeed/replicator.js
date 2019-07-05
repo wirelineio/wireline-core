@@ -173,7 +173,6 @@ export class Replicator extends EventEmitter {
     this._replicating.set(key, feed);
 
     if (!replicateOptions.live && replicateOptions.expectedFeeds === undefined) {
-      console.log('entraaa')
       stream.expectedFeeds = this._replicating.size;
     }
 
