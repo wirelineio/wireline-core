@@ -13,6 +13,8 @@ const pify = require('pify');
 const ram = require('random-access-memory');
 const crypto = require('hypercore-crypto');
 
+const { getStat } = require('@wirelineio/feed-store');
+
 const megafeed = require('./megafeed');
 
 function sortByIndex(a, b) {
@@ -25,7 +27,7 @@ describe('config megafeed', () => {
       valueEncoding: 'utf-8',
     });
 
-    expect(mf._feeds._opts.valueEncoding).toBe('utf-8');
+    expect(mf._feedStore._defaultFeedOptions.valueEncoding).toBe('utf-8');
     expect(mf._db.feed._storage.key.constructor.name).toBe('RandomAccessFile');
   });
 
@@ -34,7 +36,7 @@ describe('config megafeed', () => {
       valueEncoding: 'json',
     });
 
-    expect(mf._feeds._opts.valueEncoding).toBe('json');
+    expect(mf._feedStore._defaultFeedOptions.valueEncoding).toBe('json');
     expect(mf._db.feed._storage.key.constructor.name).toBe('RAM');
   });
 
@@ -52,17 +54,16 @@ describe('add operations in a persistent feed', () => {
   });
 
   test('add feed: documentOne', async () => {
-    const feed = await this.mf.addFeed({ name: 'documentOne' });
-    this.feed = feed;
+    const feed = await this.mf.addFeed({ path: 'documentOne' });
 
-    expect(feed.name).toBe('documentOne');
+    expect(getStat(feed).path).toBe('documentOne');
   });
 
   test('add feed by key: bee80ff3a4ee5e727dc44197cb9d25bf8f19d50b0f3ad2984cfe5b7d14e75de7', async () => {
-    const feed = await this.mf.addFeed({ key: 'bee80ff3a4ee5e727dc44197cb9d25bf8f19d50b0f3ad2984cfe5b7d14e75de7' });
-    this.feed = feed;
-
-    expect(feed.name).toBe('bee80ff3a4ee5e727dc44197cb9d25bf8f19d50b0f3ad2984cfe5b7d14e75de7');
+    const key = 'bee80ff3a4ee5e727dc44197cb9d25bf8f19d50b0f3ad2984cfe5b7d14e75de7';
+    const feed = await this.mf.addFeed({ path: 'documentTwo', key });
+    expect(getStat(feed).path).toBe('documentTwo');
+    expect(getStat(feed).key.equals(Buffer.from(key, 'hex'))).toBe(true);
   });
 });
 
@@ -72,7 +73,7 @@ describe('list / get / delete / load / close operations', () => {
       valueEncoding: 'json',
     });
 
-    this.feed = await this.mf.addFeed({ name: 'documentOne' });
+    this.feed = await this.mf.addFeed({ path: 'documentOne' });
   });
 
   test('list feed: documentOne', () => {
@@ -80,10 +81,10 @@ describe('list / get / delete / load / close operations', () => {
   });
 
   test('get a feed: documentOne', async () => {
-    let feed = await this.mf.feed('documentOne');
+    let feed = this.mf.feed('documentOne');
     expect(feed).toBe(this.feed);
 
-    feed = await this.mf.feedByDK(feed.discoveryKey.toString('hex'));
+    feed = await this.mf.feedByDK(feed.discoveryKey);
     expect(feed).toBe(this.feed);
   });
 
@@ -98,7 +99,8 @@ describe('list / get / delete / load / close operations', () => {
   });
 
   test('load feeds: documentOne', async () => {
-    const feed = await this.mf.addFeed({ name: 'documentOne' });
+    const feed = await this.mf.addFeed({ path: 'documentOne' });
+    expect(feed).toBe(this.feed);
     await pify(feed.close.bind(feed))();
 
     const result = await this.mf.loadFeeds(feed.key);
@@ -127,7 +129,7 @@ describe('destroy megafeed storage', () => {
       valueEncoding: 'json',
     });
 
-    this.feed = await this.mf.addFeed({ name: 'documentOne' });
+    this.feed = await this.mf.addFeed({ path: 'documentOne' });
   });
 
   test('destroy storage for _db and documentOne', async () => {
@@ -146,13 +148,16 @@ describe('testing replicate process', () => {
     const peerOne = megafeed(ram, { valueEncoding: 'json' });
     const peerTwo = megafeed(ram, { valueEncoding: 'json' });
 
-    const feedOne = await peerOne.addFeed({ name: 'local' });
-    const feedTwo = await peerTwo.addFeed({ name: 'local' });
+    const feedOne = await peerOne.addFeed({ path: 'local' });
+    const feedTwo = await peerTwo.addFeed({ path: 'local' });
+
+    feedOne.pAppend = pify(feedOne.append.bind(feedOne));
+    feedTwo.pAppend = pify(feedTwo.append.bind(feedTwo));
 
     this.testingElements = { partyKey, peerOne, peerTwo, feedOne, feedTwo };
   });
 
-  test('replicate using party default rules (live=false)', async () => {
+  test('replicate using party default rules live=false', async () => {
     const { partyKey, peerOne, peerTwo, feedOne, feedTwo } = this.testingElements;
 
     const partyData = {
@@ -178,7 +183,7 @@ describe('testing replicate process', () => {
     expect(resultOne.sort(sortByIndex)).toEqual(resultTwo.sort(sortByIndex));
   });
 
-  test('replicate using party default rules (live=true)', async (done) => {
+  test('replicate using party default rules live=true', async (done) => {
     const { partyKey, peerOne, peerTwo, feedOne, feedTwo } = this.testingElements;
 
     const partyData = {
@@ -213,52 +218,8 @@ describe('testing replicate process', () => {
     await feedTwo.pAppend({ index: 1, value: 'hello from two' });
 
     // Test what happen if you add a new feed after the replication process started
-    const feedThree = await peerTwo.addFeed({ name: 'localThree' });
-    await feedThree.pAppend({ index: 2, value: 'hello from three' });
-  });
-
-  test('replicate using party default rules (live=false, filter=["local", "party-feed/current"])', async () => {
-    const { partyKey, peerOne, peerTwo, feedOne, feedTwo } = this.testingElements;
-
-    const partyData = {
-      name: 'test',
-      key: partyKey,
-      metadata: {
-        filter: [
-          'local',
-          `party-feed/${partyKey.toString('hex')}/**`
-        ]
-      }
-    };
-
-    // Both peer needs to know the partyKey
-    await peerOne.addParty(partyData);
-    await peerTwo.addParty(partyData);
-
-    const r1 = peerOne.replicate({ key: partyKey });
-    const r2 = peerTwo.replicate({ key: partyKey });
-
-    const ilegalFeed = await peerTwo.addFeed({ name: 'ilegalFeed' });
-
-    await feedOne.pAppend({ index: 0, value: 'hello from one' });
-    await feedTwo.pAppend({ index: 1, value: 'hello from two' });
-    await ilegalFeed.pAppend({ index: 2, value: 'hello from ilegalFeed' });
-
-    await pify(pump)(r1, r2, r1);
-
-    const resultOne = await streamToPromise(peerOne.createReadStream());
-    const resultTwo = await streamToPromise(peerTwo.createReadStream());
-
-    expect(resultOne.sort(sortByIndex)).toEqual([
-      { index: 0, value: 'hello from one' },
-      { index: 1, value: 'hello from two' }
-    ]);
-
-    expect(resultTwo.sort(sortByIndex)).toEqual([
-      { index: 0, value: 'hello from one' },
-      { index: 1, value: 'hello from two' },
-      { index: 2, value: 'hello from ilegalFeed' }
-    ]);
+    const feedThree = await peerTwo.addFeed({ path: 'localThree' });
+    await pify(feedThree.append.bind(feedThree))({ index: 2, value: 'hello from three' });
   });
 });
 
@@ -266,35 +227,23 @@ describe('iterate over feeds and messages', () => {
   beforeEach(async () => {
     const mega = megafeed(ram, { valueEncoding: 'utf-8' });
 
-    let feed = await mega.addFeed({ name: 'feed/0' });
-    await feed.pAppend('Message from feed/0');
-    feed = await mega.addFeed({ name: 'feed/1' });
-    await feed.pAppend('Message from feed/1');
+    let feed = await mega.addFeed({ path: 'feed/0' });
+    await pify(feed.append.bind(feed))('Message from feed/0');
+    feed = await mega.addFeed({ path: 'feed/1' });
+    await pify(feed.append.bind(feed))('Message from feed/1');
 
     this.testingElements = { mega };
   });
 
-  test('createReadStream (filter=[feed/0])', async () => {
+  test('createReadStream', async () => {
     const { mega } = this.testingElements;
 
-    const messages = await streamToPromise(mega.createReadStream({ filter: 'feed/0' }));
+    const messages = await streamToPromise(mega.createReadStream());
 
-    expect(messages).toEqual(['Message from feed/0']);
-  });
-
-  test('watch (filter=[feed/1])', (done) => {
-    const { mega } = this.testingElements;
-    const messages = [];
-
-    mega.watch({ filter: 'feed/1' }, (message) => {
-      messages.push(message);
-      if (messages.length === 2) {
-        expect(messages).toEqual(['Message from feed/1', 'Message 2 from feed/1']);
-        done();
-      }
-    });
-
-    mega.feed('feed/1').append('Message 2 from feed/1');
+    expect(messages).toEqual([
+      'Message from feed/0',
+      'Message from feed/1'
+    ]);
   });
 
 });

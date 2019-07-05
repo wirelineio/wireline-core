@@ -22,8 +22,9 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.4.3",
-    "@wirelineio/hyperswarm-network-memory": "^0.1.18",
-    "buffer-from": "^1.0.0",
+    "@wirelineio/feed-store": "^0.1.35",
+    "@wirelineio/hyperswarm-network-memory": "^0.1.35",
+    "debug": "^4.1.1",
     "chance": "^1.0.18",
     "chess.js": "^0.10.2",
     "debug": "^4.1.1",

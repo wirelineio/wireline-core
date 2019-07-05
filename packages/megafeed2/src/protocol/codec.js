@@ -2,8 +2,6 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import bufferFrom from 'buffer-from';
-
 /**
  * Encodes and decodes messages.
  */
@@ -16,7 +14,7 @@ export class Codec {
    * @returns {string}
    */
   encode(message) {
-    return bufferFrom(JSON.stringify(message || {}));
+    return Buffer.from(JSON.stringify(message || {}));
   }
 
   /**

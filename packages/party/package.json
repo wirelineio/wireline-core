@@ -14,7 +14,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint **/*.js --ignore-path ../../.eslintignore",
-    "protobuf": "protocol-buffers src/schema.proto -o src/schema.js",
+    "protobuf": "pbjs -t json src/schema.proto -o src/schema.json",
     "test": "jest --verbose"
   },
   "dependencies": {
@@ -24,15 +24,13 @@
     "end-of-stream": "^1.4.1",
     "hypercore-crypto": "^1.0.0",
     "hypercore-protocol": "^6.9.0",
-    "micromatch": "^3.1.10",
-    "protocol-buffers-encodings": "^1.1.0"
+    "micromatch": "^3.1.10"
   },
   "devDependencies": {
     "hypercore": "^6.24.0",
     "hypertrie": "^3.7.0",
     "jest": "^24.5.0",
     "pify": "^4.0.1",
-    "protocol-buffers": "^4.1.0",
     "pump": "^3.0.0",
     "random-access-memory": "^3.1.1"
   },

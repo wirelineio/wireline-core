@@ -1,5 +1,8 @@
-const codecProtobuf = require('@wirelineio/codec-protobuf');
+const Codec = require('@wirelineio/codec-protobuf');
 
-const schema = require('./schema.js');
+const schema = require('./schema.json');
 
-module.exports = codecProtobuf(schema);
+const codec = new Codec({ verify: true });
+codec.loadFromJSON(schema);
+
+module.exports = codec;

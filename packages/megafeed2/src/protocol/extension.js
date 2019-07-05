@@ -1,9 +1,10 @@
 //
 // Copyright 2019 Wireline, Inc.
 //
+import assert from 'assert';
+import { EventEmitter } from 'events';
 
 import debug from 'debug';
-import { EventEmitter } from 'events';
 import uuid from 'uuid/v4';
 
 import { keyName } from '../util/keys';
@@ -21,26 +22,33 @@ const log = debug('extension');
 export class Extension extends EventEmitter {
 
   /**
+   * @type {Protocol}
+   */
+  _protocol = null;
+
+  /**
    * Pending messages.
    * @type {Map<{id, Function}>}
    */
   _pendingMessages = new Map();
 
   /**
+   * Handshake handler.
+   * @type {Function<{protocol, context}>}
+   */
+  _handshakeHandler = null;
+
+  /**
    * Message handler.
-   * @type {Function<{context, message}>}
+   * @type {Function<{protocol, context, message}>}
    */
-  _messageHandler = undefined;
+  _messageHandler = null;
 
   /**
-   * @type {{ stream, feed }}
+   * Feed handler.
+   * @type {Function<{protocol, context, discoveryKey}>}
    */
-  _protocol = undefined;
-
-  /**
-   * @type {string}
-   */
-  _extension = undefined;
+  _feedHandler = null;
 
   _stats = {
     send: 0,
@@ -50,18 +58,20 @@ export class Extension extends EventEmitter {
 
   /**
    * @param {string} name
-   * @param {{ codec, timeout }} options
+   * @param {Object} options
+   * @param {Number} options.timeout
+   * @param {Codec} options.codec
    */
   constructor(name, options = {}) {
     super();
+    assert(typeof name === 'string' && name.length > 0, 'Name is required.');
 
     this._name = name;
 
     this._options = Object.assign({
       timeout: 2000,
+      codec: new Codec()
     }, options);
-
-    this._codec = options.codec || new Codec();
   }
 
   get name() {
@@ -73,27 +83,69 @@ export class Extension extends EventEmitter {
   }
 
   /**
+   * Sets the handshake handler.
+   * @param {Function<{protocol, context}>} handshakeHandler - Async handshake handler.
+   * @returns {Extension}
+   */
+  setHandshakeHandler(handshakeHandler) {
+    this._handshakeHandler = handshakeHandler;
+
+    return this;
+  }
+
+  /**
+   * Sets the message handler.
+   * @param {Function<{protocol, context, message}>} messageHandler - Async message handler.
+   * @returns {Extension}
+   */
+  setMessageHandler(messageHandler) {
+    this._messageHandler = messageHandler;
+
+    return this;
+  }
+
+  /**
+   * Sets the message handler.
+   * @param {Function<{protocol, context, discoveryKey}>} feedHandler - Async feed handler.
+   * @returns {Extension}
+   */
+  setFeedHandler(feedHandler) {
+    this._feedHandler = feedHandler;
+
+    return this;
+  }
+
+  /**
    * Initializes the extension.
    *
    * @param {Protocol} protocol
-   * @param {string} extension
    */
-  init(protocol, extension) {
+  init(protocol) {
     console.assert(!this._protocol);
-    log(`init[${extension}]: ${keyName(protocol.id)}`);
+    log(`init[${this._name}]: ${keyName(protocol.id)}`);
 
     this._protocol = protocol;
-    this._extension = extension;
+  }
+
+  /**
+   * Handshake event.
+   *
+   * @param {Object} context
+   */
+  onHandshake(context) {
+    if (this._handshakeHandler) {
+      this._handshakeHandler(this._protocol, context);
+    }
   }
 
   /**
    * Receives extension message.
    *
-   * @param context
-   * @param request
+   * @param {Object} context
+   * @param {Buffer} message
    */
-  async onMessage(context, request) {
-    const { id, error, message: requestData } = this._codec.decode(request);
+  async onMessage(context, message) {
+    const { id, error, message: requestData, options = {} } = this._options.codec.decode(message);
 
     // Check for a pending request.
     // TODO(burdon): Explicitely check code header property?
@@ -115,39 +167,63 @@ export class Extension extends EventEmitter {
       log(`received ${keyName(this._protocol.stream.id, 'node')}: ${keyName(id, 'msg')}`);
       const responseData = await this._messageHandler(this._protocol, context, requestData);
 
+      if (options.oneway) {
+        return;
+      }
+
       // Send the response.
       const response = { id, message: responseData };
       log(`responding ${keyName(this._protocol.stream.id, 'node')}: ${keyName(id, 'msg')}`);
-      this._protocol.feed.extension(this._extension, this._codec.encode(response));
+      this._protocol.feed.extension(this._name, this._options.codec.encode(response));
     } catch (ex) {
+      if (options.oneway) {
+        return;
+      }
+
       // System error.
       const code = (ex instanceof ProtocolError) ? ex.code : 500;
       const response = { id, error: { code, error: ex.message } };
-      this._protocol.feed.extension(this._extension, this._codec.encode(response));
+      this._protocol.feed.extension(this._name, this._options.codec.encode(response));
     }
   }
 
   /**
-   * Sets the message handler.
-   * @param {Function<{protocol, context, message}>} messageHandler - Async message handler.
-   * @returns {Extension}
+   * Feed event.
+   *
+   * @param {Object} context
+   * @param {Buffer} discoveryKey
    */
-  setMessageHandler(messageHandler) {
-    this._messageHandler = messageHandler;
-
-    return this;
+  onFeed(context, discoveryKey) {
+    if (this._feedHandler) {
+      this._feedHandler(this._protocol, context, discoveryKey);
+    }
   }
 
   /**
-   * Sends message to peer.
+   * Sends a message to peer.
    * @param {Object} message
+   * @param {Object} options
+   * @param {Boolean} options.oneway
    * @returns {Promise<Object>} Response from peer.
    */
-  async send(message) {
+  async send(message, options = {}) {
+    const { oneway = false } = options;
+
     const request = {
       id: uuid(),
-      message
+      message,
+      options: {
+        oneway
+      }
     };
+
+    // Send the message.
+    // TODO(burdon): Is it possible to have a stream event, where retrying would be appropriate?
+    this._send(request);
+
+    if (oneway) {
+      return;
+    }
 
     // Set the callback to be called when the response is received.
     this._pendingMessages.set(request.id, async (context, response, error) => {
@@ -171,14 +247,6 @@ export class Extension extends EventEmitter {
       promise.resolve({ context, response });
     });
 
-    // Send the message.
-    // TODO(burdon): Is it possible to have a stream event, where retrying would be appropriate?
-    log(`sending ${keyName(this._protocol.stream.id, 'node')}: ${keyName(request.id, 'msg')}`);
-    this._protocol.feed.extension(this._extension, this._codec.encode(request));
-
-    this._stats.send++;
-    this.emit('send', this._stats);
-
     // Trigger the callback.
     const promise = {};
     return new Promise((resolve, reject) => {
@@ -196,5 +264,19 @@ export class Extension extends EventEmitter {
         }, this._options.timeout);
       }
     });
+  }
+
+  /**
+   * Sends a extension message.
+   *
+   * @param {Buffer} message
+   * @returns {Boolean}
+   */
+  _send(request) {
+    log(`sending a message ${keyName(this._protocol.stream.id, 'node')}: ${keyName(request.id, 'msg')}`);
+    this._protocol.feed.extension(this._name, this._options.codec.encode(request));
+
+    this._stats.send++;
+    this.emit('send', this._stats);
   }
 }

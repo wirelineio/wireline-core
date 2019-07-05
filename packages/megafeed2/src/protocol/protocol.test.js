@@ -21,6 +21,11 @@ test('protocol', async done => {
   const extension = 'keys';
   const timeout = 1000;
 
+  const waitOneWayMessage = {};
+  waitOneWayMessage.promise = new Promise(resolve => {
+    waitOneWayMessage.resolve = resolve;
+  });
+
   const { publicKey } = crypto.keyPair();
 
   const protocol1 = await new Protocol()
@@ -37,7 +42,7 @@ test('protocol', async done => {
           throw new Error('Not authorized');
         }
 
-        const feedMap = {
+        const feedStore = {
           'foo': ['f1', 'f2', 'f3'],
           'bar': ['f3', 'f4']
         };
@@ -45,14 +50,14 @@ test('protocol', async done => {
         switch (type) {
           case 'list': {
             return {
-              topics: Object.keys(feedMap)
+              topics: Object.keys(feedStore)
             };
           }
 
           // Async response.
           case 'request': {
             const results = topics.map(topic => {
-              const keys = feedMap[topic] || [];
+              const keys = feedStore[topic] || [];
               return { topic, keys };
             });
 
@@ -61,6 +66,11 @@ test('protocol', async done => {
                 resolve({ topics: results });
               }, 0);
             });
+          }
+
+          case 'oneway': {
+            waitOneWayMessage.resolve({ topics });
+            break;
           }
 
           // Timeout.
@@ -103,6 +113,14 @@ test('protocol', async done => {
       const { context, response: { topics } } = await keys.send({ type: 'request', topics: ['zoo'] });
       expect(context.user).toBe('user2');
       expect(topics.find(r => r.topic === 'zoo').keys).toHaveLength(0);
+      log('%o', topics);
+    }
+
+    {
+      const result = await keys.send({ type: 'oneway', topics: ['zoo'] }, { oneway: true });
+      expect(result).toBeUndefined();
+      const { topics } = await waitOneWayMessage.promise;
+      expect(topics[0]).toBe('zoo');
       log('%o', topics);
     }
 

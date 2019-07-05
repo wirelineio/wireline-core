@@ -23,12 +23,13 @@ class PartyManager extends EventEmitter {
     return `party-feed/${partyKeyHex}/${feedKeyHex}`;
   }
 
-  constructor(mega, kappa) {
+  constructor(mega, partyMap, kappa) {
     super();
     console.assert(mega);
     console.assert(kappa);
 
     this._mega = mega;
+    this._partyMap = partyMap;
     this._kappa = kappa;
 
     this._currentPartyKey = null;
@@ -46,7 +47,7 @@ class PartyManager extends EventEmitter {
   }
 
   getPartyKeyFromFeedKey(key) {
-    const feed = this._mega.feedByDK(getDiscoveryKey(key));
+    const feed = this._partyMap.findFeed(getDiscoveryKey(key));
     if (feed) {
       const args = feed.name.split('/');
       return args[1];
@@ -68,14 +69,14 @@ class PartyManager extends EventEmitter {
     // Bind the control profile with the party that we are going to connect to.
     await this._kappa.api['participants'].bindControlProfile({ partyKey });
 
-    return this._mega.addParty({
+    return this._partyMap.addParty({
       rules: 'dsuite:documents',
       key: keyToBuffer(key)
     });
   }
 
   async connectToBot({ key }) {
-    return this._mega.addParty({
+    return this._partyMap.addParty({
       rules: 'dsuite:bot',
       key: keyToBuffer(key)
     });
@@ -96,7 +97,7 @@ class PartyManager extends EventEmitter {
    * @param opts.key {Buffer} Party Key.
    */
   async setParty({ key }) {
-    const party = this._mega.party(key);
+    const party = this._partyMap.party(key);
     if (!party) {
       await this.connectToParty({ key });
       await this._mega.loadFeeds(`party-feed/${key.toString('hex')}/*`);
@@ -109,6 +110,25 @@ class PartyManager extends EventEmitter {
       this.emit('party-changed', { partyKey: key, feed });
     }
   }
+
+  setRules(...args) {
+    this._partyMap.setRules(...args);
+  }
+
+  async addParty(party) {
+    const newParty = party;
+
+    if (!newParty.rules) {
+      newParty.rules = 'megafeed:default';
+    }
+
+    return this._partyMap.addParty(newParty);
+  }
+
+  async loadParties(pattern) {
+    return this._partyMap.loadParties(pattern);
+  }
+
 }
 
 module.exports = PartyManager;

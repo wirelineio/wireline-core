@@ -2,12 +2,12 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import pify from 'pify';
+const pify = require('pify');
 
 /**
  * Stores protocol buffer messages.
  */
-export class MessageStore {
+class MessageStore {
 
   /**
    * @constructor
@@ -19,7 +19,6 @@ export class MessageStore {
     console.assert(codec);
 
     this._db = {
-      key: () => db.key,
       ready: pify(db.ready.bind(db)),
       put: pify(db.put.bind(db)),
       get: pify(db.get.bind(db)),
@@ -28,10 +27,6 @@ export class MessageStore {
     };
 
     this._codec = codec;
-  }
-
-  get key() {
-    return this._db.key();
   }
 
   async ready() {
@@ -63,3 +58,5 @@ export class MessageStore {
     return this._db.delete(key);
   }
 }
+
+module.exports = MessageStore;

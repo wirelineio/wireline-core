@@ -8,11 +8,13 @@ const assert = require('assert');
 const mm = require('micromatch');
 const protocol = require('hypercore-protocol');
 
-const { keyToHex, Repository } = require('@wirelineio/utils');
+const { keyToHex, MessageStore } = require('@wirelineio/utils');
 
 const Rule = require('./rule');
 const Party = require('./party');
 const codec = require('./codec');
+
+const STORE_NAMESPACE = 'parties';
 
 class PartyMap extends EventEmitter {
 
@@ -28,12 +30,11 @@ class PartyMap extends EventEmitter {
 
     this.id = db.id;
 
-    this._repository = new Repository(
+    this._messageStore = new MessageStore(
       db,
-      'parties',
       {
         encode: message => codec.encode({ type: 'Party', message: message.serialize() }),
-        decode: codec.decode
+        decode: codec.decode.bind(codec)
       }
     );
 
@@ -54,6 +55,9 @@ class PartyMap extends EventEmitter {
     return Array.from(this._parties.values());
   }
 
+  findFeed(...args) {
+    return this._findFeed(...args);
+  }
 
   setRules(options = {}) {
     const { name, ready = this._ready, findFeed = this._findFeed, ...opts } = options;
@@ -89,7 +93,7 @@ class PartyMap extends EventEmitter {
     });
 
     try {
-      await this._repository.put(party.name, party);
+      await this._messageStore.put(`${STORE_NAMESPACE}/${party.name}`, party);
 
       const discoveryKey = keyToHex(party.discoveryKey);
 
@@ -130,7 +134,7 @@ class PartyMap extends EventEmitter {
 
     const partiesLoaded = this.list().map(party => keyToHex(party.key));
 
-    const partiesPersisted = (await this._repository.list())
+    const partiesPersisted = (await this._messageStore.list(STORE_NAMESPACE))
       .filter(party => !partiesLoaded.includes(keyToHex(party.key)));
 
     const partiesToLoad = partiesPersisted.filter((party) => {

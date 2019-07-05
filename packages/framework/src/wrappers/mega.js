@@ -19,36 +19,42 @@ class MegaWrapper {
     // TODO(burdon): Evolve API for gravity?
 
     const methods = [
-      'on',             // DSuite
+      'on',             // Framework
 
       // Kappa/Multifeed (see createMultifeedWrapper below).
       // 'ready',          // Kappa Indexer
       // 'feeds',          // Multifeed Index? levelup => _logs.feeds
 
       // FeedMap
-      'feed',           // DSuite.initialize => swarm.js
-      'addFeed',        // DSuite.initialize
-      'loadFeeds',      // DSuite.initialize
+      'feed',           // Framework.initialize => swarm.js, PartyManager.getLocalPartyFeed
+      'addFeed',        // Framework.initialize, PartyManager.createLocalPartyFeed
+      'loadFeeds',      // Framework.initialize, PartyManager.setParty
       'feedByDK',       // PartyManager.getPartyKeyFromFeedKey
       'replicate',      // DiscoverySwarmWebrtc.stream
 
       // Party
-      'setRules',       // DSuite.initialize
-      'addParty',       // PartyManager.connectToParty
-      'party',          // PartyManager.setParty
-      'loadParties',    // botkit-core Factory.createBot
+      // 'setRules',       // Framework.initialize
+      // 'addParty',       // PartyManager.connectToParty
+      // 'party',          // PartyManager.setParty
+      // 'loadParties',    // botkit-core Factory.createBot
     ];
 
     methods.forEach((method) => { this[method] = this._mega[method].bind(this._mega); });
   }
 
-  // DSuite.initialize => swarm.js
+  // Framework.initialize => swarm.js
   get id() {
     return this._mega.id;
   }
 
   get key() {
     return this._mega.key;
+  }
+
+  // Get access to partyMap impl for PartyManager.
+  // TODO(elmasse): Remove when megafeed2 is ready.
+  get partyMap() {
+    return this._mega._parties;
   }
 }
 

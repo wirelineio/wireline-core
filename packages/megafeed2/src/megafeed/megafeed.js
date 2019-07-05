@@ -4,13 +4,10 @@
 
 import { EventEmitter } from 'events';
 import hypertrie from 'hypertrie';
-import ram from 'random-access-memory';
 
-import { Codec } from '../protocol';
+import { FeedStore } from '@wirelineio/feed-store';
 
-import { FeedMap } from './feedmap';
 import { Replicator } from './replicator';
-import { MessageStore } from './store';
 
 /**
  * A lightweight feed replication engine.
@@ -18,24 +15,32 @@ import { MessageStore } from './store';
 export class Megafeed extends EventEmitter {
 
   /**
-   * Async default constructor.
-   * @param {Object} options
+   * Megafeed factory.
+   * @param {RandomAccessStorage} storage
+   * @param {Object} [options]
    * @returns {Promise<Megafeed>}
    */
-  static async create(options) {
-    const db = await new MessageStore(hypertrie(ram), new Codec()).ready();
-    const feedMap = new FeedMap(db, ram);
+  static async create(storage, options = {}) {
+    console.assert(storage);
 
-    return new Megafeed(feedMap, options);
+    const db = hypertrie(storage);
+    const feedStore = await FeedStore.create(db, storage, {
+      feedOptions: {
+        valueEncoding: options.valueEncoding
+      }
+    });
+
+    return new Megafeed(feedStore, options);
   }
 
   /**
-   * @param {FeedMap} feedMap
+   * @constructor
+   * @param {FeedStore} feedStore
    * @param {Object} options
    */
-  constructor(feedMap, options = {}) {
+  constructor(feedStore, options = {}) {
     super();
-    console.assert(feedMap);
+    console.assert(feedStore);
 
     this._options = Object.assign({
       // TODO(burdon): Evolve replication rules.
@@ -43,10 +48,10 @@ export class Megafeed extends EventEmitter {
     }, options);
 
     // Feed storage.
-    this._feedMap = feedMap;
+    this._feedStore = feedStore;
 
     // Manages feed replication.
-    this._replicator = new Replicator(this._feedMap)
+    this._replicator = new Replicator(this._feedStore)
       .on('error', err => this.emit(err))
       .on('update', topic => this.emit('update', topic));
   }
