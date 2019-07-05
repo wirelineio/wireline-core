@@ -70,16 +70,4 @@ export class Megafeed extends EventEmitter {
       this._replicator.createExtension()
     ];
   }
-
-  /**
-   * Called on the initial protocol handshake.
-   */
-  async onHandshake(protocol) {
-    if (this._options.replicate) {
-      const topics = await this._replicator.getTopics(protocol);
-
-      // TODO(burdon): Potentially filter topics?
-      await this._replicator.replicateTopics(protocol, topics);
-    }
-  }
 }

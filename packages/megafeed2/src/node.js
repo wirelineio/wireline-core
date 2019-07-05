@@ -182,9 +182,6 @@ export class Node extends EventEmitter {
     // Handle the handshake.
     protocol.once('handshake', async () => {
       this._peerMap.set(keyStr(peerKey), protocol);
-
-      await this._megafeed.onHandshake(protocol);
-
       this.emit('handshake', peerKey);
     });
   }
