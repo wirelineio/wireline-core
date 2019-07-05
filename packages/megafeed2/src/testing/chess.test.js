@@ -12,6 +12,7 @@ import { Chess } from 'chess.js';
 import network from '@wirelineio/hyperswarm-network-memory';
 
 import { ViewFactory } from '../megafeed/view_factory';
+import { random } from '../util/debug';
 import { createFeedStore, createKeys, Megafeed } from '../megafeed';
 import { keyStr } from '../util';
 import { Node } from '../node';
@@ -19,14 +20,15 @@ import { Node } from '../node';
 import { LogView } from './log_view';
 import { ChessApp } from './chess';
 
-const log = debug('test');
+debug.enable('test,chess');
 
-debug.enable('test');
+const numPeers = 10;
+const numGames = 25;
 
-const [ gameTopic ] = createKeys(2);
-const [ whitePlayerKey, blackPlayerKey ] = createKeys(2);
+const [ gameTopic ] = createKeys(1);
+const peerKeys = createKeys(numPeers);
 
-const TEST_TIMEOUT = 15 * 1000;
+const TEST_TIMEOUT = 25 * 1000;
 
 jest.setTimeout(TEST_TIMEOUT);
 
@@ -45,86 +47,107 @@ const loadSampleGameMoves = () => {
   });
 };
 
+// Load sample game with lots of moves.
+// "The Immortal Game" (http://www.chessgames.com/perl/chessgame?gid=1018910).
+const gameMoves = loadSampleGameMoves();
+
+const createChessApps = (itemId, peer1, peer2) => {
+  const { feed: feed1, view: view1 } = peer1;
+  const { feed: feed2, view: view2 } = peer2;
+
+  const app1 = new ChessApp(feed1, view1, itemId);
+  const app2 = new ChessApp(feed2, view2, itemId);
+
+  return {
+    app1,
+    app2
+  };
+};
+
+const playGameMoves = (app1, app2) => {
+  // Players take turns playing their moves.
+  let moveNum = 0;
+  const timer = setInterval(async () => {
+    if (moveNum >= gameMoves.length) {
+      return clearInterval(timer);
+    }
+
+    const app = (moveNum % 2 === 0 ? app1 : app2);
+    await app.addMove(gameMoves[moveNum++]);
+  }, random.integer({
+    min: 10,
+    max: 250
+  }));
+};
+
+const createPeer = async (params) => {
+  const feedStore = await createFeedStore({
+    topicKeys: [gameTopic],
+    numFeedsPerTopic: 1
+  });
+
+  const megafeed = new Megafeed(feedStore);
+  new Node(network(), megafeed).joinSwarm(gameTopic);
+
+  const viewFactory = new ViewFactory(ram, feedStore);
+  const kappa = await viewFactory.getOrCreateView('gamesView', params.topic);
+  kappa.use('log', LogView(params.type));
+
+  // Peer info we'll need later for chess games.
+  const [feed] = await feedStore.getFeeds();
+  const view = kappa.api['log'];
+
+  return {
+    feed,
+    view
+  };
+};
+
 test('chess', async (done) => {
+
   // Passed from router (or stored in the feed and referenced by a view ID).
   const params = {
     topic: keyStr(gameTopic),
     type: ChessApp.TYPE,
-    itemId: 'game1'
   };
 
-  const feedStore1 = await createFeedStore({ topicKeys: [ gameTopic ], numFeedsPerTopic: 1 });
-  const megafeed1 = new Megafeed(feedStore1);
+  const peers = [];
+  const apps = [];
 
-  const feedStore2 = await createFeedStore({ topicKeys: [ gameTopic ], numFeedsPerTopic: 1 });
-  const megafeed2 = new Megafeed(feedStore2);
-
-  const node1 = new Node(network(), megafeed1).joinSwarm(gameTopic);
-  const node2 = new Node(network(), megafeed2).joinSwarm(gameTopic);
-
-  const [ feed1 ] = await feedStore1.getFeeds();
-  const [ feed2 ] = await feedStore2.getFeeds();
-
-  let app1;
-  let app2;
-
-  // Create app1.
-  {
-    const viewFactory1 = new ViewFactory(ram, feedStore1);
-    const kappa1 = await viewFactory1.getOrCreateView('view1', params.topic);
-    kappa1.use('log', LogView(params.type));
-
-    const view1 = kappa1.api['log'];
-    app1 = new ChessApp(feed1, view1, params.itemId);
+  // Create peers.
+  for (let i = 0; i < numPeers; i++) {
+    const { feed, view } = await createPeer(params);
+    peers.push({ feed, view, peerKey: peerKeys[i] });
   }
 
-  // Create app2.
-  {
-    const viewFactory2 = new ViewFactory(ram, feedStore2);
-    const kappa2 = await viewFactory2.getOrCreateView('view1', params.topic);
-    kappa2.use('log', LogView(params.type));
+  // Create game between randomly chosen peers.
+  for (let i = 0; i < numGames; i++) {
+    const peer1 = random.pickone(peers);
+    const peer2 = random.pickone(peers);
 
-    const view2 = kappa2.api['log'];
-    app2 = new ChessApp(feed2, view2, params.itemId);
-  }
+    // Create item and chess apps.
+    const itemId = random.word({ length: 16 });
+    const { app1, app2 } = createChessApps(itemId, peer1, peer2);
 
-  {
-    // Create game.
+    // Peer1 is White, Peer2 is Black.
     await app1.createGame({
-      whitePlayerKey: keyStr(whitePlayerKey),
-      blackPlayerKey: keyStr(blackPlayerKey)
+      whitePlayerKey: keyStr(peer1.peerKey),
+      blackPlayerKey: keyStr(peer2.peerKey)
     });
-  }
 
-  // Load sample game with lots of moves.
-  const gameMoves = loadSampleGameMoves();
+    apps.push(app1);
+    apps.push(app2);
 
-  // Players take turns playing their moves.
-  {
-    let moveNum = 0;
-    const timer = setInterval(async () => {
-      if (moveNum >= gameMoves.length) {
-        return clearInterval(timer);
-      }
-
-      const app = (moveNum % 2 === 0 ? app1 : app2);
-      await app.addMove(gameMoves[moveNum++]);
-      log('Played move', moveNum, 'of', gameMoves.length);
-    },100);
+    // Start playing moves on a timer.
+    playGameMoves(app1, app2);
   }
 
   // TODO(burdon): Wait for event?
   waitForExpect(async() => {
-
-    expect(app1.meta).toEqual(app2.meta);
-
-    expect(app1.moves).toEqual(gameMoves);
-    expect(app2.moves).toEqual(gameMoves);
-
-    expect(app1.position).toBe(app2.position);
-
-    node1.leaveSwarm();
-    node2.leaveSwarm();
+    apps.forEach(app => {
+      // All app instances should finally sync.
+      expect(app.moves).toEqual(gameMoves);
+    });
 
     done();
   }, TEST_TIMEOUT);

@@ -2,10 +2,13 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+import debug from 'debug';
 import pify from 'pify';
 import { Chess } from 'chess.js';
 
 import { keyName } from '../util/keys';
+
+const log = debug('chess');
 
 export class ChessStateMachine {
 
@@ -131,6 +134,8 @@ export class ChessApp {
       whitePlayerKey,
       blackPlayerKey
     });
+
+    log(`New game ${keyName(this._itemId)}: ${keyName(this._feed.key)} created the game.`);
   }
 
   async addMove({ seq, from, to }) {
@@ -142,6 +147,8 @@ export class ChessApp {
       from,
       to
     });
+
+    log(`Game ${keyName(this._itemId)}: ${keyName(this._feed.key)} played move #${seq + 1}.`);
   }
 
   _handleViewUpdate(itemId) {
