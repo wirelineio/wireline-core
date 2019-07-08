@@ -6,19 +6,27 @@ import { EventEmitter } from 'events';
 
 /**
  * Log view.
+ * @param {string} type
+ * @param {Codec} [codec]
  * @returns {{api: {logs: (function(): Array)}, map: map}}
  * @constructor
  */
-export const LogView = (type) => {
+export const LogView = (type, codec) => {
   const events = new EventEmitter();
 
   let logsByType = [];
 
+  const getMessage = (item) => {
+    return codec ? item.message : item;
+  };
+
   return {
     map: (entries, next) => {
       entries.forEach(entry => {
-        if (entry.value.type === type) {
-          logsByType.push(entry.value);
+        const value = codec ? codec.decodeWithType(entry.value): entry.value;
+        const msgType = codec ? value.type.split('.')[0] : value.type;
+        if (msgType === type) {
+          logsByType.push(value);
         }
       });
       next();
@@ -26,7 +34,8 @@ export const LogView = (type) => {
 
     indexed(entries) {
       entries.forEach(entry => {
-        events.emit('update', entry.value.itemId);
+        const value = codec ? codec.decodeWithType(entry.value): entry.value;
+        events.emit('update', getMessage(value).itemId);
       });
     },
 
@@ -37,7 +46,7 @@ export const LogView = (type) => {
 
       logsByItemId: (core, itemId) => {
         // TODO(ashwin): View should create index.
-        return logsByType.filter(item => item.itemId === itemId);
+        return logsByType.filter(value => getMessage(value).itemId === itemId);
       },
 
       events

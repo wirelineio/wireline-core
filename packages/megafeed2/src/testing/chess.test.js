@@ -8,7 +8,9 @@ import path from 'path';
 import ram from 'random-access-memory';
 import waitForExpect from 'wait-for-expect';
 import { Chess } from 'chess.js';
+import protobufjs from 'protobufjs';
 
+import Codec from '@wirelineio/codec-protobuf';
 import network from '@wirelineio/hyperswarm-network-memory';
 
 import { ViewFactory } from '../megafeed/view_factory';
@@ -34,6 +36,8 @@ const [ gameTopic ] = createKeys(1);
 
 // Used to set identity of white/black side in each game.
 const peerKeys = createKeys(numPeers);
+
+const codec = new Codec({ verify: true });
 
 /**
  * Load moves for a sample game.
@@ -64,14 +68,15 @@ const gameMoves = loadSampleGameMoves();
  * @param {String} itemId
  * @param {Object} peer1
  * @param {Object} peer2
+ * @param {Codec} codec
  * @returns {{app2: ChessApp, app1: ChessApp}}
  */
-const createChessApps = (itemId, peer1, peer2) => {
+const createChessApps = (itemId, peer1, peer2, codec) => {
   const { feed: feed1, view: view1 } = peer1;
   const { feed: feed2, view: view2 } = peer2;
 
-  const app1 = new ChessApp(feed1, view1, itemId);
-  const app2 = new ChessApp(feed2, view2, itemId);
+  const app1 = new ChessApp(feed1, view1, itemId, codec);
+  const app2 = new ChessApp(feed2, view2, itemId, codec);
 
   return {
     app1,
@@ -108,7 +113,8 @@ const playGameMoves = (app1, app2) => {
 const createPeer = async (params) => {
   const feedStore = await createFeedStore({
     topicKeys: [gameTopic],
-    numFeedsPerTopic: 1
+    numFeedsPerTopic: 1,
+    valueEncoding: 'binary'
   });
 
   const megafeed = new Megafeed(feedStore);
@@ -116,7 +122,7 @@ const createPeer = async (params) => {
 
   const viewFactory = new ViewFactory(ram, feedStore);
   const kappa = await viewFactory.getOrCreateView('gamesView', params.topic);
-  kappa.use('log', LogView(params.type));
+  kappa.use('log', LogView(params.type, codec));
 
   // Peer info we'll need later for chess games.
   const [ feed ] = await feedStore.getFeeds();
@@ -129,6 +135,9 @@ const createPeer = async (params) => {
 };
 
 test('simultaneous chess games between peers', async (done) => {
+
+  codec.load(await protobufjs.load(path.join(__dirname, 'item.proto')));
+  codec.load(await protobufjs.load(path.join(__dirname, 'chess.proto')));
 
   // Passed from router (or stored in the feed and referenced by a view ID).
   const params = {
@@ -152,7 +161,7 @@ test('simultaneous chess games between peers', async (done) => {
 
     // Create item and chess apps.
     const itemId = random.word({ length: 16 });
-    const { app1, app2 } = createChessApps(itemId, peer1, peer2);
+    const { app1, app2 } = createChessApps(itemId, peer1, peer2, codec);
 
     // Peer1 is White, Peer2 is Black.
     await app1.createGame({
