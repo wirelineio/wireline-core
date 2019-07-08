@@ -9,8 +9,7 @@ import network from '@wirelineio/hyperswarm-network-memory';
 import { keyStr, latch } from '../util';
 import { Node } from '../node';
 
-import { createKeys, createFeedStore } from './debug/generator';
-import { Megafeed } from './megafeed';
+import { createKeys, createMegafeed } from './debug/generator';
 
 debug.enable('test,megafeed,replicator,feedmap,protocol,view,extension');
 
@@ -22,11 +21,11 @@ test('megafeed replicator', async (done) => {
   const numFeedsPerTopic = 2;
   const numMessagesPerFeed = 5;
 
-  const feedStore1 = await createFeedStore({ topicKeys, numFeedsPerTopic, numMessagesPerFeed });
-  const megafeed1 = new Megafeed(feedStore1);
+  const megafeed1 = await createMegafeed({ topicKeys, numFeedsPerTopic, numMessagesPerFeed });
+  const { feedStore: feedStore1 } = megafeed1;
 
-  const feedStore2 = await createFeedStore();
-  const megafeed2 = new Megafeed(feedStore2);
+  const megafeed2 = await createMegafeed();
+  const { feedStore: feedStore2 } = megafeed2;
 
   const node1 = new Node(network(), megafeed1).joinSwarm(rendezvousKey);
   const node2 = new Node(network(), megafeed2).joinSwarm(rendezvousKey);
