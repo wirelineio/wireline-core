@@ -16,8 +16,8 @@ export class Replicator extends EventEmitter {
 
   /**
    * @param {FeedStore} feedStore
-   * @param {Object} options
-   * @param {Number} options.timeout
+   * @param {Object} [options]
+   * @param {Number} [options.timeout]
    */
   constructor(feedStore, options = {}) {
     super();
@@ -155,12 +155,26 @@ export class Replicator extends EventEmitter {
     }
   }
 
+  /**
+   * Replicate a feed.
+   * @param {Protocol} protocol
+   * @param {string} topic
+   * @param {Hypercore} feed
+   * @returns {boolean} - true if `feed.replicate` was called.
+   * @private
+   */
   _replicate(protocol, { topic, feed }) {
     const { stream } = protocol;
 
-    if (stream.destroyed) return false;
+    if (stream.destroyed) {
+      console.warn('Stream already destroyed, cannot replicate.');
+      return false;
+    }
 
-    if (stream.has(feed.key)) return false;
+    // Check if the stream already has open a channel open for the given key.
+    if (stream.has(feed.key)) {
+      return false;
+    }
 
     const replicateOptions = Object.assign({}, protocol.streamOptions, { stream });
 

@@ -17,24 +17,22 @@ export class Megafeed extends EventEmitter {
 
   /**
    * @param {RandomAccessStorage} storage
-   * @param {Object} options
+   * @param {Object} [options]
    */
   static async create(storage, options = {}) {
-    const mega = new Megafeed(storage, options);
-    await mega.initialize();
-    return mega;
+    return await new Megafeed(storage, options).initialize();
   }
 
   /**
    * @constructor
    * @param {RandomAccessStorage} storage
-   * @param {Object} options
+   * @param {Object} [options]
    */
   constructor(storage, options = {}) {
     super();
     console.assert(storage);
 
-    // We save all our personal information like the feed list in a private feed
+    // We save all our personal information like the feed list in a private feed.
     this._db = hypertrie(storage, options.key, { secretKey: options.secretKey });
 
     // Feeds manager instance
@@ -62,6 +60,7 @@ export class Megafeed extends EventEmitter {
     return this._db.secretKey;
   }
 
+  // TODO(ashwin): Don't expose entire feedStore object.
   get feedStore() {
     return this._feedStore;
   }
@@ -82,11 +81,11 @@ export class Megafeed extends EventEmitter {
   }
 
   async initialize() {
-    return this._feedStore.initialize();
+    this._feedStore.initialize();
+    return this;
   }
 
   async destroy() {
-    const dbFeed = this._db.feed;
     const warnings = [];
 
     try {
@@ -95,24 +94,24 @@ export class Megafeed extends EventEmitter {
       warnings.push(err);
     }
 
-    const promisifyDestroy = s => pify(s.destroy.bind(s))()
-      .catch(destroyErr => warnings.push(destroyErr));
+    const promisifyDestroy = storage => pify(storage.destroy.bind(storage))()
+      .catch(err => warnings.push(err));
 
     const destroyStorage = (feed) => {
-      const s = feed._storage;
+      const storage = feed._storage;
       return Promise.all([
-        promisifyDestroy(s.bitfield),
-        promisifyDestroy(s.tree),
-        promisifyDestroy(s.data),
-        promisifyDestroy(s.key),
-        promisifyDestroy(s.secretKey),
-        promisifyDestroy(s.signatures),
+        promisifyDestroy(storage.bitfield),
+        promisifyDestroy(storage.tree),
+        promisifyDestroy(storage.data),
+        promisifyDestroy(storage.key),
+        promisifyDestroy(storage.secretKey),
+        promisifyDestroy(storage.signatures),
       ]);
     };
 
     await Promise.all([
-      destroyStorage(dbFeed),
-      ...this.feeds(true).filter(f => f.closed).map(f => destroyStorage(f)),
+      destroyStorage(this._db.feed),
+      ...this.feeds(true).filter(feed => feed.closed).map(feed => destroyStorage(feed)),
     ]);
   }
 }

@@ -12,8 +12,14 @@ import { FeedStore } from '@wirelineio/feed-store';
 import { Megafeed } from '../megafeed';
 import { keyStr, times } from '../../util';
 
-function generateFeedData(feedStore, options = {}) {
-  const { topicKeys=[], numFeedsPerTopic = 0, numMessagesPerFeed = 0, valueEncoding = 'json' } = options;
+/**
+ * Generates feed data.
+ * @param feedStore
+ * @param options
+ * @returns {Promise<any>}
+ */
+const generateFeedData = async (feedStore, options = {}) => {
+  const { topicKeys = [], numFeedsPerTopic = 0, numMessagesPerFeed = 0, valueEncoding = 'json' } = options;
 
   return Promise.all(topicKeys.map(async (topic) => {
     const feedKeyPairs = createKeyPairs(numFeedsPerTopic);
@@ -25,7 +31,7 @@ function generateFeedData(feedStore, options = {}) {
       }
     }));
   }));
-}
+};
 
 export const createKeyPairs = (num = 1) => times(num, crypto.keyPair);
 
