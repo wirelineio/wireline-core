@@ -118,26 +118,29 @@ export class ChessStateMachine {
  */
 export class ChessApp {
 
-  static TYPE = 'wrn:type:wireline.io/chess';
+  static TYPE = 'chess';
 
   // Messages are always in the context of the TYPE.
-  static MOVE_MSG = 'move';
-  static GAME_MSG = 'game';
+  static MOVE_MSG = 'chess.Move';
+  static GAME_MSG = 'chess.Game';
 
   /**
    * @constructor
    * @param {Hypercore} feed
    * @param {Object} view
    * @param {String} itemId
+   * @param {Codec} codec
    */
-  constructor(feed, view, itemId) {
+  constructor(feed, view, itemId, codec) {
     console.assert(feed);
     console.assert(view);
     console.assert(itemId);
+    console.assert(codec);
 
     this._feed = feed;
     this._view = view;
     this._itemId = itemId;
+    this._codec = codec;
     this._state = new ChessStateMachine(this._itemId);
     this._view.events.on('update', this._handleViewUpdate.bind(this));
   }
@@ -161,14 +164,16 @@ export class ChessApp {
    * @returns {Promise<void>}
    */
   async createGame({ whitePlayerKey, blackPlayerKey }) {
-    // TODO(ashwin): Use protocol buffer messages.
-    await pify(this._feed.append.bind(this._feed))({
-      type: ChessApp.TYPE,
-      msgType: ChessApp.GAME_MSG,
-      itemId: this._itemId,
-      whitePlayerKey,
-      blackPlayerKey
-    });
+    const gameMessage = {
+      type: ChessApp.GAME_MSG,
+      message: {
+        itemId: this._itemId,
+        whitePlayerKey,
+        blackPlayerKey
+      }
+    };
+
+    await pify(this._feed.append.bind(this._feed))(this._codec.encode(gameMessage));
 
     log(`New game ${keyName(this._itemId)}: ${keyName(this._feed.key)} created the game.`);
   }
@@ -181,15 +186,17 @@ export class ChessApp {
    * @returns {Promise<void>}
    */
   async addMove({ seq, from, to }) {
-    // TODO(ashwin): Use protocol buffer messages.
-    await pify(this._feed.append.bind(this._feed))({
-      type: ChessApp.TYPE,
-      itemId: this._itemId,
-      seq,
-      msgType: ChessApp.MOVE_MSG,
-      from,
-      to
-    });
+    const moveMessage = {
+      type: ChessApp.MOVE_MSG,
+      message: {
+        itemId: this._itemId,
+        seq,
+        from,
+        to
+      }
+    };
+
+    await pify(this._feed.append.bind(this._feed))(this._codec.encode(moveMessage));
 
     log(`Game ${keyName(this._itemId)}: ${keyName(this._feed.key)} played move #${seq + 1}.`);
   }
@@ -221,13 +228,13 @@ export class ChessApp {
    */
   _initGame(itemLogs) {
     // See if we have a game message.
-    const gameMessages = itemLogs.filter(obj => obj.msgType === ChessApp.GAME_MSG);
+    const gameMessages = itemLogs.filter(obj => obj.type === ChessApp.GAME_MSG);
     console.assert(gameMessages.length <= 1);
     if (!gameMessages.length) {
       return;
     }
 
-    const [{ whitePlayerKey, blackPlayerKey }] = gameMessages;
+    const [{ message: { whitePlayerKey, blackPlayerKey } }] = gameMessages;
     this._state.initGame({ white: whitePlayerKey, black: blackPlayerKey });
   }
 
@@ -238,17 +245,17 @@ export class ChessApp {
    */
   _applyMoves(itemLogs) {
     const moves = itemLogs
-      .filter(obj => obj.msgType === ChessApp.MOVE_MSG)
-      .sort((a, b) => a.seq - b.seq);
+      .filter(obj => obj.type === ChessApp.MOVE_MSG)
+      .sort((a, b) => a.message.seq - b.message.seq);
 
     let expectedSeq = this._state.turn.seq;
 
     // Update state machine as long as the next seq (move number) expected by the state machine is:
     // (1) found in the log and (2) found in the correct order.
     // This ensures we don't apply moves in invalid order.
-    while (expectedSeq < moves.length && moves[expectedSeq].seq === expectedSeq) {
+    while (expectedSeq < moves.length && moves[expectedSeq].message.seq === expectedSeq) {
       // TODO(ashwin): Check if player is allowed to move.
-      this._state.applyMove(moves[expectedSeq]);
+      this._state.applyMove(moves[expectedSeq].message);
       expectedSeq = this._state.turn.seq;
     }
   }
