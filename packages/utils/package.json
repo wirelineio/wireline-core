@@ -19,7 +19,6 @@
   "dependencies": {
     "debug": "^4.1.1",
     "hypercore-crypto": "^1.0.0",
-    "lodash": "^4.17.11",
     "loggly": "segmentio/loggly",
     "loggly-jslogger": "^2.2.2",
     "micromatch": "^3.1.10",

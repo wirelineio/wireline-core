@@ -8,8 +8,7 @@ const Locker = require('./src/locker');
 const { callbackPromise } = require('./src/promise-help');
 const Repository = require('./src/repository');
 const bubblingEvents = require('./src/bubbling-events');
-const { Logalytics } = require('./src/logalytics');
-const { logUnhandled } = require('./src/unhandled');
+const { Metrics } = require('./src/metrics');
 
 module.exports = {
 
@@ -29,6 +28,5 @@ module.exports = {
 
   bubblingEvents,
 
-  Logalytics,
-  logUnhandled
+  Metrics
 };
