@@ -81,7 +81,7 @@ export class Megafeed extends EventEmitter {
   }
 
   async initialize() {
-    this._feedStore.initialize();
+    await this._feedStore.initialize();
     return this;
   }
 

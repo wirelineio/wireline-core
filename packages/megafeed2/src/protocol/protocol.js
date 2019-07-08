@@ -6,7 +6,7 @@ import debug from 'debug';
 import { EventEmitter } from 'events';
 import protocol from 'hypercore-protocol';
 
-import { keyName, discoveryKey } from '../util/keys';
+import { discoveryKey, keyName } from '../util/keys';
 
 import { Codec } from './codec';
 
@@ -60,6 +60,8 @@ export class Protocol extends EventEmitter {
   _feed = undefined;
 
   /**
+   * @constructor
+   * TODO(ashwin): Document all params.
    * @param {Object} options
    * @param {Buffer} options.id
    * @param {Boolean} options.live
@@ -70,12 +72,14 @@ export class Protocol extends EventEmitter {
   constructor(options = {}) {
     super();
 
+    // TODO(ashwin): Check Codec() only called when the option is null.
     const { discoveryToPublicKey, codec = new Codec(), ...streamOptions } = options;
 
     this._discoveryToPublicKey = discoveryToPublicKey;
 
     this._codec = codec;
 
+    // TODO(ashwin): Document streamOptions.
     this._streamOptions = streamOptions;
 
     this._stream = protocol(this._streamOptions);
@@ -185,6 +189,7 @@ export class Protocol extends EventEmitter {
   async init(initialKey) {
     console.assert(!this._init);
 
+    // TODO(ashwin): Set at end of function (we might crash).
     this._init = true;
 
     // See https://github.com/wirelineio/wireline-core/blob/master/docs/design/appendix.md#swarming--dat-protocol-handshake for details.
@@ -201,6 +206,8 @@ export class Protocol extends EventEmitter {
 
       try {
         for (const [name, extension] of this._extensionMap) {
+          // TODO(ashwin): Why is stream.destroyed checked inside the extension loop?
+          // TODO(ashwin): Also, consider logging/warn when existing due to some unexpected condition.
           if (this._stream.destroyed) {
             return;
           }
@@ -229,9 +236,7 @@ export class Protocol extends EventEmitter {
     } else {
       // Wait for the peer to share the initial feed and see if we have the public key for that.
       this._stream.once('feed', (discoveryKey) => {
-        const discoveryToPublicKey = this._discoveryToPublicKey;
-
-        initialKey = discoveryToPublicKey && discoveryToPublicKey(discoveryKey);
+        initialKey = this._discoveryToPublicKey && this._discoveryToPublicKey(discoveryKey);
         if (!initialKey) {
           // Stream will get aborted soon as both sides haven't shared the same initial Dat feed.
           console.warn('Public key not found for discovery key: ', keyName(this.id, 'node'), keyName(discoveryKey));

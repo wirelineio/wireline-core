@@ -9,8 +9,9 @@ import pify from 'pify';
 
 import { FeedStore } from '@wirelineio/feed-store';
 
-import { Megafeed } from '../megafeed';
 import { keyStr, times } from '../../util';
+
+import { Megafeed } from '../megafeed';
 
 /**
  * Generates feed data.
@@ -38,13 +39,15 @@ export const createKeyPairs = (num = 1) => times(num, crypto.keyPair);
 export const createKeys = (num = 1) => createKeyPairs(num).map(keyPair => keyPair.publicKey);
 
 /**
- * Generate a Megafeed.
+ * Generates a Megafeed.
  * @param {object} options
  */
 export const createMegafeed = async (options = {}) => {
   const { valueEncoding = 'json' } = options;
 
   const mega = await Megafeed.create(ram, { valueEncoding });
+
+  // TODO(ashwin): Don't expose feedStore, breaks encapsulation.
   const { feedStore } = mega;
 
   await generateFeedData(feedStore, options);

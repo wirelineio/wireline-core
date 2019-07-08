@@ -178,6 +178,7 @@ export class Replicator extends EventEmitter {
 
     const replicateOptions = Object.assign({}, protocol.streamOptions, { stream });
 
+    // TODO(ashwin): Needs comment. What is expectedFeeds used for?
     if (!replicateOptions.live && replicateOptions.expectedFeeds === undefined) {
       stream.expectedFeeds = this._replicating.size;
     }
