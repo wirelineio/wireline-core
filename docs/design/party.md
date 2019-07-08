@@ -40,7 +40,8 @@ via the discovery mechanism.
 * New nodes are added to the party using an invitation mechanism.
 * Additional nodes also advertise they party discovery key via the discovery mechanism.
 * Participation by an additional node in a party is authorized by the party creator.
-* Authorization to authorize additional participants may be granted (transitive party invitation authority).
+* Authorization to authorize additional participants is always granted (transitive party invitation authority). This is required
+in order to allow new nodes to connect to any existing peer as their greeter node.
 * Party invites take the form of decentralized credentials created by the inviter, transmitted to the invitee, authorizing 
 another participant (identified by an identity key) to join the party (add their nodes to the party).
 * The party key itself is communicated out of band to the invitee (e.g., using a hyperlink or ephemeral message).
@@ -49,8 +50,10 @@ another participant (identified by an identity key) to join the party (add their
 creator and all currently known transitively authorized nodes. It then provides its current party feed set to the new node
 which then proceeds to fetch party feeds.
 * The new node verifies the information provided by the greeter node using the party key, which it knew in advance.
-* Note there is a problem in that the greeter node can decide to not provide the correct party feed set (censor one or more feeds). 
-This could probably be solved by publishing the party feed set under consensus on a blockchain every so often.
+* Note there is a problem in that the greeter node can decide to not provide the correct party feed set (censor one or more feeds), or not
+provide the latest content is knows for one or more feeds. 
+This could probably be solved by publishing the party feed set and current feed sequence numbers under consensus on a 
+blockchain every so often.
 * In the case of write access being provided to the new node, the greeter node publishes a feed admission message for the new node on its feed.
 * New participants may have read-only or read-write access to the party. 
 * Finer grained access control is not possible under the party itself, but can be implemented by convention within applications.
@@ -63,6 +66,7 @@ This could probably be solved by publishing the party feed set under consensus o
 subsequent chained messages and invitation authorizations.
 * Nodes maintain their version of the party feed list by processing party feed authorization messages received on all current party feeds.
 * Peers have full control over what feeds they fetch (i.e. the decision is made locally).
+* Feed content replication is done with regular Dat protocol. 
 
 ### Technical Requirements
 
