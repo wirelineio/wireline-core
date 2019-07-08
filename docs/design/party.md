@@ -2,40 +2,73 @@
 
 ## Specification
 
-* A party provides a 'virtual space' for collaboration between peers.
-* Each party has a unique identifier called the party key (a Public Key).
-* A party consists of a logical set of feeds from one or more peers.
-* A party can be replicated between peers to enable them to synchronize the party data/state.
-* An active party is one that a peer is currently interested in and actively replicating with other peers.
-* A peer might have multiple parties active at the same time.
-* Participation in a party is by invitation only.
+* A party comprises some data realm under a peer-to-peer replication arrangement with eventual consistency supporting 
+intermittent connectivity.
+* Peer-to-peer replication requires a logical update broadcast mechanism: updates originating at any node are replicated
+to all other participating nodes.
+* Update broadcast is implemented as a logical set of Dat feeds: one feed originating at each participating node. 
+* At each node, a party is a logical set of feeds from one or more peers (party feed set).
+* Party replication consists of each node fetching from peers all available feed content over the party feed set.
+* Nodes may be added to a party at any time (see Party Membership below) therefore the party feed set is itself 
+replicated with eventual consistency.
+* Party replication is designed to preserve causal ordering by always fetching all available party set feeds from a peer.
+* Each party is identified by a unique identifier called the party key.
+* The party key is a public key for which the corresponding private key is used to prove party authority (see below).
+* (Note that the party key must not be treated as a bearer authentication token (like regular Dat feed keys are) because
+under the party invitation mechanism below, the party key is transmitted in the clear to invitees, however we want
+to only admit to the party (including read-only access) nodes that are the subject of the inviting credential.)
+* A node may participate in multiple parties at the same time.
+* An active party is one that a node is currently interested in and actively replicating with peers.
 
 ### Peer Discovery
 
-* Peers need a way to discover other peers that belong to a party they are interested in.
-* The discovery mechanism MUST preserve privacy (observers MUST not be able to figure out the party key).
+* Nodes need a way to discover peers that belong to a party they are interested in.
+* The discovery mechanism MUST preserve confidentiality (observers MUST not be able to figure out the party key).
+* Existing Dat discovery mechanisms such as hyperdiscovery can be leveraged by using the party discovery key as a topic.
+* Note that individual feeds (members of the party feed set) are not advertised via discovery. Only the party key is advertised.
+
+### Read-only Participation
+
+* Note that read-only access to a party is feasible. Read-only access means that the participant has been granted 
+credentials that permit reading the party feed set, but they do not get to add a feed to the party feed set.
 
 ### Party Membership
 
 * A party starts with one participant (the one that created the party).
-* The party creator establishes (cryptographically verifiable) ownership over the party.
-* New participants are added to the party using an invitation mechanism.
-* Party invites take the form of decentralized credentials created by the inviter, written to a feed, authorizing another participant to join the party. The party key itself is communicated out of band to the invitee (e.g., using a hyperlink or ephemeral message).
-* New participants may have read-only or read-write access to the party. Finer grained access control should be possible (e.g., the ability to invite and revoke other members).
+* The party creator establishes (cryptographically verifiable) ownership over the party and first advertises the party discovery key
+via the discovery mechanism.
+* New nodes are added to the party using an invitation mechanism.
+* Additional nodes also advertise they party discovery key via the discovery mechanism.
+* Participation by an additional node in a party is authorized by the party creator.
+* Authorization to authorize additional participants may be granted (transitive party invitation authority).
+* Party invites take the form of decentralized credentials created by the inviter, transmitted to the invitee, authorizing 
+another participant (identified by an identity key) to join the party (add their nodes to the party).
+* The party key itself is communicated out of band to the invitee (e.g., using a hyperlink or ephemeral message).
+* New nodes use the party discovery key to connect to an initial peer (greeter node), present their invitation credential.
+* The greeter node validates the invitation credential which it can do because it has the public key of the party 
+creator and all currently known transitively authorized nodes. It then provides its current party feed set to the new node
+which then proceeds to fetch party feeds.
+* The new node verifies the information provided by the greeter node using the party key, which it knew in advance.
+* Note there is a problem in that the greeter node can decide to not provide the correct party feed set (censor one or more feeds). 
+This could probably be solved by publishing the party feed set under consensus on a blockchain every so often.
+* In the case of write access being provided to the new node, the greeter node publishes a feed admission message for the new node on its feed.
+* New participants may have read-only or read-write access to the party. 
+* Finer grained access control is not possible under the party itself, but can be implemented by convention within applications.
 
 ### Replication
 
-* Peers can discover the list of feeds in a party from connected peers (and implicitly, request replication of those feeds).
-* Support ongoing discovery of new feeds in the party, even from peers that aren't directly connected.
-* Peers have full control over what feeds they replicate (i.e. the decision is made locally).
-* Peers require credentials from connecting peers to share feed keys or perform replication.
+* A node selects a peer via the discovery mechanism, connects and performs a Dat protocol handshake for the party key, which it knows.
+* Peers MUST present to connecting peers all the feed content they have for all feeds in their current party feed set.
+* Nodes must check party validity which consists of checking the genesis block vs the party key then checking all 
+subsequent chained messages and invitation authorizations.
+* Nodes maintain their version of the party feed list by processing party feed authorization messages received on all current party feeds.
+* Peers have full control over what feeds they fetch (i.e. the decision is made locally).
 
 ### Technical Requirements
 
 * It MUST be possible to replicate multiple parties over a single connection between two peers.
 * Multiple types of connection transports should be supported (e.g., WebRTC, TCP & Bluetooth).
 * Certain peers may replicate parties over multiple transports to bridge heterogeneous networks.
-
 
 ## Design Notes
 
