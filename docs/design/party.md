@@ -11,12 +11,13 @@
 6. Party replication consists of each node fetching from peers all available feed content over the party feed set.
 7. Identities may add nodes or other identities to a party at any time (see Party Membership below) therefore the party feed set is itself replicated with eventual consistency.
 8. Identities (and all of their nodes) can be removed from Parties.
-9. Party replication is designed to preserve causal ordering by always fetching all available party set feeds from a peer, including the feeds of removed nodes.
-10. Each party is identified by a unique identifier called the party key.
-11. The party key is a public key for which the corresponding private key is used to prove party authority (see below).
-12. (Note that the party key must not be treated as a bearer authentication token (like regular Dat feed keys are) because under the party invitation mechanism below, the party key is transmitted in the clear to invitees, however we want to only admit to the party (including read-only access) nodes that are the subject of the inviting credential.)
-13. An active party is one that a node is currently interested in and authorized to actively replicate with peers.
-14. Since a single identity will be operating multiple nodes, there must be some form of node sub-grouping within a party.
+9. An identity can remove any of its nodes from parties.
+10. Party replication is designed to preserve causal ordering by always fetching all available party set feeds from a peer, including the feeds of removed nodes.
+11. Each party is identified by a unique identifier called the party key.
+12. The party key is a public key for which the corresponding private key is used to prove party authority (see below).
+13. (Note that the party key must not be treated as a bearer authentication token (like regular Dat feed keys are) because under the party invitation mechanism below, the party key is transmitted in the clear to invitees, however we want to only admit to the party (including read-only access) nodes that are the subject of the inviting credential.)
+14. An active party is one that a node is currently interested in and authorized to actively replicate with peers.
+15. Since a single identity will be operating multiple nodes, there must be some form of node sub-grouping within a party.
 
 ### Peer Discovery
 
