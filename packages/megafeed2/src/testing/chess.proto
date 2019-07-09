@@ -11,10 +11,10 @@ message Game {
   string itemId = 1;
 
   // Identifies the White player.
-  string whitePlayerKey = 2;
+  string white = 2;
 
   // Identifies the Black player.
-  string blackPlayerKey = 3;
+  string black = 3;
 }
 
 // Chess move.

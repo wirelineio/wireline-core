@@ -203,24 +203,25 @@ export class ChessApp {
     const seq = this._state.turn.seq;
 
     const legalMoves = this._state.legalMoves;
-    const { from, to, promotion } = legalMoves[Math.floor(Math.random() * legalMoves.length)];
-
-    await this.addMove({ seq, from, to, promotion });
+    if (legalMoves.length > 0) {
+      const { from, to, promotion } = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+      await this.addMove({ seq, from, to, promotion });
+    }
   }
 
   /**
    * Create a game.
-   * @param {String} whitePlayerKey
-   * @param {String} blackPlayerKey
+   * @param {String} white
+   * @param {String} black
    * @returns {Promise<void>}
    */
-  async createGame({ whitePlayerKey, blackPlayerKey }) {
+  async createGame({ white, black }) {
     const gameMessage = {
       type: ChessApp.GAME_MSG,
       message: {
         itemId: this._itemId,
-        whitePlayerKey,
-        blackPlayerKey
+        white,
+        black
       }
     };
 
@@ -287,8 +288,8 @@ export class ChessApp {
       return;
     }
 
-    const [{ message: { whitePlayerKey, blackPlayerKey } }] = gameMessages;
-    this._state.initGame({ white: whitePlayerKey, black: blackPlayerKey });
+    const [{ message: { white, black } }] = gameMessages;
+    this._state.initGame({ white, black });
   }
 
   /**
