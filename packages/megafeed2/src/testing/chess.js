@@ -19,6 +19,12 @@ export class ChessStateMachine {
   static WHITE = 'white';
   static BLACK = 'black';
 
+  // Consider the game drawn if no captures have been made recently (in 'N' moves).
+  static MAX_NO_CAPTURE_NUM_MOVES = 5;
+
+  // MAX_NO_CAPTURE_NUM_MOVES kicks in only after MIN_GAME_MOVES moves have been made in the game.
+  static MIN_GAME_MOVES = 20;
+
   /**
    * @constructor
    * @param {String} gameId
@@ -46,7 +52,7 @@ export class ChessStateMachine {
     return this._game.fen();
   }
 
-  get moves() {
+  get gameMoves() {
     return this._game.history({ verbose: true }).map((move, seq) => {
       return {
         seq,
@@ -54,6 +60,14 @@ export class ChessStateMachine {
         to: move.to
       }
     });
+  }
+
+  get legalMoves() {
+    return this._game.moves({ verbose: true });
+  }
+
+  get gameOver() {
+    return this._game.game_over() || this.noRecentCapture();
   }
 
   get length() {
@@ -77,6 +91,22 @@ export class ChessStateMachine {
   }
 
   /**
+   * Check that game doesn't have a recent capture.
+   * @returns {boolean}
+   */
+  noRecentCapture() {
+    const moves = this._game.history({ verbose: true });
+    if (moves.length <= ChessStateMachine.MIN_GAME_MOVES) {
+      return false;
+    }
+
+    let lastFewMoves = moves.splice(moves.length - ChessStateMachine.MAX_NO_CAPTURE_NUM_MOVES);
+    const captureMoves = lastFewMoves.filter(move => move.captured);
+
+    return captureMoves.length === 0;
+  }
+
+  /**
    * Initialize game.
    * @param {String} white - identity of White player.
    * @param {String} black - identity of Black player.
@@ -95,8 +125,9 @@ export class ChessStateMachine {
    * @param {Number} seq
    * @param {String} from
    * @param {String} to
+   * @param {String} [promotion]
    */
-  applyMove({ seq, from, to }) {
+  applyMove({ seq, from, to, promotion }) {
     console.assert(seq >= 0);
     console.assert(from);
     console.assert(to);
@@ -110,7 +141,7 @@ export class ChessStateMachine {
       throw new Error(`Invalid move sequence. Expected ${expectedSeq}, got ${seq}.`);
     }
 
-    this._game.move({ from, to });
+    this._game.move({ from, to, promotion });
   }
 }
 
@@ -148,15 +179,33 @@ export class ChessApp {
   }
 
   get moves() {
-    return this._state.moves;
+    return this._state.gameMoves;
   }
 
   get position() {
     return this._state.position;
   }
 
+  get gameOver() {
+    return this._state.gameOver;
+  }
+
   get meta() {
     return this._state.meta;
+  }
+
+  get nextMoveNum() {
+    return this._state.turn.seq;
+  }
+
+  // Play a (random) move in the game.
+  async playMove() {
+    const seq = this._state.turn.seq;
+
+    const legalMoves = this._state.legalMoves;
+    const { from, to, promotion } = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+
+    await this.addMove({ seq, from, to, promotion });
   }
 
   /**
@@ -181,20 +230,22 @@ export class ChessApp {
   }
 
   /**
-   * Play a move.
-   * @param {Number} seq
-   * @param {String} from
-   * @param {String} to
+   * Add a move.
+   * @param seq
+   * @param from
+   * @param to
+   * @param [promotion]
    * @returns {Promise<void>}
    */
-  async addMove({ seq, from, to }) {
+  async addMove({ seq, from, to, promotion }) {
     const moveMessage = {
       type: ChessApp.MOVE_MSG,
       message: {
         itemId: this._itemId,
         seq,
         from,
-        to
+        to,
+        promotion
       }
     };
 

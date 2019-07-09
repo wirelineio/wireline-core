@@ -3,11 +3,9 @@
 //
 
 import debug from 'debug';
-import fs from 'fs';
 import path from 'path';
 import ram from 'random-access-memory';
 import waitForExpect from 'wait-for-expect';
-import { Chess } from 'chess.js';
 import protobufjs from 'protobufjs';
 
 import Codec from '@wirelineio/codec-protobuf';
@@ -28,30 +26,6 @@ const TEST_TIMEOUT = 25 * 1000;
 
 jest.setTimeout(TEST_TIMEOUT);
 
-
-/**
- * Load moves for a sample game.
- * "The Immortal Game" (http://www.chessgames.com/perl/chessgame?gid=1018910).
- *
- * @returns {{from: *, to: *, seq: number}[]}
- */
-const loadSampleGameMoves = () => {
-  const chess = new Chess();
-  chess.load_pgn(fs.readFileSync(path.join(__dirname, 'data/immortal.pgn'), 'utf8'));
-
-  let seq = 0;
-
-  return chess.history({ verbose: true }).map(move => {
-    return {
-      seq: seq++,
-      from: move.from,
-      to: move.to
-    }
-  });
-};
-
-// Load sample game with lots of moves.
-const gameMoves = loadSampleGameMoves();
 
 /**
  * Create chess apps for the given itemId.
@@ -81,17 +55,21 @@ const createChessApps = (itemId, peer1, peer2, codec) => {
  */
 const playGameMoves = (app1, app2) => {
   // Players take turns playing their moves.
-  let moveNum = 0;
+  let seq = 0;
   const timer = setInterval(async () => {
-    if (moveNum >= gameMoves.length) {
+    if (app1.gameOver && app2.gameOver) {
       return clearInterval(timer);
     }
 
-    const app = (moveNum % 2 === 0 ? app1 : app2);
-    await app.addMove(gameMoves[moveNum++]);
+    const app = (seq % 2 === 0 ? app1 : app2);
+    // Move only if it's your turn.
+    if (app.nextMoveNum === seq) {
+      await app.playMove();
+      seq++;
+    }
   }, random.integer({
     min: 10,
-    max: 250
+    max: 50
   }));
 };
 
@@ -148,6 +126,7 @@ test('simultaneous chess games between peers', async (done) => {
 
   const peers = [];
   const apps = [];
+  let games = [];
 
   // Create peers.
   for (let i = 0; i < numPeers; i++) {
@@ -173,15 +152,21 @@ test('simultaneous chess games between peers', async (done) => {
     apps.push(app1);
     apps.push(app2);
 
+    games.push({ app1, app2 });
+
     // Start playing moves on a timer.
     playGameMoves(app1, app2);
   }
 
   // TODO(burdon): Wait for event?
-  await waitForExpect(async () => {
-    apps.forEach(app => {
-      // All app instances should finally sync.
-      expect(app.moves).toEqual(gameMoves);
+  await waitForExpect(async() => {
+    games.forEach(({ app1, app2 }) => {
+      // Both sides should finally sync.
+      expect(app1.gameOver).toBeTruthy();
+      expect(app2.gameOver).toBeTruthy();
+
+      expect(app1.gameMoves).toEqual(app2.gameMoves);
+      expect(app1.position).toEqual(app2.position);
     });
 
     done();
