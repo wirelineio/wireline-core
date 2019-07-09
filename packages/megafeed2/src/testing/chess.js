@@ -7,6 +7,7 @@ import pify from 'pify';
 import { Chess } from 'chess.js';
 
 import { keyName } from '../util/keys';
+import { ItemFactory } from './item';
 
 const log = debug('chess');
 
@@ -143,6 +144,7 @@ export class ChessApp {
     this._codec = codec;
     this._state = new ChessStateMachine(this._itemId);
     this._view.events.on('update', this._handleViewUpdate.bind(this));
+    this._itemFactory = new ItemFactory(this._codec.getType('item.Item'));
   }
 
   get moves() {

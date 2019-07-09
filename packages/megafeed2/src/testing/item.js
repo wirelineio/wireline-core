@@ -4,28 +4,48 @@
 
 import crypto from 'hypercore-crypto';
 
-import { ItemProto } from './item_proto';
-
 /**
- * Item utilities.
+ * Item factory.
  */
-export class ItemStateMachine {
+export class ItemFactory {
 
-  /**
-   * Creates a signed message that designates a new Item.
-   *
-   * @param type
-   * @param ownerKey
-   * @return {Message<ItemProto.Item>}
-   */
-  static createItem(type, ownerKey) {
-    const keyPair = crypto.keyPair();
+  constructor(itemType) {
+    console.assert(itemType);
+    this._itemType = itemType;
+  }
 
-    // TODO(burdon): Create credential signed with item's secretKey.
-    return ItemProto.Item.create({
+  createItem(type, id, keyPair, signature = '') {
+    console.assert(type);
+    console.assert(id);
+    console.assert(keyPair);
+
+    return this._itemType.create({
       type,
-      key: keyPair.publicKey,
-      ownerKey
+      id,
+      ownerKey: keyPair.publicKey.toString('hex'),
+      signature
     });
+  }
+
+  signItem(item, keyPair) {
+    console.assert(item);
+    console.assert(keyPair);
+
+    // Empty signature field before encoding.
+    item.signature = '';
+
+    const buffer = this._itemType.encode(item).finish();
+    item.signature = crypto.sign(buffer, keyPair.secretKey).toString('hex');
+
+    return item;
+  }
+
+  verifyItem(item, publicKey) {
+    console.assert(item);
+    console.assert(publicKey);
+
+    const itemClone = this._itemType.fromObject({ ...this._itemType.toObject(item), signature: '' });
+    const buffer = this._itemType.encode(itemClone).finish();
+    return crypto.verify(buffer, Buffer.from(item.signature, 'hex'), publicKey);
   }
 }

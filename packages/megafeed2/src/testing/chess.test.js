@@ -15,7 +15,7 @@ import network from '@wirelineio/hyperswarm-network-memory';
 
 import { ViewFactory } from '../megafeed/view_factory';
 import { random } from '../util/debug';
-import { createMegafeed, createKeys } from '../megafeed';
+import { createKeys, createMegafeed } from '../megafeed';
 import { keyStr } from '../util';
 import { Node } from '../node';
 
@@ -28,16 +28,6 @@ const TEST_TIMEOUT = 25 * 1000;
 
 jest.setTimeout(TEST_TIMEOUT);
 
-const numPeers = 10;
-const numGames = 25;
-
-// Topic used to find peers interested in chess games.
-const [ gameTopic ] = createKeys(1);
-
-// Used to set identity of white/black side in each game.
-const peerKeys = createKeys(numPeers);
-
-const codec = new Codec({ verify: true });
 
 /**
  * Load moves for a sample game.
@@ -108,24 +98,25 @@ const playGameMoves = (app1, app2) => {
 /**
  * Create a peer.
  * @param {Object} params
+ * @param {Object} gameTopic
+ * @param {Codec} codec
  * @returns {Promise<{feed, view: *}>}
  */
-const createPeer = async (params) => {
+const createPeer = async (params, gameTopic, codec) => {
   const megafeed = await createMegafeed({
     topicKeys: [gameTopic],
     numFeedsPerTopic: 1,
     valueEncoding: 'binary'
   });
-  const { feedStore } = megafeed;
 
   new Node(network(), megafeed).joinSwarm(gameTopic);
 
-  const viewFactory = new ViewFactory(ram, feedStore);
-  const kappa = await viewFactory.getOrCreateView('gamesView', params.topic);
+  const viewFactory = new ViewFactory(ram, megafeed.feedStore);
+  const kappa = await viewFactory.getOrCreateView('games', params.topic);
   kappa.use('log', LogView(params.type, codec));
 
   // Peer info we'll need later for chess games.
-  const [ feed ] = await feedStore.getFeeds();
+  const [ feed ] = await megafeed.feedStore.getFeeds();
   const view = kappa.api['log'];
 
   return {
@@ -135,6 +126,16 @@ const createPeer = async (params) => {
 };
 
 test('simultaneous chess games between peers', async (done) => {
+  const numPeers = 10;
+  const numGames = 25;
+
+  // Topic used to find peers interested in chess games.
+  const [ gameTopic ] = createKeys(1);
+
+  // Used to set identity of white/black side in each game.
+  const peerKeys = createKeys(numPeers);
+
+  const codec = new Codec({ verify: true });
 
   codec.load(await protobufjs.load(path.join(__dirname, 'item.proto')));
   codec.load(await protobufjs.load(path.join(__dirname, 'chess.proto')));
@@ -150,8 +151,8 @@ test('simultaneous chess games between peers', async (done) => {
 
   // Create peers.
   for (let i = 0; i < numPeers; i++) {
-    const { feed, view } = await createPeer(params);
-    peers.push({ feed, view, peerKey: peerKeys[i] });
+    const { feed, view } = await createPeer(params, gameTopic, codec);
+    peers.push({ feed, view, key: peerKeys[i] });
   }
 
   // Create games between randomly chosen peers.
@@ -165,8 +166,8 @@ test('simultaneous chess games between peers', async (done) => {
 
     // Peer1 is White, Peer2 is Black.
     await app1.createGame({
-      whitePlayerKey: keyStr(peer1.peerKey),
-      blackPlayerKey: keyStr(peer2.peerKey)
+      whitePlayerKey: keyStr(peer1.key),
+      blackPlayerKey: keyStr(peer2.key)
     });
 
     apps.push(app1);
@@ -177,7 +178,7 @@ test('simultaneous chess games between peers', async (done) => {
   }
 
   // TODO(burdon): Wait for event?
-  await waitForExpect(async() => {
+  await waitForExpect(async () => {
     apps.forEach(app => {
       // All app instances should finally sync.
       expect(app.moves).toEqual(gameMoves);
