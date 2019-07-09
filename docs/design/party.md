@@ -76,13 +76,15 @@
 
 ### Replication
 
-~~* A node selects a peer via the discovery mechanism, connects and performs a Dat protocol handshake for the party key, which it knows.
+~~
+* A node selects a peer via the discovery mechanism, connects and performs a Dat protocol handshake for the party key, which it knows.
 * Peers MUST present to connecting peers all the feed content they have for all feeds in their current party feed set.
 * Nodes must check party validity which consists of checking the genesis block vs the party key then checking all 
 subsequent chained messages and invitation authorizations.
 * Nodes maintain their version of the party feed list by processing party feed authorization messages received on all current party feeds.
 * Peers have full control over what feeds they fetch (i.e. the decision is made locally).
-* Feed content replication is done with regular Dat protocol.~~
+* Feed content replication is done with regular Dat protocol.
+~~
 
 ### Technical Requirements
 
