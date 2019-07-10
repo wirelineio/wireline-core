@@ -66,7 +66,14 @@ class FeedStore extends EventEmitter {
     this._messageStore = new MessageStore(
       db,
       {
-        encode: message => codec.encode({ type: 'Feed', message }),
+        encode: (message) => {
+          // Value encoding can be a codec, in which case we can't serialize it. So, change value to 'binary'.
+          if (typeof (message.valueEncoding) === 'object') {
+            message.valueEncoding = 'binary';
+          }
+
+          return codec.encode({ type: 'Feed', message });
+        },
         decode: buffer => codec.decode(buffer, false)
       }
     );

@@ -178,15 +178,13 @@ export class ChessApp {
    * @param {Hypercore} feed
    * @param {Object} view
    * @param {Object} gameInfo
-   * @param {Codec} codec
    */
-  constructor(feed, view, gameInfo, codec) {
+  constructor(feed, view, gameInfo) {
     console.assert(feed);
     console.assert(view);
     console.assert(gameInfo);
     console.assert(gameInfo.itemId);
     console.assert(gameInfo.side);
-    console.assert(codec);
 
     this._feed = feed;
     this._view = view;
@@ -197,7 +195,6 @@ export class ChessApp {
     // Which side are we playing (white or black)?
     this._side = gameInfo.side;
 
-    this._codec = codec;
     this._state = new ChessStateMachine(this._itemId);
     this._view.events.on('update', this._handleViewUpdate.bind(this));
   }
@@ -255,7 +252,7 @@ export class ChessApp {
       }
     };
 
-    await pify(this._feed.append.bind(this._feed))(this._codec.encode(gameMessage));
+    await pify(this._feed.append.bind(this._feed))(gameMessage);
 
     log(`New game ${keyName(this._itemId)}: ${keyName(this._feed.key)} created the game.`);
   }
@@ -280,7 +277,7 @@ export class ChessApp {
       }
     };
 
-    await pify(this._feed.append.bind(this._feed))(this._codec.encode(moveMessage));
+    await pify(this._feed.append.bind(this._feed))(moveMessage);
 
     log(`Game ${keyName(this._itemId)}: ${keyName(this._feed.key)} played move #${seq + 1}.`);
   }
