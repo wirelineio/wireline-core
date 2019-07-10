@@ -94,6 +94,7 @@ export const createPeer = async (params, gameTopic, codec) => {
 
 /**
  * Create codec from .proto files.
+ * TODO(ashwin): Move to utils?
  * @param {[string]} paths
  * @returns {Promise<Codec>}
  */

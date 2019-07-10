@@ -8,7 +8,6 @@ import { Chess } from 'chess.js';
 
 import { random } from '../util/debug';
 import { keyName } from '../util/keys';
-import { ItemFactory } from './item';
 
 const log = debug('chess');
 
@@ -178,7 +177,7 @@ export class ChessApp {
    * @constructor
    * @param {Hypercore} feed
    * @param {Object} view
-   * @param {String} itemId
+   * @param {Object} gameInfo
    * @param {Codec} codec
    */
   constructor(feed, view, gameInfo, codec) {
@@ -191,12 +190,16 @@ export class ChessApp {
 
     this._feed = feed;
     this._view = view;
+
+    // Game itemId.
     this._itemId = gameInfo.itemId;
+
+    // Which side are we playing (white or black)?
     this._side = gameInfo.side;
+
     this._codec = codec;
     this._state = new ChessStateMachine(this._itemId);
     this._view.events.on('update', this._handleViewUpdate.bind(this));
-    this._itemFactory = new ItemFactory(this._codec.getType('item.Item'));
   }
 
   get moves() {
@@ -212,7 +215,7 @@ export class ChessApp {
   }
 
   get meta() {
-    return this._state.meta;
+    return { ...this._state.meta, side: this._side };
   }
 
   get nextMoveNum() {
