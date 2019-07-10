@@ -57,7 +57,7 @@ test('simultaneous chess games between peers', async (done) => {
 
     // Create item and chess apps.
     const itemId = random.word({ length: 16 });
-    const { app1, app2 } = createChessApps(itemId, peer1, peer2, codec);
+    const { app1, app2 } = createChessApps(itemId, peer1, peer2);
     games.push({ app1, app2 });
 
     // Peer1 is White, Peer2 is Black.

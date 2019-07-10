@@ -7,26 +7,27 @@ import { EventEmitter } from 'events';
 /**
  * Log view.
  * @param {string} type
- * @param {Codec} [codec]
+ * @param {boolean} [usesCodec]
  * @returns {{api: {logs: (function(): Array)}, map: map}}
  * @constructor
  */
-export const LogView = (type, codec) => {
+export const LogView = (type, usesCodec = false) => {
   const events = new EventEmitter();
 
   let logsByType = [];
 
   const getMessage = (item) => {
-    return codec ? item.message : item;
+    // TODO(ashwin): Drop use of `usesCodec` once all tests move to using protocol buffers.
+    return usesCodec ? item.message : item;
   };
 
   return {
     map: (entries, next) => {
       entries.forEach(entry => {
-        const value = codec ? codec.decodeWithType(entry.value): entry.value;
-        const msgType = codec ? value.type.split('.')[0] : value.type;
+        // TODO(ashwin): Decide convention/format for `type`.
+        const msgType = entry.value.type.split('.')[0];
         if (msgType === type) {
-          logsByType.push(value);
+          logsByType.push(entry.value);
         }
       });
       next();
@@ -34,8 +35,7 @@ export const LogView = (type, codec) => {
 
     indexed(entries) {
       entries.forEach(entry => {
-        const value = codec ? codec.decodeWithType(entry.value): entry.value;
-        events.emit('update', getMessage(value).itemId);
+        events.emit('update', getMessage(entry.value).itemId);
       });
     },
 

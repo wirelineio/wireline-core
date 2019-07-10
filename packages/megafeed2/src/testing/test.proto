@@ -1,0 +1,15 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
+syntax = "proto3";
+
+message MessageOne {
+  required string subject = 1;
+  string body = 2;
+}
+
+message MessageTwo {
+  required string subject = 1;
+  string body = 2;
+}
