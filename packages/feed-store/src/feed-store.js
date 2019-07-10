@@ -67,7 +67,7 @@ class FeedStore extends EventEmitter {
       db,
       {
         encode: message => codec.encode({ type: 'Feed', message }),
-        decode: codec.decode
+        decode: buffer => codec.decode(buffer, false)
       }
     );
 

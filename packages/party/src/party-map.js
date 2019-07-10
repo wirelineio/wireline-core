@@ -34,7 +34,7 @@ class PartyMap extends EventEmitter {
       db,
       {
         encode: message => codec.encode({ type: 'Party', message: message.serialize() }),
-        decode: codec.decode.bind(codec)
+        decode: buffer => codec.decode(buffer, false)
       }
     );
 
