@@ -6,6 +6,7 @@ import debug from 'debug';
 import pify from 'pify';
 import { Chess } from 'chess.js';
 
+import { random } from '../util/debug';
 import { keyName } from '../util/keys';
 import { ItemFactory } from './item';
 
@@ -79,6 +80,23 @@ export class ChessStateMachine {
       toPlay: this._game.turn() === 'w' ? ChessStateMachine.WHITE : ChessStateMachine.BLACK,
       seq: this.length
     }
+  }
+
+  get result() {
+    if (this._game.in_checkmate()) {
+      return this._game.turn() === 'w' ? '0-1': '1-0';
+    }
+
+    if (this.noRecentCapture() ||
+        this._game.in_stalemate() ||
+        this._game.in_draw() ||
+        this._game.in_threefold_repetition() ||
+        this._game.insufficient_material()) {
+
+      return '1/2-1/2';
+    }
+
+    return '-';
   }
 
   toString() {
@@ -163,15 +181,18 @@ export class ChessApp {
    * @param {String} itemId
    * @param {Codec} codec
    */
-  constructor(feed, view, itemId, codec) {
+  constructor(feed, view, gameInfo, codec) {
     console.assert(feed);
     console.assert(view);
-    console.assert(itemId);
+    console.assert(gameInfo);
+    console.assert(gameInfo.itemId);
+    console.assert(gameInfo.side);
     console.assert(codec);
 
     this._feed = feed;
     this._view = view;
-    this._itemId = itemId;
+    this._itemId = gameInfo.itemId;
+    this._side = gameInfo.side;
     this._codec = codec;
     this._state = new ChessStateMachine(this._itemId);
     this._view.events.on('update', this._handleViewUpdate.bind(this));
@@ -198,13 +219,19 @@ export class ChessApp {
     return this._state.turn.seq;
   }
 
+  get result() {
+    return this._state.result;
+  }
+
   // Play a (random) move in the game.
   async playMove() {
     const seq = this._state.turn.seq;
 
-    const legalMoves = this._state.legalMoves;
-    if (legalMoves.length > 0) {
-      const { from, to, promotion } = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+    const allMoves = this._state.legalMoves;
+    if (allMoves.length > 0) {
+      // Prefer captures as they move the game along faster.
+      const captures = allMoves.filter(move => move.captured);
+      const { from, to, promotion } = captures.length ? random.pickone(captures) : random.pickone(allMoves);
       await this.addMove({ seq, from, to, promotion });
     }
   }

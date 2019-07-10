@@ -14,7 +14,7 @@ import { Node } from '../node';
 import { random } from '../util';
 
 import { LogView } from './log_view';
-import { ChessApp } from './chess';
+import { ChessApp, ChessStateMachine } from './chess';
 
 /**
  * Create chess apps for the given itemId.
@@ -28,8 +28,8 @@ export const createChessApps = (itemId, peer1, peer2, codec) => {
   const { feed: feed1, view: view1 } = peer1;
   const { feed: feed2, view: view2 } = peer2;
 
-  const app1 = new ChessApp(feed1, view1, itemId, codec);
-  const app2 = new ChessApp(feed2, view2, itemId, codec);
+  const app1 = new ChessApp(feed1, view1, { itemId, side: ChessStateMachine.WHITE }, codec);
+  const app2 = new ChessApp(feed2, view2, { itemId, side: ChessStateMachine.BLACK }, codec);
 
   return {
     app1,
@@ -57,8 +57,8 @@ export const playGameMoves = (app1, app2) => {
       seq++;
     }
   }, random.integer({
-    min: 10,
-    max: 50
+    min: 5,
+    max: 25
   }));
 };
 

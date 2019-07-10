@@ -15,9 +15,11 @@ import { createChessApps, createPeer, createCodec, playGameMoves } from './helpe
 
 debug.enable('test,chess');
 
-const TEST_TIMEOUT = 25 * 1000;
+const TEST_TIMEOUT = 50 * 1000;
 
 jest.setTimeout(TEST_TIMEOUT);
+
+const log = debug('test');
 
 test('simultaneous chess games between peers', async (done) => {
   const numPeers = 10;
@@ -74,6 +76,10 @@ test('simultaneous chess games between peers', async (done) => {
       expect(app1.gameOver).toBeTruthy();
       expect(app2.gameOver).toBeTruthy();
       expect(app1.position).toEqual(app2.position);
+    });
+
+    games.forEach(({ app1 }) => {
+      log('Position: [', app1.position, '] Result:', app1.result);
     });
 
     done();
