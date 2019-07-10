@@ -11,8 +11,15 @@ package item;
 //
 message Item {
 
-  string key = 1;
-  string type = 2;
+  // Item Type.
+  string type = 1;
 
-  // TODO(burdon): Signed proof.
+  // Item ID.
+  string id = 2;
+
+  // Public Key of item owner.
+  string ownerKey = 3;
+
+  // Signature.
+  string signature = 4;
 }

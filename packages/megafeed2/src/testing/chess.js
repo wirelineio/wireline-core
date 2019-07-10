@@ -6,6 +6,7 @@ import debug from 'debug';
 import pify from 'pify';
 import { Chess } from 'chess.js';
 
+import { random } from '../util/debug';
 import { keyName } from '../util/keys';
 
 const log = debug('chess');
@@ -17,6 +18,12 @@ export class ChessStateMachine {
 
   static WHITE = 'white';
   static BLACK = 'black';
+
+  // Consider the game drawn if no captures have been made recently (in 'N' moves).
+  static MAX_NO_CAPTURE_NUM_MOVES = 5;
+
+  // MAX_NO_CAPTURE_NUM_MOVES kicks in only after MIN_GAME_MOVES moves have been made in the game.
+  static MIN_GAME_MOVES = 20;
 
   /**
    * @constructor
@@ -45,7 +52,7 @@ export class ChessStateMachine {
     return this._game.fen();
   }
 
-  get moves() {
+  get gameMoves() {
     return this._game.history({ verbose: true }).map((move, seq) => {
       return {
         seq,
@@ -53,6 +60,14 @@ export class ChessStateMachine {
         to: move.to
       }
     });
+  }
+
+  get legalMoves() {
+    return this._game.moves({ verbose: true });
+  }
+
+  get gameOver() {
+    return this._game.game_over() || this.noRecentCapture();
   }
 
   get length() {
@@ -66,6 +81,23 @@ export class ChessStateMachine {
     }
   }
 
+  get result() {
+    if (this._game.in_checkmate()) {
+      return this._game.turn() === 'w' ? '0-1': '1-0';
+    }
+
+    if (this.noRecentCapture() ||
+        this._game.in_stalemate() ||
+        this._game.in_draw() ||
+        this._game.in_threefold_repetition() ||
+        this._game.insufficient_material()) {
+
+      return '1/2-1/2';
+    }
+
+    return '-';
+  }
+
   toString() {
     const meta = {
       gameId: keyName(this._gameId),
@@ -73,6 +105,22 @@ export class ChessStateMachine {
     };
 
     return `Chess(${JSON.stringify(meta)})`;
+  }
+
+  /**
+   * Check that game doesn't have a recent capture.
+   * @returns {boolean}
+   */
+  noRecentCapture() {
+    const moves = this._game.history({ verbose: true });
+    if (moves.length <= ChessStateMachine.MIN_GAME_MOVES) {
+      return false;
+    }
+
+    let lastFewMoves = moves.splice(moves.length - ChessStateMachine.MAX_NO_CAPTURE_NUM_MOVES);
+    const captureMoves = lastFewMoves.filter(move => move.captured);
+
+    return captureMoves.length === 0;
   }
 
   /**
@@ -94,8 +142,9 @@ export class ChessStateMachine {
    * @param {Number} seq
    * @param {String} from
    * @param {String} to
+   * @param {String} [promotion]
    */
-  applyMove({ seq, from, to }) {
+  applyMove({ seq, from, to, promotion }) {
     console.assert(seq >= 0);
     console.assert(from);
     console.assert(to);
@@ -109,7 +158,7 @@ export class ChessStateMachine {
       throw new Error(`Invalid move sequence. Expected ${expectedSeq}, got ${seq}.`);
     }
 
-    this._game.move({ from, to });
+    this._game.move({ from, to, promotion });
   }
 }
 
@@ -128,48 +177,81 @@ export class ChessApp {
    * @constructor
    * @param {Hypercore} feed
    * @param {Object} view
-   * @param {String} itemId
+   * @param {Object} gameInfo
    * @param {Codec} codec
    */
-  constructor(feed, view, itemId, codec) {
+  constructor(feed, view, gameInfo, codec) {
     console.assert(feed);
     console.assert(view);
-    console.assert(itemId);
+    console.assert(gameInfo);
+    console.assert(gameInfo.itemId);
+    console.assert(gameInfo.side);
     console.assert(codec);
 
     this._feed = feed;
     this._view = view;
-    this._itemId = itemId;
+
+    // Game itemId.
+    this._itemId = gameInfo.itemId;
+
+    // Which side are we playing (white or black)?
+    this._side = gameInfo.side;
+
     this._codec = codec;
     this._state = new ChessStateMachine(this._itemId);
     this._view.events.on('update', this._handleViewUpdate.bind(this));
   }
 
   get moves() {
-    return this._state.moves;
+    return this._state.gameMoves;
   }
 
   get position() {
     return this._state.position;
   }
 
+  get gameOver() {
+    return this._state.gameOver;
+  }
+
   get meta() {
-    return this._state.meta;
+    return { ...this._state.meta, side: this._side };
+  }
+
+  get nextMoveNum() {
+    return this._state.turn.seq;
+  }
+
+  get result() {
+    return this._state.result;
+  }
+
+  // Play a (random) move in the game.
+  async playMove() {
+    const seq = this._state.turn.seq;
+
+    const allMoves = this._state.legalMoves;
+    if (allMoves.length > 0) {
+      // Prefer captures as they move the game along faster.
+      const captures = allMoves.filter(move => move.captured);
+      const { from, to, promotion } = captures.length ? random.pickone(captures) : random.pickone(allMoves);
+      await this.addMove({ seq, from, to, promotion });
+    }
   }
 
   /**
    * Create a game.
-   * @param {String} whitePlayerKey
-   * @param {String} blackPlayerKey
+   * @param {String} white
+   * @param {String} black
    * @returns {Promise<void>}
    */
-  async createGame({ whitePlayerKey, blackPlayerKey }) {
+  async createGame({ white, black }) {
     const gameMessage = {
       type: ChessApp.GAME_MSG,
       message: {
         itemId: this._itemId,
-        whitePlayerKey,
-        blackPlayerKey
+        white,
+        black
       }
     };
 
@@ -179,20 +261,22 @@ export class ChessApp {
   }
 
   /**
-   * Play a move.
-   * @param {Number} seq
-   * @param {String} from
-   * @param {String} to
+   * Add a move.
+   * @param seq
+   * @param from
+   * @param to
+   * @param [promotion]
    * @returns {Promise<void>}
    */
-  async addMove({ seq, from, to }) {
+  async addMove({ seq, from, to, promotion }) {
     const moveMessage = {
       type: ChessApp.MOVE_MSG,
       message: {
         itemId: this._itemId,
         seq,
         from,
-        to
+        to,
+        promotion
       }
     };
 
@@ -234,8 +318,8 @@ export class ChessApp {
       return;
     }
 
-    const [{ message: { whitePlayerKey, blackPlayerKey } }] = gameMessages;
-    this._state.initGame({ white: whitePlayerKey, black: blackPlayerKey });
+    const [{ message: { white, black } }] = gameMessages;
+    this._state.initGame({ white, black });
   }
 
   /**
