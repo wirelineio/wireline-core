@@ -21,15 +21,14 @@ import { ChessApp, ChessStateMachine } from './chess';
  * @param {String} itemId
  * @param {Object} peer1
  * @param {Object} peer2
- * @param {Codec} codec
  * @returns {{app2: ChessApp, app1: ChessApp}}
  */
-export const createChessApps = (itemId, peer1, peer2, codec) => {
+export const createChessApps = (itemId, peer1, peer2) => {
   const { feed: feed1, view: view1 } = peer1;
   const { feed: feed2, view: view2 } = peer2;
 
-  const app1 = new ChessApp(feed1, view1, { itemId, side: ChessStateMachine.WHITE }, codec);
-  const app2 = new ChessApp(feed2, view2, { itemId, side: ChessStateMachine.BLACK }, codec);
+  const app1 = new ChessApp(feed1, view1, { itemId, side: ChessStateMachine.WHITE });
+  const app2 = new ChessApp(feed2, view2, { itemId, side: ChessStateMachine.BLACK });
 
   return {
     app1,
@@ -73,14 +72,14 @@ export const createPeer = async (params, gameTopic, codec) => {
   const megafeed = await createMegafeed({
     topicKeys: [gameTopic],
     numFeedsPerTopic: 1,
-    valueEncoding: 'binary'
+    valueEncoding: codec,
   });
 
   new Node(network(), megafeed).joinSwarm(gameTopic);
 
   const viewFactory = new ViewFactory(ram, megafeed.feedStore);
   const kappa = await viewFactory.getOrCreateView('games', params.topic);
-  kappa.use('log', LogView(params.type, codec));
+  kappa.use('log', LogView(params.type, true));
 
   // Peer info we'll need later for chess games.
   const [feed] = await megafeed.feedStore.getFeeds();
