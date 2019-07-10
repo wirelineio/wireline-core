@@ -100,6 +100,9 @@ module.exports = function CRDTDocumentsView({ core, db, partyManager }, { viewId
       },
 
       async getById(core, itemId) {
+
+        await new Promise(resolve => this.ready(resolve));
+
         const { data: { title, type } } = await core.api['items'].getInfo(itemId);
 
         let doc = documents.get(itemId);
