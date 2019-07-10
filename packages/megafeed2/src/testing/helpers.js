@@ -8,7 +8,6 @@ import protobufjs from 'protobufjs';
 import Codec from '@wirelineio/codec-protobuf';
 import network from '@wirelineio/hyperswarm-network-memory';
 
-import { ViewFactory } from '../megafeed/view_factory';
 import { createMegafeed } from '../megafeed';
 import { Node } from '../node';
 import { random } from '../util';
@@ -78,12 +77,12 @@ export const createPeer = async (params, gameTopic, codec) => {
 
   new Node(network(), megafeed).joinSwarm(gameTopic);
 
-  const viewFactory = new ViewFactory(ram, megafeed.feedStore);
+  const viewFactory = megafeed.createViewFactory(ram);
   const kappa = await viewFactory.getOrCreateView('games', params.topic);
   kappa.use('log', LogView(params.type, codec));
 
   // Peer info we'll need later for chess games.
-  const [feed] = await megafeed.feedStore.getFeeds();
+  const [feed] = await megafeed.getFeeds();
   const view = kappa.api['log'];
 
   return {

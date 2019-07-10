@@ -22,17 +22,14 @@ test('megafeed replicator', async (done) => {
   const numMessagesPerFeed = 5;
 
   const megafeed1 = await createMegafeed({ topicKeys, numFeedsPerTopic, numMessagesPerFeed });
-  const { feedStore: feedStore1 } = megafeed1;
+  const node1 = new Node(network(), megafeed1).joinSwarm(rendezvousKey);
 
   const megafeed2 = await createMegafeed();
-  const { feedStore: feedStore2 } = megafeed2;
-
-  const node1 = new Node(network(), megafeed1).joinSwarm(rendezvousKey);
   const node2 = new Node(network(), megafeed2).joinSwarm(rendezvousKey);
 
   const onUpdate = latch(topicKeys.length * numFeedsPerTopic, async () => {
-    const feeds1 = await feedStore1.getFeeds().sort((a, b) => keyStr(a.key) < keyStr(b.key) ? -1 : 1);
-    const feeds2 = await feedStore2.getFeeds().sort((a, b) => keyStr(a.key) < keyStr(b.key) ? -1 : 1);
+    const feeds1 = await megafeed1.getFeeds().sort((a, b) => keyStr(a.key) < keyStr(b.key) ? -1 : 1);
+    const feeds2 = await megafeed2.getFeeds().sort((a, b) => keyStr(a.key) < keyStr(b.key) ? -1 : 1);
 
     expect(feeds1.length).toBe(feeds2.length);
     expect(feeds2.length).toBe(topicKeys.length * numFeedsPerTopic);

@@ -9,6 +9,7 @@ import pify from 'pify';
 import { FeedStore } from '@wirelineio/feed-store';
 
 import { Replicator } from './replicator';
+import { ViewFactory } from './view_factory';
 
 /**
  * A lightweight feed replication engine.
@@ -60,15 +61,27 @@ export class Megafeed extends EventEmitter {
     return this._db.secretKey;
   }
 
-  // TODO(ashwin): Don't expose entire feedStore object.
-  get feedStore() {
-    return this._feedStore;
+  async openFeed(...args) {
+    return await this._feedStore.openFeed(...args);
+  }
+
+  getFeeds() {
+    return this._feedStore.getFeeds();
   }
 
   toString() {
     const meta = {};
 
     return `Megafeed(${JSON.stringify(meta)})`;
+  }
+
+  /**
+   * Create view factory
+   * @param {RandomAccessStorage} storage - used to create kappa instances.
+   * @returns {ViewFactory}
+   */
+  createViewFactory(storage) {
+    return new ViewFactory(storage, this._feedStore);
   }
 
   /**
