@@ -38,10 +38,9 @@ export const createItem = (ownerKey) => {
  * @return {string} signature
  */
 export const signItem = (item, secretKey) => {
-  const signature = crypto
+  return crypto
     .sign(Buffer.from(canonicalStringify(item)), secretKey)
     .toString('hex');
-  return signature;
 };
 
 /**
