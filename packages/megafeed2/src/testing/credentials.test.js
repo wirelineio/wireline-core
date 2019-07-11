@@ -31,12 +31,15 @@ test('item genesis', async () => {
   {
     const user2 = crypto.keyPair();
 
-    // Clone the item, minus signature.
+    // Clone the item.
     const itemClone = { ...item };
-    delete itemClone.signature;
 
-    // Change owner and sign with new owners secret key.
+    // Tampering the ownerKey doesn't work.
     itemClone.ownerKey = user2.publicKey;
+    expect(verifyItem(itemClone)).toBeFalsy();
+
+    // Sign with new owners secret key.
+    delete itemClone.signature;
     const signature = signItem(item, user2.secretKey);
 
     // Verificaton MUST fail as the item needs to be signed with the items private key, which has been burned.
