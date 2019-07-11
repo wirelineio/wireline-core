@@ -80,7 +80,6 @@ export class Protocol extends EventEmitter {
 
     this._codec = codec;
 
-    // https://github.com/mafintosh/hypercore-protocol#var-stream--protocoloptions
     this._streamOptions = streamOptions;
 
     this._stream = protocol(this._streamOptions);
