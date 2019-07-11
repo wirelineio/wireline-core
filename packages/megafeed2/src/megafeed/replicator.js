@@ -180,7 +180,7 @@ export class Replicator extends EventEmitter {
 
     // TODO(ashwin): Needs comment. What is expectedFeeds used for?
     if (!replicateOptions.live && replicateOptions.expectedFeeds === undefined) {
-      stream.expectedFeeds = this._replicating.size;
+      stream.expectedFeeds = stream.feeds.length + 1;
     }
 
     // TODO(burdon): Only add once.
