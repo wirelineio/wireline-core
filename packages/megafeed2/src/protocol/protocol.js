@@ -61,25 +61,25 @@ export class Protocol extends EventEmitter {
 
   /**
    * @constructor
-   * TODO(ashwin): Document all params.
+   *
    * @param {Object} options
-   * @param {Buffer} options.id
-   * @param {Boolean} options.live
-   * @param {Number} options.expectedFeeds
-   * @param {Function<{discoveryKey}>} options.discoveryToPublicKey
-   * @param {Codec} options.codec
+   * @param {Object} options.streamOptions - https://github.com/mafintosh/hypercore-protocol#var-stream--protocoloptions
+   * @param {Buffer} [options.streamOptions.id=randomBytes(32)] - You can use this to detect if you connect to yourself.
+   * @param {Boolean} [options.streamOptions.live=false] - Signal to the other peer that you want to keep this stream open forever.
+   * @param {Number} [options.streamOptions.expectedFeeds=0] - How many feeds I expect to be sync before close the stream.
+   * @param {Function<{discoveryKey}>} options.discoveryToPublicKey - Match the discoveryKey with a publicKey to do the handshake.
+   * @param {Codec} options.codec - Define a codec to encode/decode messages from extensions.
    */
   constructor(options = {}) {
     super();
 
     // TODO(ashwin): Check Codec() only called when the option is null.
-    const { discoveryToPublicKey, codec = new Codec(), ...streamOptions } = options;
+    const { discoveryToPublicKey, codec = new Codec(), streamOptions } = options;
 
     this._discoveryToPublicKey = discoveryToPublicKey;
 
     this._codec = codec;
 
-    // TODO(ashwin): Document streamOptions.
     this._streamOptions = streamOptions;
 
     this._stream = protocol(this._streamOptions);
@@ -89,7 +89,7 @@ export class Protocol extends EventEmitter {
 
   toString() {
     const meta = {
-      id: keyName(this.id),
+      id: keyName(this._stream.id),
       extensions: Array.from(this._extensionMap.keys())
     };
 
@@ -117,7 +117,7 @@ export class Protocol extends EventEmitter {
   }
 
   get streamOptions() {
-    return Object.assign({}, { id: this.id }, this._streamOptions);
+    return Object.assign({}, { id: this._stream.id }, this._streamOptions);
   }
 
   /**
@@ -239,7 +239,7 @@ export class Protocol extends EventEmitter {
         initialKey = this._discoveryToPublicKey && this._discoveryToPublicKey(discoveryKey);
         if (!initialKey) {
           // Stream will get aborted soon as both sides haven't shared the same initial Dat feed.
-          console.warn('Public key not found for discovery key: ', keyName(this.id, 'node'), keyName(discoveryKey));
+          console.warn('Public key not found for discovery key: ', keyName(this._stream.id, 'node'), keyName(discoveryKey));
 
           return;
         }
@@ -262,7 +262,7 @@ export class Protocol extends EventEmitter {
       });
     }
 
-    log(keyName(this.id, 'node'), 'initialized');
+    log(keyName(this._stream.id, 'node'), 'initialized');
     return this;
   }
 
@@ -281,7 +281,7 @@ export class Protocol extends EventEmitter {
    * @private
    */
   _initStream(key) {
-    log(keyName(this.id, 'node'), 'shared initial feed', keyName(this._discoveryKey));
+    log(keyName(this._stream.id, 'node'), 'shared initial feed', keyName(this._discoveryKey));
     this._feed = this._stream.feed(key);
     this._feed.on('extension', this._extensionHandler);
   }

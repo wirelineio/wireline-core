@@ -160,7 +160,13 @@ export class Node extends EventEmitter {
     };
 
     // Create a new protocol stream.
-    let protocol = await new Protocol({ id: this._id, discoveryToPublicKey, live: true })
+    let protocol = await new Protocol({
+      streamOptions: {
+        id: this._id,
+        live: true
+      },
+      discoveryToPublicKey
+    })
       // TODO(burdon): User identifier?
       // Note: User and extension data is sent in the handshake message, which is the 2nd message exchanged between peers.
       // Communication is encrypted from the 2nd message onward (https://datprotocol.github.io/how-dat-works/#encryption).
