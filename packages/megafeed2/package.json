@@ -25,6 +25,7 @@
     "@wirelineio/codec-protobuf": "^0.1.35",
     "@wirelineio/feed-store": "^0.1.35",
     "@wirelineio/hyperswarm-network-memory": "^0.1.35",
+    "canonical-json": "^0.0.4",
     "chance": "^1.0.18",
     "chess.js": "^0.10.2",
     "debug": "^4.1.1",
