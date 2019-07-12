@@ -75,12 +75,6 @@ export class Replicator extends EventEmitter {
 
     const topics = await this.getTopics(protocol);
 
-    this._feedStore.on('feed', (feed, stat) => {
-      if (topics.includes(stat.metadata.topic)) {
-        this._replicate(protocol, feed);
-      }
-    });
-
     // Ask peer for topic feeds and create the feeds if doesn't exist.
     const { response: { feedKeysByTopic } } = await extension.send({ type: 'get-keys', topics });
     await Promise.all(
@@ -99,6 +93,12 @@ export class Replicator extends EventEmitter {
         }));
       })
     );
+
+    this._feedStore.on('feed', (feed, stat) => {
+      if (topics.includes(stat.metadata.topic)) {
+        this._replicate(protocol, feed);
+      }
+    });
   }
 
   /**
