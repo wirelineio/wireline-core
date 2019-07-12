@@ -184,9 +184,9 @@ export class Protocol extends EventEmitter {
    * https://github.com/mafintosh/hypercore-protocol
    *
    * @param {string} [initialKey]
-   * @returns {Promise<Protocol>}
+   * @returns {Protocol}
    */
-  async init(initialKey) {
+  init(initialKey) {
     console.assert(!this._init);
 
     // TODO(ashwin): Set at end of function (we might crash).

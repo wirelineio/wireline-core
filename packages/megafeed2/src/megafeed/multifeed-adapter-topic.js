@@ -3,22 +3,22 @@
 //
 
 /**
- * Multifeed adapter factory for FeedStore based on topic.
- * @param {FeedStore} feedStore
+ * Multifeed adapter factory for Megafeed based on topic.
+ * @param {Megafeed} megafeed
  * @param {string} topic
  * @returns {Promise<{ready, feeds: (function(): [Feed]), on}>}
  */
-export const createMultifeedAdapter = async (feedStore, topic) => {
-  console.assert(feedStore);
+export const createMultifeed = async (megafeed, topic) => {
+  console.assert(megafeed);
   console.assert(topic);
 
-  const feeds = await feedStore.loadFeeds(descriptor => {
+  const feeds = await megafeed.loadFeeds(descriptor => {
     return descriptor.stat.metadata.topic === topic;
   });
 
   // Dispatch `feed` event to kappa.
   const onFeedListeners = new Map();
-  feedStore.on('feed', (feed, stat) => {
+  megafeed.on('feed', (feed, stat) => {
     feeds.push(feed);
 
     const handler = onFeedListeners.get(stat.metadata.topic);

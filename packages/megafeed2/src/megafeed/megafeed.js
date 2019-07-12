@@ -5,10 +5,8 @@
 import { EventEmitter } from 'events';
 import hypertrie from 'hypertrie';
 import pify from 'pify';
-import mm from 'micromatch';
 
 import { FeedStore } from '@wirelineio/feed-store';
-import { keyToHex, getDiscoveryKey } from '@wirelineio/utils';
 
 import { Replicator } from './replicator';
 
@@ -79,32 +77,12 @@ export class Megafeed extends EventEmitter {
     return this._feedStore.findFeed(descriptor => descriptor.discoveryKey.equals(key));
   }
 
-  async addFeed(path, stat) {
+  async openFeed(path, stat) {
     return this._feedStore.openFeed(path, stat);
   }
 
-  async loadFeeds(pattern) {
-    if (Array.isArray(pattern)) {
-      pattern = pattern.filter(Boolean).map(value => keyToHex(value));
-    } else {
-      pattern = keyToHex(pattern);
-    }
-
-    return this._feedStore.loadFeeds(descriptor => {
-      const list = [
-        descriptor.path,
-        keyToHex(descriptor.key),
-        keyToHex(getDiscoveryKey(descriptor.key))
-      ].filter(Boolean);
-
-      if (descriptor.secretKey) {
-        list.push(keyToHex(descriptor.secretKey));
-      }
-
-      const matches = mm(list, pattern);
-
-      return matches.length > 0
-    });
+  async loadFeeds(cb) {
+    return this._feedStore.loadFeeds(cb);
   }
 
   /**

@@ -113,6 +113,8 @@ export class Replicator extends EventEmitter {
         const topics = Array.from(new Set(this._feedStore
           .getDescriptors()
           .filter(descriptor => !!descriptor.stat.metadata.topic)
+          // This is the only way right now to prevent share topics that you don't want to.
+          .filter(descriptor => descriptor.opened)
           .map(descriptor => descriptor.stat.metadata.topic)));
 
         return {

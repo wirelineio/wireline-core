@@ -5,6 +5,8 @@
 const discoverySwarmWebrtc = require('@geut/discovery-swarm-webrtc');
 const debug = require('debug')('dsuite:swarm');
 
+const { Protocol } = require('@wirelineio/megafeed2');
+
 const Metric = require('../utils/metric');
 const Config = require('../config');
 
@@ -41,7 +43,18 @@ exports.createSwarm = (mega, conf) => {
     maxPeers: conf.maxPeers || process.env.SWARM_MAX_PEERS || (conf.isBot ? 64 : 2),
 
     // TODO(burdon): Get's the main hypercore stream (not actually the feed replication stream).
-    stream: info => mega.replicate({ key: info.channel, live: true }),
+    stream: (info) => {
+      return new Protocol({
+        streamOptions: {
+          id,
+          live: true
+        }
+      })
+        .setExtensions(mega.createExtensions())
+        .init(conf.partyKey);
+      // TODO(martin): Should be dynamic using info.channel but for now static is fine.
+      // .init(info.channel);
+    },
 
     simplePeer: {
       // Node client (e.g., for bots).

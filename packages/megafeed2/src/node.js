@@ -160,7 +160,7 @@ export class Node extends EventEmitter {
     };
 
     // Create a new protocol stream.
-    let protocol = await new Protocol({
+    let protocol = new Protocol({
       streamOptions: {
         id: this._id,
         live: true

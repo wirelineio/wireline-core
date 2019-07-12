@@ -5940,7 +5940,7 @@ loggly-jslogger@^2.2.2:
   resolved "https://registry.yarnpkg.com/loggly-jslogger/-/loggly-jslogger-2.2.2.tgz#f527e6c09c57587b4eb3852638ee1b3b3b77bc8b"
   integrity sha512-0lmavRkkmsYhMy0wd0zKSk9R3nU3cDIcqKTI/HZVMVwYtZlg1s2lmWCKpbs7PIPqwvUXtH1u+NFPGpDIvzwhlA==
 
-"loggly@github:segmentio/loggly", loggly@segmentio/loggly:
+loggly@segmentio/loggly:
   version "0.1.1"
   resolved "https://codeload.github.com/segmentio/loggly/tar.gz/a77b6418faeb184c867a38c175552962f590427c"
   dependencies:
