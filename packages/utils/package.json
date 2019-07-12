@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/utils",
-  "version": "0.1.35",
+  "version": "0.1.36",
   "description": "Wireline core utilities.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/utils",
   "bugs": {
