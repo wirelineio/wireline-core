@@ -3,12 +3,11 @@
 //
 
 import debug from 'debug';
-import ram from 'random-access-memory';
 import pify from 'pify';
 import waitForExpect from 'wait-for-expect';
 
-import { createFeedStore, createKeys } from '../megafeed/debug/generator'
-import { ViewFactory } from '../megafeed/view_factory';
+import { createMegafeed, createKeys } from '../megafeed/debug/generator'
+import { KappaManager } from '../megafeed/kappa-manager';
 import { random } from '../util/debug';
 import { keyStr, keyName } from '../util/keys';
 
@@ -36,8 +35,8 @@ test('kappa with feedmap', async () => {
     itemId: 'game1'
   };
 
-  const feedStore = await createFeedStore({ topicKeys: [ topic ], numFeedsPerTopic: 2 });
-  const [ feed1, feed2 ] = await feedStore.getFeeds();
+  const megafeed = await createMegafeed({ topicKeys: [ topic ], numFeedsPerTopic: 2 });
+  const [ feed1, feed2 ] = await megafeed.getFeeds();
 
   // Chess Game 1.
   pify(feed1.append.bind(feed1))({ type: 'chess', itemId: 'game1', move: 'e4', seq: 1 });
@@ -52,8 +51,8 @@ test('kappa with feedmap', async () => {
   pify(feed2.append.bind(feed2))({ type: 'document', itemId: 'doc2', title: 'New Doc 2' });
 
   // Create view.
-  const viewFactory = new ViewFactory(ram, feedStore);
-  const kappa = await viewFactory.getOrCreateView('view1', params.topic);
+  const kappaManager = new KappaManager(megafeed);
+  const kappa = await kappaManager.getOrCreateKappa(params.topic);
   kappa.use('log', LogView(params.type));
 
   // Create app from view.
@@ -82,8 +81,8 @@ test('kappa with message order', async () => {
     itemId: `chat${random.timestamp()}`
   };
 
-  const feedStore = await createFeedStore({ topicKeys: [ chatTopic ], numFeedsPerTopic: numFeeds });
-  const feeds = await feedStore.getFeeds();
+  const megafeed = await createMegafeed({ topicKeys: [ chatTopic ], numFeedsPerTopic: numFeeds });
+  const feeds = await megafeed.getFeeds();
 
   // Multiple messages from multiple feeds.
   const messages = [];
@@ -109,8 +108,8 @@ test('kappa with message order', async () => {
   }
 
   // Create view.
-  const viewFactory = new ViewFactory(ram, feedStore);
-  const kappa = await viewFactory.getOrCreateView('view1', params.topic);
+  const kappaManager = new KappaManager(megafeed);
+  const kappa = await kappaManager.getOrCreateKappa(params.topic);
   kappa.use('ordered_log', OrderedLogView(params.type));
 
   // Create app from view.

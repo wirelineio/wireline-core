@@ -3,7 +3,6 @@
 //
 
 import kappa from 'kappa-core';
-import pify from 'pify';
 
 import { createMultifeed } from './multifeed-adapter-topic';
 
@@ -41,8 +40,6 @@ export class KappaManager {
     });
 
     this._kappaList.set(topic, kappaInstance);
-
-    await pify(kappaInstance.ready.bind(kappaInstance))();
 
     return kappaInstance;
   }

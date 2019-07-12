@@ -77,6 +77,10 @@ export class Megafeed extends EventEmitter {
     return this._feedStore.findFeed(descriptor => descriptor.discoveryKey.equals(key));
   }
 
+  getFeeds() {
+    return this._feedStore.getFeeds();
+  }
+
   async openFeed(path, stat) {
     return this._feedStore.openFeed(path, stat);
   }
