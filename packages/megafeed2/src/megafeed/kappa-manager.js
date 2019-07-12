@@ -4,7 +4,7 @@
 
 import kappa from 'kappa-core';
 
-import { createMultifeed } from './multifeed-adapter-topic';
+import { MultifeedAdapter } from './multifeed-adapter';
 
 /**
  * Kappa factory.
@@ -31,12 +31,12 @@ export class KappaManager {
    * @param topic
    * @returns {Promise<Kappa>}
    */
-  async getOrCreateKappa(topic) {
+  getOrCreateKappa(topic) {
     console.assert(topic);
 
     // TODO(ashwin): How is kappa storage configured?
     const kappaInstance = this._kappaList.get(topic) || kappa(null, {
-      multifeed: await createMultifeed(this._megafeed, topic)
+      multifeed: new MultifeedAdapter(this._megafeed, topic)
     });
 
     this._kappaList.set(topic, kappaInstance);

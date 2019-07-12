@@ -83,6 +83,8 @@ class FeedStore extends EventEmitter {
     this._defaultFeedOptions = feedOptions;
 
     this._descriptors = new Map();
+
+    this._ready = false;
   }
 
   /**
@@ -100,6 +102,21 @@ class FeedStore extends EventEmitter {
         this._createDescriptor(path, stat);
       })
     );
+
+    process.nextTick(() => {
+      this._ready = true;
+      this.emit('ready');
+    });
+  }
+
+  async ready() {
+    if (this._ready) {
+      return;
+    }
+
+    return new Promise((resolve) => {
+      this.once('ready', resolve);
+    });
   }
 
   /**
@@ -186,6 +203,8 @@ class FeedStore extends EventEmitter {
    * @returns {Promise<Hypercore[]>}
    */
   async loadFeeds(cb) {
+    await this.ready();
+
     const descriptors = this.getOpenedDescriptors()
       .filter(descriptor => cb(descriptor));
 
@@ -209,6 +228,8 @@ class FeedStore extends EventEmitter {
    * @returns {Hypercore}
    */
   async openFeed(path, stat = {}) {
+    await this.ready();
+
     const { key } = stat;
 
     let descriptor = this.getDescriptorByPath(path);
@@ -235,6 +256,8 @@ class FeedStore extends EventEmitter {
    * @returns {Promise}
    */
   async closeFeed(path) {
+    await this.ready();
+
     const descriptor = this.getDescriptorByPath(path);
 
     if (!descriptor) {
@@ -251,6 +274,8 @@ class FeedStore extends EventEmitter {
    * @returns {Promise}
    */
   async deleteFeed(path) {
+    await this.ready();
+
     const descriptor = this.getDescriptorByPath(path);
 
     try {

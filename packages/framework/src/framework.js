@@ -6,21 +6,14 @@ const { EventEmitter } = require('events');
 const ram = require('random-access-memory');
 const levelup = require('levelup');
 const memdown = require('memdown');
-const pify = require('pify');
 
-const { bubblingEvents, keyToHex } = require('@wirelineio/utils');
+const { keyToHex } = require('@wirelineio/utils');
 
 const { Megafeed, KappaManager } = require('@wirelineio/megafeed2');
 const { ViewTypes, Views } = require('./views/defs');
-const ViewManager = require('./views/view_manager');
+const ViewManager = require('./views/view-manager');
 
-const PartyManager = require('./parties/party_manager');
-const PartySerializer = require('./parties/party_serializer');
-
-const botPartyRules = require('./parties/bots');
-const documentPartyRules = require('./parties/documents');
-
-const { createSwarm, addSwarmHandlers } = require('./wrappers/swarm');
+const { createSwarm } = require('./wrappers/swarm');
 
 /**
  * App framework.
@@ -33,8 +26,8 @@ class Framework extends EventEmitter {
    *
    * @param conf.storage {Function} A random-access-* implementation for storage.
    * @param conf.keys {Object}
-   * @param conf.key.publicKey {Buffer}
-   * @param conf.key.secretKey {Buffer}
+   * @param conf.keys.publicKey {Buffer}
+   * @param conf.keys.secretKey {Buffer}
    * @param conf.hub {String|Array} Signalhub url for swarm connection.
    * @param conf.isBot {Boolean} Sefines if dsuite is for a bot.
    * @param conf.partyKey {Buffer} Sefines initial party key.
@@ -43,6 +36,7 @@ class Framework extends EventEmitter {
   // TODO(burdon): Non-optional variables (e.g., storage) should be actual params.
   constructor(conf = {}) {
     super();
+    console.assert(Buffer.isBuffer(conf.partyKey));
 
     this._conf = conf;
 
@@ -60,7 +54,7 @@ class Framework extends EventEmitter {
     this._mega = new Megafeed(storage, {
       publicKey,
       secretKey,
-      feedOptions: { valueEncoding: 'json' }
+      valueEncoding: 'json'
     });
 
     // Metrics.
@@ -73,6 +67,15 @@ class Framework extends EventEmitter {
 
     // Create KappaManager.
     this._kappaManager = new KappaManager(this._mega);
+
+    // Create a single Kappa instance
+    const topic = keyToHex(this._conf.partyKey);
+    this._kappa = this._kappaManager.getOrCreateKappa(topic);
+
+    // Create a ViewManager
+    this._viewManager = new ViewManager(this._kappa, this._db)
+      .registerTypes(ViewTypes)
+      .registerViews(Views);
 
     this._initialized = false;
   }
@@ -99,29 +102,16 @@ class Framework extends EventEmitter {
 
   async initialize() {
     console.assert(!this._initialized);
+    const topic = keyToHex(this._conf.partyKey);
+
     await this._mega.initialize();
 
-    // Initialize control feed of the user.
-    await this._mega.openFeed('feed/profiles/local');
-
-    // Load initial feeds. Default is to lazy load feeds on connection.
-    await this._mega.loadFeeds(descriptor => descriptor.path.includes('feed/profiles/'));
-
-    // Create a single kappa by a topic = partyKey.
-    const topic = keyToHex(this._conf.partyKey);
-    this._kappa = await this._kappaManager.getOrCreateKappa(topic);
-    await this._mega.openFeed(`feed/${topic}/local`, { metadata: { topic } });
-
-    // Create a ViewManager
-    this._viewManager = new ViewManager(this._mega, this._kappa, this._db)
-      .registerTypes(ViewTypes)
-      .registerViews(Views);
+    // We set the feed where we are going to write messages.
+    const feed = await this._mega.openFeed(`feed/${topic}/local`, { metadata: { topic } });
+    this._viewManager.setFeed(feed);
 
     // Connect to the swarm.
     this._swarm = createSwarm(this._mega, this._conf);
-
-    // TODO(burdon): Remove (use event bubbling?)
-    addSwarmHandlers(this._swarm, this._mega, this);
 
     // Set Profile if name is provided.
     const { name } = this._conf;

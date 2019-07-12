@@ -81,6 +81,10 @@ export class Megafeed extends EventEmitter {
     return this._feedStore.getFeeds();
   }
 
+  filterFeeds(cb) {
+    return this._feedStore.filterFeeds(cb);
+  }
+
   async openFeed(path, stat) {
     return this._feedStore.openFeed(path, stat);
   }

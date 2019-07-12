@@ -7,23 +7,27 @@
  */
 class ViewManager {
 
-  constructor(mega, kappa, db, partyManager) {
-    console.assert(mega);
+  constructor(kappa, db) {
     console.assert(kappa);
     console.assert(db);
-    console.assert(partyManager);
 
     this._kappa = kappa;
 
-    // Adapter for views.
-    // TODO(burdon): Remove partyManager dependency.
-    this._adapter = { mega, core: kappa, db, partyManager };
+    this._db = db;
 
     // Map of view types.
     this._types = new Map();
 
     // Map of views indexed by name.
     this._views = new Map();
+  }
+
+  setFeed(feed) {
+    this._feed = feed;
+  }
+
+  getFeed() {
+    return this._feed;
   }
 
   registerTypes(types) {
@@ -50,8 +54,7 @@ class ViewManager {
     const viewConstructor = (typeof viewType === 'string') ? this._types.get(viewType) : viewType;
     console.assert(viewConstructor, `Invalid view: ${viewType}`);
 
-    // TODO(burdon): Pass individual params.
-    const view = viewConstructor(this._adapter, { viewId: name });
+    const view = viewConstructor(name, this._db, this._kappa, this.getFeed.bind(this));
 
     this._kappa.use(name, view);
     this._views.set(name, view);
