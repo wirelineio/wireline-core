@@ -13,17 +13,17 @@ import canonicalStringify from 'canonical-json';
 export const createItem = (ownerKey) => {
   console.assert(ownerKey);
 
-  const itemKeys = crypto.keyPair();
+  const itemKeyPair = crypto.keyPair();
   const item = {
-    type: 'wrn:protobuf:wirelinio.credential.ItemGenesis',
-    key: itemKeys.publicKey.toString('hex'),
+    type: 'wrn:protobuf:wirelineio.credential.ItemGenesis',
+    key: itemKeyPair.publicKey.toString('hex'),
     ownerKey: ownerKey.toString('hex')
   };
 
-  const signature = signItem(item, itemKeys.secretKey);
+  const signature = signItem(item, itemKeyPair.secretKey);
 
   // Burn the item secret key after signing the genesis block.
-  itemKeys.secretKey = undefined;
+  itemKeyPair.secretKey = undefined;
 
   return {
     ...item,
@@ -58,8 +58,11 @@ export const verifyItem = (item) => {
   console.assert(ownerKey);
   console.assert(signature);
 
+  const itemClone = { ...item };
+  delete itemClone.signature;
+
   return crypto.verify(
-    Buffer.from(canonicalStringify({ type, key, ownerKey })),
+    Buffer.from(canonicalStringify(itemClone)),
     Buffer.from(signature, 'hex'),
     Buffer.from(key, 'hex')
   );
