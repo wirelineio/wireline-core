@@ -41,7 +41,13 @@ export class Megafeed extends EventEmitter {
           valueEncoding: options.valueEncoding
         }
       })
-      .on('feed', (feed, stat) => this.emit('feed', feed, stat))
+      .on('feed', (feed, stat) => {
+        this.emit('feed', feed, stat)
+
+        feed.on('sync', () => {
+          this.emit('update', feed, stat);
+        });
+      });
 
     // Manages feed replication.
     this._replicator = new Replicator(this._feedStore)
