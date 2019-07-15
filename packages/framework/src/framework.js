@@ -7,9 +7,9 @@ const ram = require('random-access-memory');
 const levelup = require('levelup');
 const memdown = require('memdown');
 
+const { Megafeed, KappaManager } = require('@wirelineio/megafeed2');
 const { keyToHex } = require('@wirelineio/utils');
 
-const { Megafeed, KappaManager } = require('@wirelineio/megafeed2');
 const { ViewTypes, Views } = require('./views/defs');
 const ViewManager = require('./views/view-manager');
 
