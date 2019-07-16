@@ -11,6 +11,7 @@ const pify = require('pify');
 const { Megafeed, KappaManager } = require('@wirelineio/megafeed2');
 const { keyToHex } = require('@wirelineio/utils');
 
+const PartySerializer = require('./parties/party-serializer');
 const { ViewTypes, Views } = require('./views/defs');
 const ViewManager = require('./views/view-manager');
 
@@ -63,6 +64,9 @@ class Framework extends EventEmitter {
       this.emit('metric.mega.append', { value: feed.key.toString('hex') });
     });
 
+    // Import/export
+    this._partySerializer = new PartySerializer(this._mega, this._conf.partyKey);
+
     // In-memory cache for views.
     this._db = db || levelup(memdown());
 
@@ -101,6 +105,10 @@ class Framework extends EventEmitter {
     return this._viewManager;
   }
 
+  get partySerializer() {
+    return this._partySerializer;
+  }
+
   async initialize() {
     console.assert(!this._initialized);
     const topic = keyToHex(this._conf.partyKey);
@@ -110,6 +118,9 @@ class Framework extends EventEmitter {
     // We set the feed where we are going to write messages.
     const feed = await this._mega.openFeed(`feed/${topic}/local`, { metadata: { topic } });
     this._viewManager.setFeed(feed);
+
+    // We need to load all the feeds with the related topic
+    await this._mega.loadFeeds(({ stat }) => stat.metadata.topic === topic);
 
     // Connect to the swarm.
     this._swarm = createSwarm(this._mega, this._conf);
