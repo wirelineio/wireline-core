@@ -3020,11 +3020,6 @@ debug@3.1.0, debug@~3.1.0:
   dependencies:
     ms "2.0.0"
 
-debug@^0.8.1:
-  version "0.8.1"
-  resolved "https://registry.yarnpkg.com/debug/-/debug-0.8.1.tgz#20ff4d26f5e422cb68a1bacbbb61039ad8c1c130"
-  integrity sha1-IP9NJvXkIstoobrLu2EDmtjBwTA=
-
 debug@^2.2.0, debug@^2.3.3, debug@^2.6.8, debug@^2.6.9:
   version "2.6.9"
   resolved "https://registry.yarnpkg.com/debug/-/debug-2.6.9.tgz#5d128515df134ff327e90a4c93f4e077a536341f"
@@ -5793,18 +5788,6 @@ log-update@^2.3.0:
     cli-cursor "^2.0.0"
     wrap-ansi "^3.0.1"
 
-loggly-jslogger@^2.2.2:
-  version "2.2.2"
-  resolved "https://registry.yarnpkg.com/loggly-jslogger/-/loggly-jslogger-2.2.2.tgz#f527e6c09c57587b4eb3852638ee1b3b3b77bc8b"
-  integrity sha512-0lmavRkkmsYhMy0wd0zKSk9R3nU3cDIcqKTI/HZVMVwYtZlg1s2lmWCKpbs7PIPqwvUXtH1u+NFPGpDIvzwhlA==
-
-loggly@segmentio/loggly:
-  version "0.1.1"
-  resolved "https://codeload.github.com/segmentio/loggly/tar.gz/a77b6418faeb184c867a38c175552962f590427c"
-  dependencies:
-    debug "^0.8.1"
-    request "^2.36.0"
-
 long@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/long/-/long-4.0.0.tgz#9a7b71cfb7d361a194ea555241c92f7468d5bf28"
@@ -7571,7 +7554,7 @@ request-promise-native@^1.0.5, request-promise-native@^1.0.7:
     stealthy-require "^1.1.1"
     tough-cookie "^2.3.3"
 
-request@^2.36.0, request@^2.87.0, request@^2.88.0:
+request@^2.87.0, request@^2.88.0:
   version "2.88.0"
   resolved "https://registry.yarnpkg.com/request/-/request-2.88.0.tgz#9c2fca4f7d35b592efe57c7f0a55e81052124fef"
   integrity sha512-NAqBSrijGLZdM0WZNsInLJpkJokL72XYjUpnB0iwsRgxh7dB6COrHnTBNwN0E+lHDAJzu7kLAkDeY08z2/A0hg==
