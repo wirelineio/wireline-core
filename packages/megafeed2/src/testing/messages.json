@@ -1,0 +1,46 @@
+[
+   {
+      "type": "wrn:chess/new_game",
+      "message": {
+        "itemKey": "wrn:item:game1",
+         "white": "kasparov",
+         "black": "karpov"
+      }
+   },
+   {
+      "type": "wrn:chess/move",
+      "message": {
+        "itemKey": "wrn:item:game1",
+         "seq": 0,
+         "from": "e2",
+         "to": "e4"
+      }
+   },
+   {
+      "type": "wrn:chess/move",
+      "message": {
+        "itemKey": "wrn:item:game1",
+         "seq": 1,
+         "from": "e7",
+         "to": "e5"
+      }
+   },
+   {
+      "type": "wrn:chess/move",
+      "message": {
+        "itemKey": "wrn:item:game1",
+         "seq": 2,
+         "from": "d2",
+         "to": "d4"
+      }
+   },
+   {
+      "type": "wrn:chess/move",
+      "message": {
+        "itemKey": "wrn:item:game1",
+         "seq": 3,
+         "from": "d7",
+         "to": "d5"
+      }
+   }
+]
