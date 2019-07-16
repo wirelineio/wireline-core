@@ -5,6 +5,7 @@
 const EventEmitter = require('events');
 const view = require('kappa-view-level');
 const sub = require('subleveldown');
+const pify = require('pify');
 
 const { keyToHex } = require('@wirelineio/utils');
 
@@ -57,8 +58,9 @@ module.exports = function ContactsView(viewId, db, core, getFeed) {
 
     api: {
 
-      // TODO(burdon): Query?
-      getContacts(core, opts = {}) {
+      async getContacts(core, opts = {}) {
+        await pify(this.ready.bind(this))();
+
         const fromKey = uuid('profile');
         const toKey = `${fromKey}~`;
         const reader = viewDB.createValueStream({ gte: fromKey, lte: toKey, reverse: opts.reverse });
@@ -72,6 +74,8 @@ module.exports = function ContactsView(viewId, db, core, getFeed) {
       },
 
       async getProfile(core, { key } = {}) {
+        await pify(this.ready.bind(this))();
+
         try {
           return await viewDB.get(uuid('profile', key || keyToHex(getFeed().key)));
         } catch (error) {

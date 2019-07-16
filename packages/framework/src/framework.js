@@ -6,6 +6,7 @@ const { EventEmitter } = require('events');
 const ram = require('random-access-memory');
 const levelup = require('levelup');
 const memdown = require('memdown');
+const pify = require('pify');
 
 const { Megafeed, KappaManager } = require('@wirelineio/megafeed2');
 const { keyToHex } = require('@wirelineio/utils');
@@ -112,6 +113,8 @@ class Framework extends EventEmitter {
 
     // Connect to the swarm.
     this._swarm = createSwarm(this._mega, this._conf);
+
+    await pify(this._kappa.ready.bind(this._kappa))();
 
     // Set Profile if name is provided.
     const { name } = this._conf;
