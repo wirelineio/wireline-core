@@ -6,11 +6,12 @@ import path from 'path';
 import crypto from 'hypercore-crypto';
 
 import { createCodec } from './helpers';
-import { createItem, signItem, verifyItem } from './credentials';
+import { createItem, createParty, signObject, verifyObject } from './credentials';
 
 test('item genesis', async () => {
 
-  // TODO(ashwin): Import .ptoro and pass in objects as string literals.
+  // TODO(ashwin): Import .proto and pass in objects as string literals.
+  // TODO(ashwin): Loading from string currently NOT supported (https://github.com/protobufjs/protobuf.js/issues/1162).
   const codec = await createCodec([
     path.join(__dirname, 'credentials.proto')
   ]);
@@ -29,7 +30,7 @@ test('item genesis', async () => {
     expect(message).toEqual(item);
 
     // Verify signature.
-    expect(verifyItem(item)).toBeTruthy();
+    expect(verifyObject(item)).toBeTruthy();
   }
 
   {
@@ -38,13 +39,54 @@ test('item genesis', async () => {
 
     // Tampering the ownerKey doesn't work.
     itemClone.ownerKey = user2.publicKey;
-    expect(verifyItem(itemClone)).toBeFalsy();
+    expect(verifyObject(itemClone)).toBeFalsy();
 
     // Verificaton MUST fail as the item needs to be signed with the item's private key, which has been burned.
     // Check not possible to claim ownership since burned private item key is required to sign block.
     // Sign with new owners secret key.
     delete itemClone.signature;
-    const signature = signItem(item, user2.secretKey);
-    expect(verifyItem({ ...itemClone, signature })).toBeFalsy();
+    const signature = signObject(item, user2.secretKey);
+    expect(verifyObject({ ...itemClone, signature })).toBeFalsy();
+  }
+});
+
+test('party genesis', async () => {
+  const codec = await createCodec([
+    path.join(__dirname, 'credentials.proto')
+  ]);
+
+  const user1 = crypto.keyPair();
+  const user2 = crypto.keyPair();
+
+  const feedKeyPair = crypto.keyPair();
+
+  const party = createParty(user1.publicKey, feedKeyPair.publicKey);
+
+  {
+    const buffer = codec.encode({ type: 'wirelineio.credential.PartyGenesis', message: party });
+    expect(buffer).toBeDefined();
+
+    const { type, message } = codec.decode(buffer);
+    expect(type).toBe('wirelineio.credential.PartyGenesis');
+    expect(message).toEqual(party);
+
+    // Verify signature.
+    expect(verifyObject(party)).toBeTruthy();
+  }
+
+  {
+    // Clone the party.
+    const partyClone = { ...party };
+
+    // Tampering the ownerKey doesn't work.
+    partyClone.ownerKey = user2.publicKey;
+    expect(verifyObject(partyClone)).toBeFalsy();
+
+    // Verificaton MUST fail as the party needs to be signed with the party's private key, which has been burned.
+    // Check not possible to claim ownership since burned private party key is required to sign block.
+    // Sign with new owners secret key.
+    delete partyClone.signature;
+    const signature = signObject(party, user2.secretKey);
+    expect(verifyObject({ ...partyClone, signature })).toBeFalsy();
   }
 });

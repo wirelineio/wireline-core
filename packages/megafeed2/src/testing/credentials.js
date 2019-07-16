@@ -20,7 +20,7 @@ export const createItem = (ownerKey) => {
     ownerKey: ownerKey.toString('hex')
   };
 
-  const signature = signItem(item, itemKeyPair.secretKey);
+  const signature = signObject(item, itemKeyPair.secretKey);
 
   // Burn the item secret key after signing the genesis block.
   itemKeyPair.secretKey = undefined;
@@ -32,37 +32,62 @@ export const createItem = (ownerKey) => {
 };
 
 /**
- * Sign an item.
- * @param {Object} item
+ * Creates a party (genesis message).
+ * @param {Buffer} ownerKey
+ * @param {Buffer} feedKey
+ * @returns {Object} party
+ */
+export const createParty = (ownerKey, feedKey) => {
+  console.assert(ownerKey);
+
+  const partyKeyPair = crypto.keyPair();
+  const party = {
+    type: 'wrn:protobuf:wirelineio.credential.PartyGenesis',
+    key: partyKeyPair.publicKey.toString('hex'),
+    ownerKey: ownerKey.toString('hex'),
+    feedKey: feedKey.toString('hex')
+  };
+
+  const signature = signObject(party, partyKeyPair.secretKey);
+
+  // Burn the party secret key after signing the genesis block.
+  partyKeyPair.secretKey = undefined;
+
+  return {
+    ...party,
+    signature
+  };
+};
+
+/**
+ * Sign an object.
+ * @param {Object} obj
  * @param {Buffer} secretKey
  * @return {string} signature
  */
-export const signItem = (item, secretKey) => {
+export const signObject = (obj, secretKey) => {
   return crypto
-    .sign(Buffer.from(canonicalStringify(item)), secretKey)
+    .sign(Buffer.from(canonicalStringify(obj)), secretKey)
     .toString('hex');
 };
 
 /**
- * Verify item.
- * @param {Object} item
+ * Verify obj.
+ * @param {Object} obj
  * @returns {boolean}
  */
-export const verifyItem = (item) => {
-  console.assert(item);
+export const verifyObject = (obj) => {
+  console.assert(obj);
 
-  const { type, key, ownerKey, signature } = item;
-
-  console.assert(type);
+  const { key, signature } = obj;
   console.assert(key);
-  console.assert(ownerKey);
   console.assert(signature);
 
-  const itemClone = { ...item };
-  delete itemClone.signature;
+  const clone = { ...obj };
+  delete clone.signature;
 
   return crypto.verify(
-    Buffer.from(canonicalStringify(itemClone)),
+    Buffer.from(canonicalStringify(clone)),
     Buffer.from(signature, 'hex'),
     Buffer.from(key, 'hex')
   );
