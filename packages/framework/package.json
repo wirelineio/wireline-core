@@ -19,7 +19,7 @@
   "dependencies": {
     "@geut/discovery-swarm-webrtc": "^2.0.0-alpha.18",
     "@wirelineio/automerge-worker": "^0.1.12",
-    "@wirelineio/megafeed": "^0.1.35",
+    "@wirelineio/megafeed2": "^0.1.35",
     "@wirelineio/utils": "^0.1.35",
     "@wirelineio/wire-inspect": "^0.1.17",
     "bufferutil": "^4.0.1",

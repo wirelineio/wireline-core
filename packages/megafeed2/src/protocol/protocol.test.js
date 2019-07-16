@@ -28,12 +28,12 @@ test('protocol', async done => {
 
   const { publicKey } = crypto.keyPair();
 
-  const protocol1 = await new Protocol()
+  const protocol1 = new Protocol()
     .setUserData({ user: 'user1' })
     .setExtension(new Extension(extension, { timeout }))
     .init(publicKey);
 
-  const protocol2 = await new Protocol()
+  const protocol2 = new Protocol()
     .setUserData({ user: 'user2' })
     .setExtension(new Extension(extension, { timeout })
       .setMessageHandler(async (protocol, context, { type, topics }) => {

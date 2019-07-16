@@ -5,6 +5,9 @@
 const discoverySwarmWebrtc = require('@geut/discovery-swarm-webrtc');
 const debug = require('debug')('dsuite:swarm');
 
+const { Protocol } = require('@wirelineio/megafeed2');
+const { getDiscoveryKey } = require('@wirelineio/utils');
+
 const Metric = require('../utils/metric');
 const Config = require('../config');
 
@@ -20,7 +23,7 @@ const isBrowser = typeof window !== 'undefined';
 exports.createSwarm = (mega, conf) => {
 
   // TODO(burdon): Removing control feed.
-  const id = mega.feed('control').discoveryKey.toString('hex');
+  const id = mega.id.toString('hex');
 
   // TODO(burdon): Handle defaults externally (remove const here).
   // Priority: conf => ENV => default (SIGNALHUB const).
@@ -28,11 +31,11 @@ exports.createSwarm = (mega, conf) => {
   const ice = JSON.parse(conf.ice || process.env.ICE_SERVERS || Config.ICE_SERVERS);
 
   debug('Connecting:', JSON.stringify({ signalhub, ice }));
-  debug('PeerId:', mega.id.toString('hex'));
+  debug('PeerId:', id);
 
   const swarm = conf.swarm || discoverySwarmWebrtc;
 
-  return swarm({
+  const sw = swarm({
     id,
 
     urls: Array.isArray(signalhub) ? signalhub : [signalhub],
@@ -41,7 +44,19 @@ exports.createSwarm = (mega, conf) => {
     maxPeers: conf.maxPeers || process.env.SWARM_MAX_PEERS || (conf.isBot ? 64 : 2),
 
     // TODO(burdon): Get's the main hypercore stream (not actually the feed replication stream).
-    stream: info => mega.replicate({ key: info.channel, live: true }),
+    stream: (info) => {
+      return new Protocol({
+        streamOptions: {
+          id,
+          live: true
+        }
+      })
+        .setExtensions(mega.createExtensions())
+        .init(conf.partyKey)
+        .stream;
+      // TODO(martin): Should be dynamic using info.channel but for now static is fine.
+      // .init(info.channel);
+    },
 
     simplePeer: {
       // Node client (e.g., for bots).
@@ -51,6 +66,10 @@ exports.createSwarm = (mega, conf) => {
       }
     }
   });
+
+  process.nextTick(() => sw.join(getDiscoveryKey(conf.partyKey)));
+
+  return sw;
 };
 
 /**
@@ -68,15 +87,7 @@ exports.addSwarmHandlers = (sw, mega, dsuite) => {
   // sw.signal.info(data => console.log(data));
 
   // TODO(burdon): Removing control feed.
-  const id = mega.feed('control').discoveryKey.toString('hex');
-
-  mega.on('party', (party) => {
-    const value = { key: party.key.toString('hex'), dk: party.discoveryKey.toString('hex') };
-
-    sw.join(value.dk);
-
-    dsuite.emit('metric.swarm.party', { value });
-  });
+  const id = mega.id.toString('hex');
 
   if (!sw.signal) {
     return sw;
