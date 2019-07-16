@@ -43,11 +43,10 @@ test('simultaneous chess games between peers', async (done) => {
   };
 
   // Create peers.
-  const peers = [];
-  for (let i = 0; i < numPeers; i++) {
+  const peers = await Promise.all([...Array(numPeers).keys()].map(async i => {
     const { feed, view } = await createPeer(params, gameTopic, codec);
-    peers.push({ feed, view, key: peerKeys[i] });
-  }
+    return { feed, view, key: peerKeys[i] };
+  }));
 
   // Create games between randomly chosen peers.
   const games = [];

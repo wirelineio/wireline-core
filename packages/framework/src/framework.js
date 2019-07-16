@@ -6,22 +6,14 @@ const { EventEmitter } = require('events');
 const ram = require('random-access-memory');
 const levelup = require('levelup');
 const memdown = require('memdown');
-const pify = require('pify');
 
-const { bubblingEvents } = require('@wirelineio/utils');
+const { Megafeed, KappaManager } = require('@wirelineio/megafeed2');
+const { keyToHex } = require('@wirelineio/utils');
 
 const { ViewTypes, Views } = require('./views/defs');
-const ViewManager = require('./views/view_manager');
+const ViewManager = require('./views/view-manager');
 
-const PartyManager = require('./parties/party_manager');
-const PartySerializer = require('./parties/party_serializer');
-
-const botPartyRules = require('./parties/bots');
-const documentPartyRules = require('./parties/documents');
-
-const { createMega } = require('./wrappers/mega');
-const { createKappa } = require('./wrappers/kappa');
-const { createSwarm, addSwarmHandlers } = require('./wrappers/swarm');
+const { createSwarm } = require('./wrappers/swarm');
 
 /**
  * App framework.
@@ -34,8 +26,8 @@ class Framework extends EventEmitter {
    *
    * @param conf.storage {Function} A random-access-* implementation for storage.
    * @param conf.keys {Object}
-   * @param conf.key.publicKey {Buffer}
-   * @param conf.key.secretKey {Buffer}
+   * @param conf.keys.publicKey {Buffer}
+   * @param conf.keys.secretKey {Buffer}
    * @param conf.hub {String|Array} Signalhub url for swarm connection.
    * @param conf.isBot {Boolean} Sefines if dsuite is for a bot.
    * @param conf.partyKey {Buffer} Sefines initial party key.
@@ -44,6 +36,7 @@ class Framework extends EventEmitter {
   // TODO(burdon): Non-optional variables (e.g., storage) should be actual params.
   constructor(conf = {}) {
     super();
+    console.assert(Buffer.isBuffer(conf.partyKey));
 
     this._conf = conf;
 
@@ -56,51 +49,31 @@ class Framework extends EventEmitter {
     // Megafeed
     //
 
-    const feeds = [
-      {
-        name: 'control' // TODO(burdon): Factor out consts.
-      },
-      {
-        name: PartyManager.getPartyName(conf.partyKey, 'local'),
-        load: false
-      }
-    ];
-
     // Create megafeed.
     const { publicKey, secretKey } = keys || {};
-    this._mega = createMega(storage, publicKey, secretKey, feeds);
+    this._mega = new Megafeed(storage, {
+      publicKey,
+      secretKey,
+      valueEncoding: 'json'
+    });
 
     // Metrics.
     this._mega.on('append', (feed) => {
       this.emit('metric.mega.append', { value: feed.key.toString('hex') });
     });
 
-    //
-    // Kappa
-    //
-
     // In-memory cache for views.
     this._db = db || levelup(memdown());
 
-    // Create kapp views.
-    this._kappa = createKappa(this._mega);
+    // Create KappaManager.
+    this._kappaManager = new KappaManager(this._mega);
 
-    //
-    // Parties
-    //
+    // Create a single Kappa instance
+    const topic = keyToHex(this._conf.partyKey);
+    this._kappa = this._kappaManager.getOrCreateKappa(topic);
 
-    // Manages parties.
-    this._partyManager = new PartyManager(this._mega, this._mega.partyMap, this._kappa);
-
-    // Import/export
-    this._partySerializer = new PartySerializer(this._mega, this._kappa, this._partyManager);
-
-    //
-    // Kappa views
-    //
-
-    // Map of views indexed by name.
-    this._viewManager = new ViewManager(this._mega, this._kappa, this._db, this._partyManager)
+    // Create a ViewManager
+    this._viewManager = new ViewManager(this._kappa, this._db)
       .registerTypes(ViewTypes)
       .registerViews(Views);
 
@@ -127,54 +100,18 @@ class Framework extends EventEmitter {
     return this._viewManager;
   }
 
-  get partyManager() {
-    return this._partyManager;
-  }
-
-  get partySerializer() {
-    return this._partySerializer;
-  }
-
   async initialize() {
     console.assert(!this._initialized);
+    const topic = keyToHex(this._conf.partyKey);
 
-    // Initialize control feed of the user.
-    await this._mega.addFeed({ name: 'control' });
+    await this._mega.initialize();
 
-    // Load initial feeds for the currentPartyKey. Default is to lazy load feeds on connection.
-    await this._mega.loadFeeds('control-feed/*');
-
-    // Wait for kappa to initialize.
-    await pify(this._kappa.ready.bind(this._kappa))();
+    // We set the feed where we are going to write messages.
+    const feed = await this._mega.openFeed(`feed/${topic}/local`, { metadata: { topic } });
+    this._viewManager.setFeed(feed);
 
     // Connect to the swarm.
     this._swarm = createSwarm(this._mega, this._conf);
-
-    // TODO(burdon): Remove (use event bubbling?)
-    addSwarmHandlers(this._swarm, this._mega, this);
-
-    const replicationRules = [
-      documentPartyRules({ mega: this._mega, kappa: this._kappa, partyManager: this._partyManager }),
-      botPartyRules({ conf: this._conf, swarm: this._swarm, partyManager: this._partyManager })
-    ];
-
-    replicationRules.forEach(rule => this._partyManager.setRules(rule));
-
-    // TODO(burdon): Remove need for bubbling?
-    bubblingEvents(this, this._partyManager, ['rule-handshake', 'rule-ephemeral-message']);
-
-    // TODO(burdon): Really needs a comment.
-    if (this._conf.isBot) {
-      await this._partyManager.connectToBot({
-        key: this._mega.key
-      });
-    }
-
-    // TODO(burdon): Need to re-initialize if changed?
-    const { partyKey } = this._conf;
-    if (partyKey) {
-      await this._partyManager.setParty({ key: partyKey });
-    }
 
     // Set Profile if name is provided.
     const { name } = this._conf;

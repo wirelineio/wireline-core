@@ -7,8 +7,7 @@ const DocumentsView = require('./documents');
 const CRDTDocumentsView = require('./crdt-documents');
 const ItemsView = require('./items');
 const LogsView = require('./logs');
-const ParticipantsView = require('./participants');
-const ChatLogsView = require('./chat_logs');
+const ChatLogsView = require('./chat-logs');
 
 module.exports.ViewTypes = {
   ContactsView,
@@ -16,7 +15,6 @@ module.exports.ViewTypes = {
   CRDTDocumentsView,
   ItemsView,
   LogsView,
-  ParticipantsView,
   ChatLogsView
 };
 
@@ -28,10 +26,6 @@ module.exports.Views = [
   {
     name: 'contacts',
     view: 'ContactsView'
-  },
-  {
-    name: 'participants',
-    view: 'ParticipantsView'
   },
   {
     name: 'items',

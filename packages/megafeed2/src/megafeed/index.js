@@ -4,3 +4,4 @@
 
 export * from './debug/generator';
 export * from './megafeed';
+export * from './kappa-manager';

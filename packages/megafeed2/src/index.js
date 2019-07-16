@@ -4,5 +4,5 @@
 
 export * from './megafeed';
 export * from './util';
-
+export * from './protocol';
 export * from './node';

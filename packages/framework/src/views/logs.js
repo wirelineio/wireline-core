@@ -6,6 +6,8 @@ const EventEmitter = require('events');
 const view = require('kappa-view-level');
 const sub = require('subleveldown');
 
+const { keyToHex } = require('@wirelineio/utils');
+
 const { append } = require('../protocol/messages');
 const { uuid } = require('../utils/uuid');
 const { streamToList } = require('../utils/stream');
@@ -13,7 +15,7 @@ const { streamToList } = require('../utils/stream');
 const serializeChanges = change => (typeof change === 'string' ? change : JSON.stringify(change));
 
 // TODO(burdon): Rename LogView.
-module.exports = function LogsView({ core, db, partyManager }, { viewId }) {
+module.exports = function LogsView(viewId, db, core, getFeed) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
@@ -26,15 +28,11 @@ module.exports = function LogsView({ core, db, partyManager }, { viewId }) {
         return [];
       }
 
-      const partyKey = partyManager.getPartyKeyFromFeedKey(msg.key);
-      value.partyKey = partyKey;
-
       const { itemId } = value.data;
-      core.api['items'].updatePartyByItemId(itemId, partyKey);
 
       const type = value.type.replace(`item.${viewId}.`, '');
       if (type === 'change') {
-        return [[uuid('change', partyKey, itemId, value.timestamp), value]];
+        return [[uuid('change', itemId, value.timestamp), value]];
       }
 
       return [];
@@ -54,7 +52,7 @@ module.exports = function LogsView({ core, db, partyManager }, { viewId }) {
             const changes = await core.api[viewId].getChanges(itemId);
             const content = changes.map(({ data: { changes } }) => changes).map(serializeChanges).join('');
 
-            const localChange = partyManager.isPartyLocal(value.author, value.partyKey);
+            const localChange = value.author === keyToHex(getFeed().key);
 
             events.emit(`${viewId}.logentry`, itemId, content, localChange, changes);
           }
@@ -62,8 +60,8 @@ module.exports = function LogsView({ core, db, partyManager }, { viewId }) {
     },
 
     api: {
-      async create(core, { type, title = 'Untitled', partyKey }) {
-        return core.api['items'].create({ type, title, partyKey });
+      async create(core, { type, title = 'Untitled' }) {
+        return core.api['items'].create({ type, title });
       },
 
       async getById(core, itemId) {
@@ -90,10 +88,9 @@ module.exports = function LogsView({ core, db, partyManager }, { viewId }) {
       },
 
       async getChanges(core, itemId, opts = {}) {
-        const { partyKey } = core.api['items'].getPartyForItemId(itemId);
         const query = { reverse: opts.reverse };
-        const fromKey = uuid('change', partyKey, itemId, opts.lastChange);
-        const toKey = `${uuid('change', partyKey, itemId)}~`;
+        const fromKey = uuid('change', itemId, opts.lastChange);
+        const toKey = `${uuid('change', itemId)}~`;
 
         if (opts.lastChange) {
           // greater than
@@ -111,9 +108,7 @@ module.exports = function LogsView({ core, db, partyManager }, { viewId }) {
       },
 
       async appendChange(core, itemId, changes) {
-        const { feed } = core.api['items'].getPartyForItemId(itemId);
-
-        return append(feed, {
+        return append(getFeed(), {
           type: `item.${viewId}.change`,
           data: { itemId, changes }
         });

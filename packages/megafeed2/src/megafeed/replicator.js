@@ -7,6 +7,7 @@ import { EventEmitter } from 'events';
 import { keyStr } from '../util/keys';
 import { Extension, ProtocolError } from '../protocol';
 
+
 /**
  * Manages key exchange and feed replication.
  */
@@ -74,20 +75,29 @@ export class Replicator extends EventEmitter {
 
     const topics = await this.getTopics(protocol);
 
-    // NOTE: Does not wait to complete.
-    // Ask peer for topic feeds and replicate.
+    // Ask peer for topic feeds and create the feeds if doesn't exist.
     const { response: { feedKeysByTopic } } = await extension.send({ type: 'get-keys', topics });
-    feedKeysByTopic.forEach(async ({ topic, keys }) => {
-      await Promise.all(keys.map(async (key) => {
-        const path = `feed/${topic}/${key}`;
-        const feed = await this._feedStore.openFeed(path, {
-          key: Buffer.from(key, 'hex'),
-          metadata: { topic }
-        });
+    await Promise.all(
+      feedKeysByTopic.map(async ({ topic, keys }) => {
+        await Promise.all(keys.map(async (key) => {
+          const path = `feed/${topic}/${key}`;
 
-        // Start replication.
-        this._replicate(protocol, { topic, feed });
-      }));
+          try {
+            await this._feedStore.openFeed(path, {
+              key: Buffer.from(key, 'hex'),
+              metadata: { topic }
+            });
+          } catch (err) {
+            console.warn('Replicator - handshakeHandler:', err);
+          }
+        }));
+      })
+    );
+
+    this._feedStore.on('feed', (feed, stat) => {
+      if (topics.includes(stat.metadata.topic)) {
+        this._replicate(protocol, feed);
+      }
     });
   }
 
@@ -100,9 +110,10 @@ export class Replicator extends EventEmitter {
    */
   async _messageHandler(protocol, context, message) {
     // TODO(burdon): Check credentials. By topic?
-    if (!context.user) {
-      throw new ProtocolError(401);
-    }
+    // Sould be optional not a restriction to share feeds.
+    //if (!context.user) {
+      //throw new ProtocolError(401);
+    //}
 
     const { type } = message;
     switch (type) {
@@ -113,6 +124,8 @@ export class Replicator extends EventEmitter {
         const topics = Array.from(new Set(this._feedStore
           .getDescriptors()
           .filter(descriptor => !!descriptor.stat.metadata.topic)
+          // This is the only way right now to prevent share topics that you don't want to.
+          .filter(descriptor => descriptor.opened)
           .map(descriptor => descriptor.stat.metadata.topic)));
 
         return {
@@ -135,7 +148,7 @@ export class Replicator extends EventEmitter {
           // Share and replicate feeds over protocol stream.
           feeds.forEach((feed) => {
             // Start replicating.
-            this._replicate(protocol, { topic, feed });
+            this._replicate(protocol, feed);
           });
 
           return { topic, keys };
@@ -163,16 +176,11 @@ export class Replicator extends EventEmitter {
    * @returns {boolean} - true if `feed.replicate` was called.
    * @private
    */
-  _replicate(protocol, { topic, feed }) {
+  _replicate(protocol, feed) {
     const { stream } = protocol;
 
     if (stream.destroyed) {
       console.warn('Stream already destroyed, cannot replicate.');
-      return false;
-    }
-
-    // Check if the stream already has open a channel open for the given key.
-    if (stream.has(feed.key)) {
       return false;
     }
 
@@ -182,12 +190,6 @@ export class Replicator extends EventEmitter {
     if (!replicateOptions.live && replicateOptions.expectedFeeds === undefined) {
       stream.expectedFeeds = stream.feeds.length + 1;
     }
-
-    // TODO(burdon): Only add once.
-    // Propagate replication events.
-    feed.on('sync', () => {
-      this.emit('update', { topic, feed });
-    });
 
     feed.replicate(replicateOptions);
 
