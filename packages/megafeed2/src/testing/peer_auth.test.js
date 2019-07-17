@@ -25,7 +25,39 @@ test('protocol auth', async done => {
 
   const protocol1 = new Protocol()
     .setUserData({ user: user1KeyPair.publicKey.toString('hex') })
-    .setExtension(new Extension(extension, { timeout }))
+    .setExtension(new Extension(extension, { timeout })
+      .setHandshakeHandler(async (protocol) => {
+        const auth = protocol.getExtension(extension);
+
+        auth.on('error', err => {
+          log('Error: %o', err);
+          done(err);
+        });
+
+        {
+          const nonce = random.prime();
+          const { context, response: { proof } } = await auth.send({
+            type: 'challenge',
+            // TODO(ashwin): Encode using codec.
+            request: {
+              type: 'wrn:protobuf:wirelineio.credential.Auth',
+              key: user2KeyPair.publicKey.toString('hex'),
+              nonce
+            }
+          });
+
+          expect(context.user).toEqual(user2KeyPair.publicKey.toString('hex'));
+          expect(proof).toBeDefined();
+          expect(verifyAuthProof(proof, nonce, user2KeyPair.publicKey.toString('hex'))).toBeTruthy();
+
+          // TODO(ashwin): Close connection if auth fails?
+          // TODO(ashwin): Emit authenticated event on protocol object?
+
+          log('%o', proof);
+        }
+
+        done();
+      }))
     .init(publicKey);
 
   const protocol2 = new Protocol()
@@ -45,6 +77,7 @@ test('protocol auth', async done => {
             return {
               // TODO(ashwin): Decode using codec.
               // TODO(ashwin): Should Protocol have access to the private key directly?
+              // TODO(ashwin): If no, how should the auth extension be configured? Pass in a `signer` function?
               proof: createAuthProof(user2KeyPair, request.nonce)
             }
           }
@@ -56,36 +89,6 @@ test('protocol auth', async done => {
         }
       }))
     .init(publicKey);
-
-  protocol1.on('handshake', async (protocol) => {
-    const auth = protocol.getExtension(extension);
-
-    auth.on('error', err => {
-      log('Error: %o', err);
-      done(err);
-    });
-
-    {
-      const nonce = random.prime();
-      const { context, response: { proof } } = await auth.send({
-        type: 'challenge',
-        // TODO(ashwin): Encode using codec.
-        request: {
-          type: 'wrn:protobuf:wirelineio.credential.Auth',
-          key: user2KeyPair.publicKey.toString('hex'),
-          nonce
-        }
-      });
-
-      expect(context.user).toEqual(user2KeyPair.publicKey.toString('hex'));
-      expect(proof).toBeDefined();
-      expect(verifyAuthProof(proof, nonce, user2KeyPair.publicKey.toString('hex'))).toBeTruthy();
-
-      log('%o', proof);
-    }
-
-    done();
-  });
 
   pump(protocol1.stream, protocol2.stream, protocol1.stream, (err) => { err && done(err); });
 });
