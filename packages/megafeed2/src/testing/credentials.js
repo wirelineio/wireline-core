@@ -60,6 +60,49 @@ export const createParty = (ownerKey, feedKey) => {
 };
 
 /**
+ * Create authentication proof.
+ * @param {{publicKey, secretKey}} keyPair
+ * @param {number} nonce
+ * @return {{type, nonce, key, signature}}
+ */
+export const createAuthProof = (keyPair, nonce) => {
+  console.assert(keyPair);
+  console.assert(nonce);
+
+  const { publicKey, secretKey } = keyPair;
+  console.assert(publicKey);
+  console.assert(secretKey);
+
+  const proof = {
+    type: 'wrn:protobuf:wirelineio.credential.Auth',
+    key: publicKey.toString('hex'),
+    nonce
+  };
+
+  const signature = signObject(proof, secretKey);
+
+  return {
+    ...proof,
+    signature
+  }
+};
+
+/**
+ * Verify auth proof.
+ * @param {Object} proof
+ * @param {number} nonce
+ * @param {string} publicKey
+ * @return {boolean}
+ */
+export const verifyAuthProof = (proof, nonce, publicKey) => {
+  console.assert(proof);
+  console.assert(nonce);
+  console.assert(publicKey);
+
+  return verifyObject(proof) && proof.nonce === nonce && proof.key === publicKey;
+};
+
+/**
  * Sign an object.
  * @param {Object} obj
  * @param {Buffer} secretKey
