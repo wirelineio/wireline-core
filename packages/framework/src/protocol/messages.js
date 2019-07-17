@@ -11,7 +11,7 @@ const uuid = hyperid({ fixedLength: true });
 
 // TODO(burdon): appendMessage.
 // TODO(burdon): Move to utils?
-exports.append = async (feed, message) => {
+exports.append = async (feed, author, message) => {
   assert(message.type, 'Message.type is required.');
   assert(message.data !== undefined, 'Message.data is required.');
 
@@ -21,7 +21,7 @@ exports.append = async (feed, message) => {
       {},
       {
         id: uuid(),
-        author: feed.key.toString('hex'),
+        author: author.toString('hex'),
         timestamp: timestamp(),
         type: message.type,
         data: message.data

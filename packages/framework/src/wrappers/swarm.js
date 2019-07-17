@@ -20,10 +20,10 @@ const isBrowser = typeof window !== 'undefined';
  * @param conf
  * @return {*|DiscoverySwarmWebrtc}
  */
-exports.createSwarm = (mega, conf) => {
+exports.createSwarm = (mega, conf, emit) => {
 
   // TODO(burdon): Removing control feed.
-  const id = mega.id.toString('hex');
+  const id = mega.key.toString('hex');
 
   // TODO(burdon): Handle defaults externally (remove const here).
   // Priority: conf => ENV => default (SIGNALHUB const).
@@ -44,7 +44,7 @@ exports.createSwarm = (mega, conf) => {
     maxPeers: conf.maxPeers || process.env.SWARM_MAX_PEERS || (conf.isBot ? 64 : 2),
 
     // TODO(burdon): Get's the main hypercore stream (not actually the feed replication stream).
-    stream: (info) => {
+    stream: () => {
       return new Protocol({
         streamOptions: {
           id,
@@ -67,27 +67,11 @@ exports.createSwarm = (mega, conf) => {
     }
   });
 
-  process.nextTick(() => sw.join(getDiscoveryKey(conf.partyKey)));
-
-  return sw;
-};
-
-/**
- * Add event handlers for debugging.
- *
- * @param sw
- * @param mega
- * @param dsuite
- * @return {*|DiscoverySwarmWebrtc}
- */
-// TODO(burdon): Event bubbling (rather than on dsuite object?)
-exports.addSwarmHandlers = (sw, mega, dsuite) => {
-
-  // TODO(burdon): 'swarm.peers' (different from connections).
-  // sw.signal.info(data => console.log(data));
-
-  // TODO(burdon): Removing control feed.
-  const id = mega.id.toString('hex');
+  process.nextTick(() => {
+    const value = { key: conf.partyKey.toString('hex'), dk: getDiscoveryKey(conf.partyKey).toString('hex') };
+    sw.join(value.dk);
+    emit('metric.swarm.party', { value });
+  });
 
   if (!sw.signal) {
     return sw;
@@ -97,7 +81,7 @@ exports.addSwarmHandlers = (sw, mega, dsuite) => {
     sw.signal.info({ type: 'connection', channel: info.channel, peers: [id, info.id] });
 
     debug('Connection open:', info.id);
-    dsuite.emit('metric.swarm.connection-open', {
+    emit('metric.swarm.connection-open', {
       value: sw.peers(info.channel).filter(peer => peer.connected).length,
       peer,
       info,
@@ -109,7 +93,7 @@ exports.addSwarmHandlers = (sw, mega, dsuite) => {
     sw.signal.info({ type: 'disconnection', channel: info.channel, peers: [id, info.id] });
 
     debug('Connection closed:', info.id);
-    dsuite.emit('metric.swarm.connection-closed', {
+    emit('metric.swarm.connection-closed', {
       value: sw.peers(info.channel).filter(peer => peer.connected).length,
       peer,
       info,
@@ -125,7 +109,7 @@ exports.addSwarmHandlers = (sw, mega, dsuite) => {
       debug('Connection error:', err);
     }
 
-    dsuite.emit('metric.swarm.connection-error', {
+    emit('metric.swarm.connection-error', {
       err,
       info,
       swarm: sw
@@ -135,7 +119,7 @@ exports.addSwarmHandlers = (sw, mega, dsuite) => {
   sw.on('reconnecting', (info) => {
     debug('Reconnecting:', info);
 
-    dsuite.emit('metric.swarm.reconnecting', {
+    emit('metric.swarm.reconnecting', {
       info,
       swarm: sw
     });
@@ -148,7 +132,7 @@ exports.addSwarmHandlers = (sw, mega, dsuite) => {
       connections: info.connections
     };
 
-    dsuite.emit('metric.swarm.network-updated', {
+    emit('metric.swarm.network-updated', {
       value: new Metric(value, value => value.connections.length),
       info,
       swarm: sw

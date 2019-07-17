@@ -81,10 +81,15 @@ export class Replicator extends EventEmitter {
       feedKeysByTopic.map(async ({ topic, keys }) => {
         await Promise.all(keys.map(async (key) => {
           const path = `feed/${topic}/${key}`;
+          const keyBuffer = Buffer.from(key, 'hex');
 
           try {
+            if (this._feedStore.getDescriptorByKey(keyBuffer)) {
+              return;
+            }
+
             await this._feedStore.openFeed(path, {
-              key: Buffer.from(key, 'hex'),
+              key: keyBuffer,
               metadata: { topic }
             });
           } catch (err) {

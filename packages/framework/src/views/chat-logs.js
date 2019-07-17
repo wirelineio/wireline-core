@@ -6,7 +6,6 @@ const EventEmitter = require('events');
 const view = require('kappa-view-level');
 const sub = require('subleveldown');
 
-const { append } = require('../protocol/messages');
 const { uuid } = require('../utils/uuid');
 const { streamToList } = require('../utils/stream');
 
@@ -40,7 +39,7 @@ const hierarchicalSort = (tree, id, comparator, result) => {
 };
 
 // TODO(burdon): Rename ChatLogView.
-module.exports = function ChatLogsView(viewId, db, core, getFeed) {
+module.exports = function ChatLogsView(viewId, db, core, { append, isLocal }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
@@ -76,9 +75,7 @@ module.exports = function ChatLogsView(viewId, db, core, getFeed) {
             const changes = await core.api[viewId].getChanges(itemId);
             const content = changes.map(({ data: { changes } }) => changes).map(serializeChanges).join('');
 
-            const localChange = value.author === getFeed().key.toString('hex');
-
-            events.emit(`${viewId}.logentry`, itemId, content, localChange, changes);
+            events.emit(`${viewId}.logentry`, itemId, content, isLocal(value), changes);
           }
         });
     },
@@ -134,7 +131,7 @@ module.exports = function ChatLogsView(viewId, db, core, getFeed) {
       },
 
       async appendChange(core, itemId, changes) {
-        return append(getFeed(), {
+        return append({
           type: `item.${viewId}.change`,
           data: { itemId, changes }
         });

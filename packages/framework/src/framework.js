@@ -7,6 +7,7 @@ const ram = require('random-access-memory');
 const levelup = require('levelup');
 const memdown = require('memdown');
 const pify = require('pify');
+const crypto = require('hypercore-crypto');
 
 const { Megafeed, KappaManager } = require('@wirelineio/megafeed2');
 const { keyToHex } = require('@wirelineio/utils');
@@ -42,7 +43,9 @@ class Framework extends EventEmitter {
 
     this._conf = conf;
 
-    const { db, keys, storage = ram } = this._conf;
+    const { db, keys = crypto.keyPair(), storage = ram } = this._conf;
+    console.assert(keys.publicKey);
+    console.assert(keys.secretKey);
 
     // Created on initialize.
     this._swarm = null;
@@ -52,16 +55,11 @@ class Framework extends EventEmitter {
     //
 
     // Create megafeed.
-    const { publicKey, secretKey } = keys || {};
+    const { publicKey, secretKey } = keys;
     this._mega = new Megafeed(storage, {
       publicKey,
       secretKey,
       valueEncoding: 'json'
-    });
-
-    // Metrics.
-    this._mega.on('append', (feed) => {
-      this.emit('metric.mega.append', { value: feed.key.toString('hex') });
     });
 
     // Import/export
@@ -78,7 +76,7 @@ class Framework extends EventEmitter {
     this._kappa = this._kappaManager.getOrCreateKappa(topic);
 
     // Create a ViewManager
-    this._viewManager = new ViewManager(this._kappa, this._db)
+    this._viewManager = new ViewManager(this._kappa, this._db, publicKey)
       .registerTypes(ViewTypes)
       .registerViews(Views);
 
@@ -88,6 +86,18 @@ class Framework extends EventEmitter {
   //
   // Accessors
   //
+
+  /**
+   * Author key representing the identity of the user in the network
+   *
+   * This is not a final solution. It's a hack to identify the user.
+   *
+   * @prop {Buffer}
+   *
+   */
+  get key() {
+    return this._mega.key;
+  }
 
   get swarm() {
     return this._swarm;
@@ -117,23 +127,20 @@ class Framework extends EventEmitter {
 
     // We set the feed where we are going to write messages.
     const feed = await this._mega.openFeed(`feed/${topic}/local`, { metadata: { topic } });
-    this._viewManager.setFeed(feed);
+    this._viewManager.setWriterFeed(feed);
 
     // We need to load all the feeds with the related topic
     await this._mega.loadFeeds(({ stat }) => stat.metadata.topic === topic);
 
     // Connect to the swarm.
-    this._swarm = createSwarm(this._mega, this._conf);
+    this._swarm = createSwarm(this._mega, this._conf, this.emit.bind(this));
 
     await pify(this._kappa.ready.bind(this._kappa))();
 
     // Set Profile if name is provided.
-    const { name } = this._conf;
-    if (name) {
-      const profile = await this._kappa.api['contacts'].getProfile();
-      if (!profile || profile.data.username !== name) {
-        await this._kappa.api['contacts'].setProfile({ data: { username: name } });
-      }
+    const profile = await this._kappa.api['contacts'].getProfile();
+    if (!profile && this._conf.name) {
+      await this._kappa.api['contacts'].setProfile({ data: { username: this._conf.name } });
     }
 
     this._initialized = true;
