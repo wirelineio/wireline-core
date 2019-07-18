@@ -11,9 +11,8 @@ const { keyToHex } = require('@wirelineio/utils');
 
 const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
-const { append } = require('../protocol/messages');
 
-module.exports = function ContactsView(viewId, db, core, getFeed) {
+module.exports = function ContactsView(viewId, db, core, { append, isLocal, author }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
@@ -46,8 +45,7 @@ module.exports = function ContactsView(viewId, db, core, getFeed) {
           if (event === 'set-profile') {
             events.emit(event, value);
 
-            const isContact = value.author !== keyToHex(getFeed().key);
-            if (isContact) {
+            if (!isLocal(value)) {
               events.emit('contact', value);
             }
           }
@@ -65,7 +63,7 @@ module.exports = function ContactsView(viewId, db, core, getFeed) {
         const toKey = `${fromKey}~`;
         const reader = viewDB.createValueStream({ gte: fromKey, lte: toKey, reverse: opts.reverse });
         return streamToList(reader, (msg, next) => {
-          if (msg.author === keyToHex(getFeed().key)) {
+          if (!opts.all && isLocal(msg)) {
             return next(false);
           }
 
@@ -77,7 +75,7 @@ module.exports = function ContactsView(viewId, db, core, getFeed) {
         await pify(this.ready.bind(this))();
 
         try {
-          return await viewDB.get(uuid('profile', key || keyToHex(getFeed().key)));
+          return await viewDB.get(uuid('profile', key || keyToHex(author)));
         } catch (error) {
           if (error.notFound) {
             return;
@@ -88,10 +86,12 @@ module.exports = function ContactsView(viewId, db, core, getFeed) {
       },
 
       async setProfile(core, { data }) {
-        await append(getFeed(), {
+        const msg = await append({
           type: 'contact.set-profile',
           data
         });
+
+        process.nextTick(() => events.emit('profile-updated', msg));
 
         return { data };
       },

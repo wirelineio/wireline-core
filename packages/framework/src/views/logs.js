@@ -6,16 +6,13 @@ const EventEmitter = require('events');
 const view = require('kappa-view-level');
 const sub = require('subleveldown');
 
-const { keyToHex } = require('@wirelineio/utils');
-
-const { append } = require('../protocol/messages');
 const { uuid } = require('../utils/uuid');
 const { streamToList } = require('../utils/stream');
 
 const serializeChanges = change => (typeof change === 'string' ? change : JSON.stringify(change));
 
 // TODO(burdon): Rename LogView.
-module.exports = function LogsView(viewId, db, core, getFeed) {
+module.exports = function LogsView(viewId, db, core, { append, isLocal }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
@@ -52,9 +49,7 @@ module.exports = function LogsView(viewId, db, core, getFeed) {
             const changes = await core.api[viewId].getChanges(itemId);
             const content = changes.map(({ data: { changes } }) => changes).map(serializeChanges).join('');
 
-            const localChange = value.author === keyToHex(getFeed().key);
-
-            events.emit(`${viewId}.logentry`, itemId, content, localChange, changes);
+            events.emit(`${viewId}.logentry`, itemId, content, isLocal(value), changes);
           }
         });
     },
@@ -108,7 +103,7 @@ module.exports = function LogsView(viewId, db, core, getFeed) {
       },
 
       async appendChange(core, itemId, changes) {
-        return append(getFeed(), {
+        return append({
           type: `item.${viewId}.change`,
           data: { itemId, changes }
         });
