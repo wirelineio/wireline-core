@@ -5,7 +5,7 @@
 import { EventEmitter } from 'events';
 
 import { keyStr } from '../util/keys';
-import { Extension, ProtocolError } from '../protocol';
+import { Extension } from '../protocol';
 
 
 /**

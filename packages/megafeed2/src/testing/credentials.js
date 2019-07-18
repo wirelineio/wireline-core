@@ -60,24 +60,34 @@ export const createParty = (ownerKey, feedKey) => {
 };
 
 /**
- * Create authentication proof.
- * @param {{publicKey, secretKey}} keyPair
- * @param {number} nonce
- * @return {{type, nonce, key, signature}}
+ * Create auth proof payload (unsigned).
+ * @param publicKey
+ * @param nonce
+ * @return {{type: string, nonce: number, key: string}}
  */
-export const createAuthProof = (keyPair, nonce) => {
-  console.assert(keyPair);
-  console.assert(nonce);
-
-  const { publicKey, secretKey } = keyPair;
+export const createAuthProofPayload = (publicKey, nonce) => {
   console.assert(publicKey);
-  console.assert(secretKey);
+  console.assert(nonce);
 
   const proof = {
     type: 'wrn:protobuf:wirelineio.credential.Auth',
     key: publicKey.toString('hex'),
     nonce
   };
+
+  return proof;
+};
+
+/**
+ * Sign auth proof payload.
+ * @param {Object} proof
+ * @param {Buffer} secretKey
+ * @return {Object}
+ */
+export const signAuthProofPayload = (proof, secretKey) => {
+  console.assert(proof);
+  console.assert(secretKey);
+  console.assert(proof.type === 'wrn:protobuf:wirelineio.credential.Auth');
 
   const signature = signObject(proof, secretKey);
 
@@ -135,3 +145,31 @@ export const verifyObject = (obj) => {
     Buffer.from(key, 'hex')
   );
 };
+
+/**
+ * Auth provider (used to sign requests).
+ */
+export class AuthProvider {
+
+  /**
+   * @constructor
+   * @param {{publicKey, secretKey}} keyPair
+   */
+  constructor(keyPair) {
+    console.assert(keyPair);
+    this._keyPair = keyPair;
+  }
+
+  get publicKey() {
+    return this._keyPair.publicKey;
+  }
+
+  /**
+   * Request user to sign the data (e.g., async using a popup).
+   * @param {Object} data
+   * @return {Promise<Object>}
+   */
+  async requestSignature(data) {
+    return signAuthProofPayload(data, this._keyPair.secretKey);
+  }
+}
