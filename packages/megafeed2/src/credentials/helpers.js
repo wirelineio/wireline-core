@@ -5,6 +5,8 @@
 import crypto from 'hypercore-crypto';
 import canonicalStringify from 'canonical-json';
 
+import { keyStr } from '../util';
+
 /**
  * Creates an item (genesis message).
  * @param {Buffer} ownerKey
@@ -16,8 +18,8 @@ export const createItem = (ownerKey) => {
   const itemKeyPair = crypto.keyPair();
   const item = {
     type: 'wrn:protobuf:wirelineio.credential.ItemGenesis',
-    key: itemKeyPair.publicKey.toString('hex'),
-    ownerKey: ownerKey.toString('hex')
+    key: keyStr(itemKeyPair.publicKey),
+    ownerKey: keyStr(ownerKey)
   };
 
   const signature = signObject(item, itemKeyPair.secretKey);
@@ -43,9 +45,9 @@ export const createParty = (ownerKey, feedKey) => {
   const partyKeyPair = crypto.keyPair();
   const party = {
     type: 'wrn:protobuf:wirelineio.credential.PartyGenesis',
-    key: partyKeyPair.publicKey.toString('hex'),
-    ownerKey: ownerKey.toString('hex'),
-    feedKey: feedKey.toString('hex')
+    key: keyStr(partyKeyPair.publicKey),
+    ownerKey: keyStr(ownerKey),
+    feedKey: keyStr(feedKey)
   };
 
   const signature = signObject(party, partyKeyPair.secretKey);
@@ -61,8 +63,8 @@ export const createParty = (ownerKey, feedKey) => {
 
 /**
  * Create auth proof payload (unsigned).
- * @param publicKey
- * @param nonce
+ * @param {Buffer} publicKey
+ * @param {number} nonce
  * @return {{type: string, nonce: number, key: string}}
  */
 export const createAuthProofPayload = (publicKey, nonce) => {
@@ -71,7 +73,7 @@ export const createAuthProofPayload = (publicKey, nonce) => {
 
   const proof = {
     type: 'wrn:protobuf:wirelineio.credential.Auth',
-    key: publicKey.toString('hex'),
+    key: keyStr(publicKey),
     nonce
   };
 
@@ -119,9 +121,7 @@ export const verifyAuthProof = (proof, nonce, publicKey) => {
  * @return {string} signature
  */
 export const signObject = (obj, secretKey) => {
-  return crypto
-    .sign(Buffer.from(canonicalStringify(obj)), secretKey)
-    .toString('hex');
+  return keyStr(crypto.sign(Buffer.from(canonicalStringify(obj)), secretKey));
 };
 
 /**

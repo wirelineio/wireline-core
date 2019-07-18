@@ -5,15 +5,16 @@
 import path from 'path';
 import crypto from 'hypercore-crypto';
 
-import { createCodec } from './helpers';
-import { createItem, createParty, signObject, verifyObject } from './credentials';
+import { createCodec } from '../util/codec';
+
+import { createItem, createParty, signObject, verifyObject } from './helpers';
 
 test('item genesis', async () => {
 
   // TODO(ashwin): Import .proto and pass in objects as string literals.
   // TODO(ashwin): Loading from string currently NOT supported (https://github.com/protobufjs/protobuf.js/issues/1162).
   const codec = await createCodec([
-    path.join(__dirname, 'credentials.proto')
+    path.join(__dirname, '../credentials', 'credentials.proto')
   ]);
 
   const user1 = crypto.keyPair();
@@ -52,7 +53,7 @@ test('item genesis', async () => {
 
 test('party genesis', async () => {
   const codec = await createCodec([
-    path.join(__dirname, 'credentials.proto')
+    path.join(__dirname, '../credentials', 'credentials.proto')
   ]);
 
   const user1 = crypto.keyPair();

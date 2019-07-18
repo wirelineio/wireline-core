@@ -7,9 +7,9 @@ import debug from 'debug';
 import pump from 'pump';
 
 import { Protocol, Extension } from '../protocol';
-import { random } from '../util';
+import { keyStr, random } from '../util';
 
-import { AuthProvider, createAuthProofPayload, verifyAuthProof } from './credentials';
+import { AuthProvider, createAuthProofPayload, verifyAuthProof } from './helpers';
 
 const log = debug('test');
 debug.enable('test,protocol');
@@ -18,12 +18,12 @@ test('protocol auth', async done => {
   const extension = 'auth';
   const timeout = 1000;
 
-  const { publicKey } = crypto.keyPair();
+  const { publicKey: rendezvousKey } = crypto.keyPair();
   const user1AuthProvider = new AuthProvider(crypto.keyPair());
   const user2AuthProvider = new AuthProvider(crypto.keyPair());
 
   const protocol1 = new Protocol()
-    .setUserData({ user: user1AuthProvider.publicKey.toString('hex') })
+    .setUserData({ user: keyStr(user1AuthProvider.publicKey) })
     .setExtension(new Extension(extension, { timeout })
       .setHandshakeHandler(async (protocol) => {
         const auth = protocol.getExtension(extension);
@@ -39,7 +39,7 @@ test('protocol auth', async done => {
           request: createAuthProofPayload(user2AuthProvider.publicKey, nonce)
         });
 
-        const verified = verifyAuthProof(proof, nonce, user2AuthProvider.publicKey.toString('hex'));
+        const verified = verifyAuthProof(proof, nonce, keyStr(user2AuthProvider.publicKey));
         if (!verified) {
           // Close stream if auth fails.
           auth.emit('auth:error');
@@ -48,12 +48,11 @@ test('protocol auth', async done => {
 
         auth.emit('auth:success');
       }))
-    .init(publicKey);
+    .init(rendezvousKey);
 
   const protocol2 = new Protocol()
-    .setUserData({ user: user2AuthProvider.publicKey.toString('hex') })
+    .setUserData({ user: keyStr(user2AuthProvider.publicKey) })
     .setExtension(new Extension(extension, { timeout })
-      // TODO(ashwin): Make auth message handlers symmetric.
       .setMessageHandler(async (protocol, context, { type, request }) => {
         switch (type) {
           case 'challenge': {
@@ -68,7 +67,7 @@ test('protocol auth', async done => {
           }
         }
       }))
-    .init(publicKey);
+    .init(rendezvousKey);
 
   pump(protocol1.stream, protocol2.stream, protocol1.stream, (err) => { err && done(err); });
 

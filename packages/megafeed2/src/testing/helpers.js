@@ -2,9 +2,6 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import protobufjs from 'protobufjs';
-
-import Codec from '@wirelineio/codec-protobuf';
 import network from '@wirelineio/hyperswarm-network-memory';
 
 import { KappaManager } from '../megafeed/kappa-manager';
@@ -90,17 +87,3 @@ export const createPeer = async (params, gameTopic, codec) => {
   };
 };
 
-/**
- * Create codec from .proto files.
- * TODO(ashwin): Move to utils?
- * @param {[string]} paths
- * @returns {Promise<Codec>}
- */
-export const createCodec = async (paths) => {
-  const codec = new Codec({ verify: true });
-  for (let i = 0; i < paths.length; i++) {
-    codec.load(await protobufjs.load(paths[i]));
-  }
-
-  return codec;
-};
