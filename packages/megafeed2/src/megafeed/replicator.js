@@ -84,17 +84,11 @@ export class Replicator extends EventEmitter {
           const keyBuffer = Buffer.from(key, 'hex');
 
           try {
-            if (this._feedStore.getDescriptorByKey(keyBuffer)) {
-              return;
-            }
-
             await this._feedStore.openFeed(path, {
               key: keyBuffer,
               metadata: { topic }
             });
-          } catch (err) {
-            console.warn('Replicator - handshakeHandler:', err);
-          }
+          } catch (err) {}
         }));
       })
     );

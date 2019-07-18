@@ -86,10 +86,12 @@ module.exports = function ContactsView(viewId, db, core, { append, isLocal, auth
       },
 
       async setProfile(core, { data }) {
-        await append({
+        const msg = await append({
           type: 'contact.set-profile',
           data
         });
+
+        process.nextTick(() => events.emit('profile-updated', msg));
 
         return { data };
       },

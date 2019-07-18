@@ -15,8 +15,8 @@ const { keyToHex } = require('@wirelineio/utils');
 const PartySerializer = require('./parties/party-serializer');
 const { ViewTypes, Views } = require('./views/defs');
 const ViewManager = require('./views/view-manager');
-
 const { createSwarm } = require('./wrappers/swarm');
+const { getProfile, setProfile } = require('./utils/profile');
 
 /**
  * App framework.
@@ -139,8 +139,13 @@ class Framework extends EventEmitter {
 
     // Set Profile if name is provided.
     const profile = await this._kappa.api['contacts'].getProfile();
-    if (!profile && this._conf.name) {
-      await this._kappa.api['contacts'].setProfile({ data: { username: this._conf.name } });
+    if (!profile) {
+      const lastProfile = getProfile(this._mega.key);
+      const name = lastProfile ? lastProfile.data.username : this._conf.name;
+      await this._kappa.api['contacts'].setProfile({ data: { username: name } });
+      this._kappa.api['contacts'].events.on('profile-updated', (msg) => {
+        setProfile(this._mega.key, msg);
+      });
     }
 
     this._initialized = true;
