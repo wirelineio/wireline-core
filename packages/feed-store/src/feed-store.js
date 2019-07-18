@@ -205,7 +205,7 @@ class FeedStore extends EventEmitter {
   async loadFeeds(cb) {
     await this.ready();
 
-    const descriptors = this.getOpenedDescriptors()
+    const descriptors = this.getDescriptors()
       .filter(descriptor => cb(descriptor));
 
     return Promise.all(descriptors.map(descriptor => this._openFeed(descriptor)));

@@ -2,18 +2,25 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+const { keyToHex } = require('@wirelineio/utils');
+
+const { append } = require('../protocol/messages');
+
 /**
  * Manages a collection of kappa views.
  */
 class ViewManager {
 
-  constructor(kappa, db) {
+  constructor(kappa, db, author) {
     console.assert(kappa);
     console.assert(db);
+    console.assert(author);
 
     this._kappa = kappa;
 
     this._db = db;
+
+    this._author = author;
 
     // Map of view types.
     this._types = new Map();
@@ -22,12 +29,16 @@ class ViewManager {
     this._views = new Map();
   }
 
-  setFeed(feed) {
+  setWriterFeed(feed) {
     this._feed = feed;
   }
 
-  getFeed() {
-    return this._feed;
+  async append(data) {
+    return append(this._feed, this._author, data);
+  }
+
+  isLocal(message) {
+    return message.author === keyToHex(this._author);
   }
 
   registerTypes(types) {
@@ -47,19 +58,26 @@ class ViewManager {
   // TODO(burdon): Const for LogsView.
   // TODO(burdon): Disallow polymorphic viewType. Why pass in non-string?
   registerView({ name, view: viewType = 'LogsView' }) {
-    if (this._views.has(name)) {
-      return this._views.get(name);
-    }
+    // TODO(tinchoz49): Remove the try catch after merged mf2
+    try {
+      if (this._views.has(name)) {
+        return this._views.get(name);
+      }
 
-    const viewConstructor = (typeof viewType === 'string') ? this._types.get(viewType) : viewType;
-    console.assert(viewConstructor, `Invalid view: ${viewType}`);
+      const viewConstructor = (typeof viewType === 'string') ? this._types.get(viewType) : viewType;
+      console.assert(viewConstructor, `Invalid view: ${viewType}`);
 
-    const view = viewConstructor(name, this._db, this._kappa, this.getFeed.bind(this));
+      const view = viewConstructor(name, this._db, this._kappa, {
+        append: this.append.bind(this),
+        isLocal: this.isLocal.bind(this),
+        author: this._author
+      });
 
-    this._kappa.use(name, view);
-    this._views.set(name, view);
+      this._kappa.use(name, view);
+      this._views.set(name, view);
 
-    return view;
+      return view;
+    } catch (err) {}
   }
 }
 

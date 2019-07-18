@@ -9,11 +9,10 @@ const sub = require('subleveldown');
 
 const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
-const { append } = require('../protocol/messages');
 
 const createId = hyperid({ urlSafe: true });
 
-module.exports = function ItemsView(viewId, db, core, getFeed) {
+module.exports = function ItemsView(viewId, db, core, { append }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
@@ -94,7 +93,7 @@ module.exports = function ItemsView(viewId, db, core, getFeed) {
           // eslint-disable-next-line no-empty
         }
 
-        return append(getFeed(), { type: 'item.metadata', data: { ...msg.data, ...data } });
+        return append({ type: 'item.metadata', data: { ...msg.data, ...data } });
       },
 
       onChange(core, itemId, cb) {

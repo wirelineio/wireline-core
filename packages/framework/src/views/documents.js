@@ -11,9 +11,8 @@ const { keyToHex } = require('@wirelineio/utils');
 
 const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
-const { append } = require('../protocol/messages');
 
-module.exports = function DocumentsView(viewId, db, core, getFeed) {
+module.exports = function DocumentsView(viewId, db, core, { append, author }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
@@ -30,11 +29,6 @@ module.exports = function DocumentsView(viewId, db, core, getFeed) {
     applyChangesFromOps,
     getDocumentContent
   } = automergeWorker;
-
-  // TODO(burdon): ???
-  automergeWorker.on('status', () => {
-    events.emit('metric.kappa.document.status');
-  });
 
   return view(viewDB, {
     map(msg) {
@@ -87,10 +81,10 @@ module.exports = function DocumentsView(viewId, db, core, getFeed) {
       },
 
       async init(core, { itemId }) {
-        const { changes } = await createDocument(keyToHex(getFeed().key), itemId);
+        const { changes } = await createDocument(keyToHex(author), itemId);
 
         // Publish initial change
-        await append(getFeed(), {
+        await append({
           type: `item.${viewId}.change`,
           data: { itemId, changes }
         });
@@ -101,7 +95,7 @@ module.exports = function DocumentsView(viewId, db, core, getFeed) {
       },
 
       async getById(core, itemId) {
-        const actorId = keyToHex(getFeed().key);
+        const actorId = keyToHex(author);
 
         const {
           data: { title, type }
@@ -158,7 +152,7 @@ module.exports = function DocumentsView(viewId, db, core, getFeed) {
 
         // Maybe not applied because debounce + batch
         if (automergeChanges) {
-          return append(getFeed(), {
+          return append({
             type: `item.${viewId}.change`,
             data: { itemId, changes: automergeChanges }
           });
