@@ -7,11 +7,12 @@ import path from 'path';
 import waitForExpect from 'wait-for-expect';
 
 import { random } from '../util/debug';
-import { createKeys } from '../megafeed';
+import { createCodec } from '../util/codec';
 import { keyStr } from '../util';
+import { createKeys } from '../megafeed';
 
 import { ChessApp } from './chess';
-import { createChessApps, createPeer, createCodec, playGameMoves } from './helpers';
+import { createChessApps, createPeer, playGameMoves } from './helpers';
 
 debug.enable('test,chess');
 
