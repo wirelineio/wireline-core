@@ -91,9 +91,9 @@ module.exports = function ContactsView(viewId, db, core, { append, isLocal, auth
           data
         });
 
-        process.nextTick(() => events.emit('profile-updated', msg));
+        events.emit('profile-updated', msg);
 
-        return { data };
+        return msg;
       },
 
       events

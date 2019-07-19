@@ -142,7 +142,8 @@ class Framework extends EventEmitter {
     if (!profile) {
       const lastProfile = getProfile(this._mega.key);
       const name = lastProfile ? lastProfile.data.username : this._conf.name;
-      await this._kappa.api['contacts'].setProfile({ data: { username: name } });
+      const msg = await this._kappa.api['contacts'].setProfile({ data: { username: name } });
+      setProfile(this._mega.key, msg);
       this._kappa.api['contacts'].events.on('profile-updated', (msg) => {
         setProfile(this._mega.key, msg);
       });
