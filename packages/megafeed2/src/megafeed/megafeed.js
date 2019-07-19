@@ -8,6 +8,8 @@ import pify from 'pify';
 
 import { FeedStore } from '@wirelineio/feed-store';
 
+import { Authenticator } from '../credentials';
+
 import { Replicator } from './replicator';
 
 /**
@@ -53,6 +55,10 @@ export class Megafeed extends EventEmitter {
     this._replicator = new Replicator(this._feedStore)
       .on('error', err => this.emit('error', err))
       .on('update', topic => this.emit('update', topic));
+
+    // Manages peer authentication.
+    console.assert(options.authProvider);
+    this._authenticator = new Authenticator(options.authProvider);
   }
 
   get id() {
@@ -104,6 +110,7 @@ export class Megafeed extends EventEmitter {
    */
   createExtensions() {
     return [
+      this._authenticator.createExtension(),
       this._replicator.createExtension()
     ];
   }

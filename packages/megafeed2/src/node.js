@@ -139,10 +139,11 @@ export class Node extends EventEmitter {
    */
   _createExtensions() {
     return [
-      this._messenger.createExtension(),
 
       // TODO(burdon): Messenger test fails if this is declared first.
-      ...this._megafeed.createExtensions()
+      ...this._megafeed.createExtensions(),
+
+      this._messenger.createExtension()
     ];
   }
 
@@ -170,7 +171,7 @@ export class Node extends EventEmitter {
       // TODO(burdon): User identifier?
       // Note: User and extension data is sent in the handshake message, which is the 2nd message exchanged between peers.
       // Communication is encrypted from the 2nd message onward (https://datprotocol.github.io/how-dat-works/#encryption).
-      .setUserData({ user: {} })
+      .setUserData({ user: keyStr(this._megafeed.key) })
       .setExtensions(this._createExtensions())
       .init(this._rendezvousKey);
 

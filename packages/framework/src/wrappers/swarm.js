@@ -5,7 +5,7 @@
 const discoverySwarmWebrtc = require('@geut/discovery-swarm-webrtc');
 const debug = require('debug')('dsuite:swarm');
 
-const { Protocol } = require('@wirelineio/megafeed2');
+const { Protocol, keyStr } = require('@wirelineio/megafeed2');
 const { getDiscoveryKey } = require('@wirelineio/utils');
 
 const Metric = require('../utils/metric');
@@ -51,6 +51,7 @@ exports.createSwarm = (mega, conf, emit) => {
           live: true
         }
       })
+        .setUserData({ user: keyStr(mega.key) })
         .setExtensions(mega.createExtensions())
         .init(conf.partyKey)
         .stream;
