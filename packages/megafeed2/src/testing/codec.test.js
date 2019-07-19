@@ -7,7 +7,7 @@ import hypercore from 'hypercore';
 import ram from 'random-access-memory';
 import pify from 'pify';
 
-import { createCodec } from './helpers';
+import { createCodec } from '../util/codec';
 
 test('hypercore codec', async () => {
   const codec = await createCodec([
