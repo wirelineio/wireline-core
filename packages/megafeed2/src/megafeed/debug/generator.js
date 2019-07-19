@@ -9,6 +9,7 @@ import pify from 'pify';
 
 import { FeedStore } from '@wirelineio/feed-store';
 
+import { AuthProvider } from '../../credentials';
 import { keyStr, times } from '../../util';
 
 import { Megafeed } from '../megafeed';
@@ -45,7 +46,10 @@ export const createKeys = (num = 1) => createKeyPairs(num).map(keyPair => keyPai
 export const createMegafeed = async (options = {}) => {
   const { valueEncoding = 'json' } = options;
 
-  const mega = await Megafeed.create(ram, { valueEncoding });
+  const keyPair = crypto.keyPair();
+  const authProvider = new AuthProvider(keyPair);
+
+  const mega = await Megafeed.create(ram, { ...keyPair, valueEncoding, authProvider });
 
   await generateFeedData(mega, options);
 
