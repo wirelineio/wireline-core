@@ -65,7 +65,9 @@ class ViewManager {
       }
 
       const viewConstructor = (typeof viewType === 'string') ? this._types.get(viewType) : viewType;
-      console.assert(viewConstructor, `Invalid view: ${viewType}`);
+      if (!viewConstructor) {
+        throw new Error(`Invalid view: ${name}:${viewType}`);
+      }
 
       const view = viewConstructor(name, this._db, this._kappa, {
         append: this.append.bind(this),
@@ -77,7 +79,10 @@ class ViewManager {
       this._views.set(name, view);
 
       return view;
-    } catch (err) {}
+    } catch (err) {
+      console.warn(err.message);
+      return null;
+    }
   }
 }
 
