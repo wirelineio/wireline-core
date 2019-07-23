@@ -787,7 +787,7 @@
     unique-filename "^1.1.1"
     which "^1.3.1"
 
-"@geut/discovery-swarm-webrtc@^2.0.0-alpha.18":
+"@geut/discovery-swarm-webrtc@^2.0.0-alpha.18", "@geut/discovery-swarm-webrtc@^2.0.0-alpha.19":
   version "2.0.0-alpha.19"
   resolved "https://registry.yarnpkg.com/@geut/discovery-swarm-webrtc/-/discovery-swarm-webrtc-2.0.0-alpha.19.tgz#6da974f6884916741fd4e6848abcf4338b175149"
   integrity sha512-HtOTrxObwWSHcmWQZ4e3xeEls7Ri553jszOBOl9pKngkW5La2y/4nItOOYkIcH/c+3haQMfZCnFZIU+43qiThg==
