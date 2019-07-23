@@ -6,6 +6,14 @@
   "bugs": {
     "url": "https://github.com/wirelineio/wireline-core/issues"
   },
+  "bin": {
+    "signal": "bin/signal.js"
+  },
+  "files": [
+    "bin/",
+    "index.js",
+    "server.js"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wirelineio/wireline-core.git"
