@@ -223,20 +223,21 @@ export const createPartyInvite = (partyKey, inviter, invitee) => {
   console.assert(partyKey);
   console.assert(inviter);
   console.assert(inviter.feedKey);
-  console.assert(inviter.secretKey);
+  console.assert(inviter.keyPair);
   console.assert(invitee);
   console.assert(invitee.ownerKey);
   console.assert(invitee.feedKey);
 
   const partyInvite = {
     type: 'wrn:protobuf:wirelineio.party.Invite',
-    inviterFeedKey: keyStr(inviter.feedKey),
     partyKey: keyStr(partyKey),
+    inviterOwnerKey: keyStr(inviter.keyPair.publicKey),
+    inviterFeedKey: keyStr(inviter.feedKey),
     inviteeOwnerKey: keyStr(invitee.ownerKey),
     inviteeFeedKey: keyStr(invitee.feedKey)
   };
 
-  const signature = signObject(partyInvite, inviter.secretKey);
+  const signature = signObject(partyInvite, inviter.keyPair.secretKey);
 
   return {
     ...partyInvite,
@@ -289,8 +290,8 @@ const verifyPartyInvite = async (partyKey, partyInvite, genesisBlockLoader, invi
   console.assert(partyInvite);
   console.assert(partyInvite.type === 'wrn:protobuf:wirelineio.party.Invite');
 
-  // Verify signature on feed genesis block.
-  if (!verifyObject(partyInvite, 'inviterFeedKey')) {
+  // Verify signature on invite.
+  if (!verifyObject(partyInvite, 'inviterOwnerKey')) {
     return { verified: false, error: 'Signature mismatch.' };
   }
 

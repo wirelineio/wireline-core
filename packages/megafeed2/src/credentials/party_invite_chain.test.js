@@ -36,13 +36,14 @@ test('party invite chain', async () => {
     const inviteeFeedKeyPair = feedKeys[i];
     const { publicKey: inviteeFeedKey } = inviteeFeedKeyPair;
     const { publicKey: inviteePublicKey } = feedOwners[i];
+    const inviterKeyPair = feedOwners[i - 1];
     const inviterFeedKeyPair = feedKeys[i - 1];
-    const { publicKey: inviterFeedKey, secretKey: inviterFeedSecretKey } = inviterFeedKeyPair;
+    const { publicKey: inviterFeedKey } = inviterFeedKeyPair;
 
     const feedGenesis = createFeedGenesis(inviteeFeedKeyPair, inviteePublicKey, partyKey);
     const partyInvite = createPartyInvite(partyKey,{
       feedKey: inviterFeedKey,
-      secretKey: inviterFeedSecretKey
+      keyPair: inviterKeyPair
     }, {
       ownerKey: inviteePublicKey,
       feedKey: inviteeFeedKey
