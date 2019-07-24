@@ -72,7 +72,7 @@ test('party genesis', async () => {
     expect(message).toEqual(party);
 
     // Verify signature.
-    expect(verifyObject(party)).toBeTruthy();
+    expect(verifyObject(party, 'partyKey')).toBeTruthy();
   }
 
   {
@@ -81,13 +81,13 @@ test('party genesis', async () => {
 
     // Tampering the ownerKey doesn't work.
     partyClone.ownerKey = user2.publicKey;
-    expect(verifyObject(partyClone)).toBeFalsy();
+    expect(verifyObject(partyClone, 'partyKey')).toBeFalsy();
 
     // Verificaton MUST fail as the party needs to be signed with the party's private key, which has been burned.
     // Check not possible to claim ownership since burned private party key is required to sign block.
     // Sign with new owners secret key.
     delete partyClone.signature;
     const signature = signObject(party, user2.secretKey);
-    expect(verifyObject({ ...partyClone, signature })).toBeFalsy();
+    expect(verifyObject({ ...partyClone, signature }, 'partyKey')).toBeFalsy();
   }
 });
