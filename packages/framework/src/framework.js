@@ -9,7 +9,8 @@ const memdown = require('memdown');
 const pify = require('pify');
 const crypto = require('hypercore-crypto');
 
-const { Megafeed, KappaManager } = require('@wirelineio/megafeed2');
+const { Megafeed, KappaManager, AuthProvider } = require('@wirelineio/megafeed2');
+
 const { keyToHex } = require('@wirelineio/utils');
 
 const PartySerializer = require('./parties/party-serializer');
@@ -31,8 +32,9 @@ class Framework extends EventEmitter {
    * @param conf.keys {Object}
    * @param conf.keys.publicKey {Buffer}
    * @param conf.keys.secretKey {Buffer}
+   * @param [conf.authProvider] {AuthProvider} Provider to sign auth challenges/requests from peers.
    * @param conf.hub {String|Array} Signalhub url for swarm connection.
-   * @param conf.isBot {Boolean} Sefines if dsuite is for a bot.
+   * @param conf.isBot {Boolean} Defines if dsuite is for a bot.
    * @param conf.partyKey {Buffer} Sefines initial party key.
    * @param conf.maxPeers {Number} Maximum connections on swarm. Optional. Defaults: If isBot is true it is set to 64 otherwise 2.
    */
@@ -43,9 +45,11 @@ class Framework extends EventEmitter {
 
     this._conf = conf;
 
-    const { db, keys = crypto.keyPair(), storage = ram } = this._conf;
+    const { db, keys = crypto.keyPair(), storage = ram, authProvider } = this._conf;
     console.assert(keys.publicKey);
     console.assert(keys.secretKey);
+
+    this._authProvider = authProvider || new AuthProvider(keys);
 
     // Created on initialize.
     this._swarm = null;
@@ -59,7 +63,8 @@ class Framework extends EventEmitter {
     this._mega = new Megafeed(storage, {
       publicKey,
       secretKey,
-      valueEncoding: 'json'
+      valueEncoding: 'json',
+      authProvider: this._authProvider
     });
 
     // Import/export

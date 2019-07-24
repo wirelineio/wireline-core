@@ -148,6 +148,7 @@ export const verifyObject = (obj) => {
 
 /**
  * Auth provider (used to sign requests).
+ * TODO(ashwin): Move into own package outside megafeed2?
  */
 export class AuthProvider {
 
