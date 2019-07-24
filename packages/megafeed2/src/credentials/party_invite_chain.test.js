@@ -19,7 +19,7 @@ test('party invite chain', async () => {
 
   // Asynchronously load the genesis block for a feed given the key.
   // It might, for example, sparse replicate the feed from a peer and request block zero.
-  const genesisBlockLoader = async (feedKey) => {
+  const loadFeedGenesisBlock = async (feedKey) => {
     return keyToGenesisBlock.get(feedKey);
   };
 
@@ -42,8 +42,8 @@ test('party invite chain', async () => {
 
     const feedGenesis = createFeedGenesis(inviteeFeedKeyPair, inviteePublicKey, partyKey);
     const partyInvite = createPartyInvite(partyKey,{
-      feedKey: inviterFeedKey,
-      keyPair: inviterKeyPair
+      keyPair: inviterKeyPair,
+      feedKey: inviterFeedKey
     }, {
       ownerKey: inviteePublicKey,
       feedKey: inviteeFeedKey
@@ -53,7 +53,7 @@ test('party invite chain', async () => {
     inviteChain.push(partyInvite);
   }
 
-  const { verified, error } = await verifyPartyInviteChain(partyGenesis.partyKey, inviteChain, genesisBlockLoader);
+  const { verified, error } = await verifyPartyInviteChain(partyGenesis.partyKey, inviteChain, loadFeedGenesisBlock);
   expect(error).toBeUndefined();
   expect(verified).toBeTruthy();
 });

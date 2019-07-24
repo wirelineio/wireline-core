@@ -213,7 +213,7 @@ export class AuthProvider {
 
 /**
  * Create party invite (written to feed of inviter).
- * Signed with the secret key of the inviting feed.
+ * Signed with the secret key of the inviter.
  * @param {Buffer} partyKey
  * @param {Object} inviter
  * @param {Object} invitee
@@ -222,8 +222,8 @@ export class AuthProvider {
 export const createPartyInvite = (partyKey, inviter, invitee) => {
   console.assert(partyKey);
   console.assert(inviter);
-  console.assert(inviter.feedKey);
   console.assert(inviter.keyPair);
+  console.assert(inviter.feedKey);
   console.assert(invitee);
   console.assert(invitee.ownerKey);
   console.assert(invitee.feedKey);
@@ -249,10 +249,10 @@ export const createPartyInvite = (partyKey, inviter, invitee) => {
  * Verify party genesis block.
  * @param {string} partyKey
  * @param {Object} partyGenesis
- * @param {Function} genesisBlockLoader
+ * @param {Function} loadFeedGenesisBlock
  * @return {Promise<{verified: boolean}|{verified: boolean, error: string}>}
  */
-const verifyPartyGenesisBlock = async (partyKey, partyGenesis, genesisBlockLoader) => {
+const verifyPartyGenesisBlock = async (partyKey, partyGenesis, loadFeedGenesisBlock) => {
   console.assert(partyKey);
   console.assert(partyGenesis);
   console.assert(partyGenesis.type === 'wrn:protobuf:wirelineio.credential.PartyGenesis');
@@ -270,7 +270,7 @@ const verifyPartyGenesisBlock = async (partyKey, partyGenesis, genesisBlockLoade
   }
 
   // Check genesis block in the chain actually matches the one on the feed.
-  if (!isEqual(partyGenesis, await genesisBlockLoader(partyGenesis.feedKey))) {
+  if (!isEqual(partyGenesis, await loadFeedGenesisBlock(partyGenesis.feedKey))) {
     return { verified: false, error: 'Party genesis block mismatch.' };
   }
 
@@ -282,11 +282,11 @@ const verifyPartyGenesisBlock = async (partyKey, partyGenesis, genesisBlockLoade
  * Note: Can't reliably check for the party invite on existing feeds as it may not have been written yet.
  * @param {string} partyKey
  * @param {Object} partyInvite
- * @param {Function} genesisBlockLoader
+ * @param {Function} loadFeedGenesisBlock
  * @param {string} inviterFeedKey
  * @return {Promise<{verified: boolean}|{verified: boolean, error: string}>}
  */
-const verifyPartyInvite = async (partyKey, partyInvite, genesisBlockLoader, inviterFeedKey) => {
+const verifyPartyInvite = async (partyKey, partyInvite, loadFeedGenesisBlock, inviterFeedKey) => {
   console.assert(partyInvite);
   console.assert(partyInvite.type === 'wrn:protobuf:wirelineio.party.Invite');
 
@@ -301,7 +301,7 @@ const verifyPartyInvite = async (partyKey, partyInvite, genesisBlockLoader, invi
   }
 
   // Load the feed genesis block for more checks.
-  const feedGenesis = await genesisBlockLoader(partyInvite.inviteeFeedKey);
+  const feedGenesis = await loadFeedGenesisBlock(partyInvite.inviteeFeedKey);
   console.assert(feedGenesis);
   console.assert(feedGenesis.type === 'wrn:protobuf:wirelineio.credential.FeedGenesis');
 
@@ -337,17 +337,17 @@ const verifyPartyInvite = async (partyKey, partyInvite, genesisBlockLoader, invi
  * Verify party invite chain.
  * @param {string} partyKey
  * @param {Array{Object}} inviteChain
- * @param {Function} genesisBlockLoader
+ * @param {Function} loadFeedGenesisBlock
  * @return {Promise<{verified: boolean}|{verified: boolean, error: string}>}
  */
-export const verifyPartyInviteChain = async (partyKey, inviteChain, genesisBlockLoader) => {
+export const verifyPartyInviteChain = async (partyKey, inviteChain, loadFeedGenesisBlock) => {
   console.assert(partyKey);
   console.assert(inviteChain);
   console.assert(inviteChain.length);
 
   // The invite chain ALWAYS begins with the party genesis block.
   const partyGenesis = inviteChain[0];
-  const { verified, error } = await verifyPartyGenesisBlock(partyKey, partyGenesis, genesisBlockLoader);
+  const { verified, error } = await verifyPartyGenesisBlock(partyKey, partyGenesis, loadFeedGenesisBlock);
   if (!verified) {
     return { verified, error };
   }
@@ -358,7 +358,7 @@ export const verifyPartyInviteChain = async (partyKey, inviteChain, genesisBlock
     log(partyKey, inviteChain[i]);
 
     const partyInvite = inviteChain[i];
-    const { verified, error } = await verifyPartyInvite(partyKey, partyInvite, genesisBlockLoader, inviterFeedKey);
+    const { verified, error } = await verifyPartyInvite(partyKey, partyInvite, loadFeedGenesisBlock, inviterFeedKey);
     if (!verified) {
       return { verified, error };
     }
