@@ -2,10 +2,13 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+import debug from 'debug';
 import crypto from 'hypercore-crypto';
 import canonicalStringify from 'canonical-json';
 
 import { keyStr } from '../util';
+
+const log = debug('helpers');
 
 /**
  * Creates an item (genesis message).
@@ -34,13 +37,14 @@ export const createItem = (ownerKey) => {
 };
 
 /**
- * Creates a party (genesis message).
+ * Creates a party genesis message.
  * @param {Buffer} ownerKey
  * @param {Buffer} feedKey
  * @returns {Object} party
  */
-export const createParty = (ownerKey, feedKey) => {
+export const createPartyGenesis = (ownerKey, feedKey) => {
   console.assert(ownerKey);
+  console.assert(feedKey);
 
   const partyKeyPair = crypto.keyPair();
   const party = {
@@ -57,6 +61,33 @@ export const createParty = (ownerKey, feedKey) => {
 
   return {
     ...party,
+    signature
+  };
+};
+
+/**
+ * Creates a feed genesis message.
+ * @param {{publickey, secretKey}} feedKey
+ * @param {Buffer} ownerKey
+ * @param {Buffer} partyKey
+ * @returns {Object} feed
+ */
+export const createFeedGenesis = (feedKeyPair, ownerKey, partyKey) => {
+  console.assert(feedKeyPair);
+  console.assert(ownerKey);
+  console.assert(partyKey);
+
+  const feed = {
+    type: 'wrn:protobuf:wirelineio.credential.FeedGenesis',
+    key: keyStr(feedKeyPair.publicKey),
+    ownerKey: keyStr(ownerKey),
+    partyKey: keyStr(partyKey)
+  };
+
+  const signature = signObject(feed, feedKeyPair.secretKey);
+
+  return {
+    ...feed,
     signature
   };
 };
@@ -173,3 +204,78 @@ export class AuthProvider {
     return signAuthProofPayload(data, this._keyPair.secretKey);
   }
 }
+
+/**
+ * Create party invite (written to feed of inviter).
+ * @param {Object} inviter
+ * @param {Object} invitee
+ * @return {{inviterFeedKey, inviteeFeedKey, inviteeOwnerKey, type: string}}
+ */
+export const createPartyInvite = (inviter, invitee) => {
+  console.assert(inviter);
+  console.assert(invitee);
+
+  return {
+    type: 'wrn:protobuf:wirelineio.party.Invite',
+    inviterFeedKey: keyStr(inviter.feedKey),
+    inviteeOwnerKey: keyStr(invitee.ownerKey),
+    inviteeFeedKey: keyStr(invitee.feedKey)
+  };
+};
+
+/**
+ * Verify party proof chain.
+ * @param {string} partyKey
+ * @param {Array{Object}} chain
+ * @return {{boolean, string}}
+ */
+export const verifyPartyProofChain = (partyKey, chain) => {
+  console.assert(chain);
+  console.assert(chain.length);
+
+  const { partyGenesis } = chain[0];
+  console.assert(partyGenesis.type === 'wrn:protobuf:wirelineio.credential.PartyGenesis');
+  if (!verifyObject(partyGenesis)) {
+    return { verified: false, error: 'Signature mismatch.' };
+  }
+
+  if (partyKey !== partyGenesis.key) {
+    return { verified: false, error: 'Party key mismatch.' };
+  }
+
+  // Walk the chain, verifying data.
+  let prevFeedKey = partyGenesis.feedKey;
+  for (let i = 1; i < chain.length; i++) {
+    log(partyKey, chain[i]);
+
+    const { feedGenesis, partyInvite } = chain[i];
+    console.assert(feedGenesis);
+    console.assert(feedGenesis.type === 'wrn:protobuf:wirelineio.credential.FeedGenesis');
+    console.assert(partyInvite);
+    console.assert(partyInvite.type === 'wrn:protobuf:wirelineio.party.Invite');
+
+    if (!verifyObject(feedGenesis)) {
+      return { verified: false, error: 'Signature mismatch.' };
+    }
+
+    if (partyKey !== feedGenesis.partyKey) {
+      return { verified: false, error: 'Party key mismatch.' };
+    }
+
+    if (partyInvite.inviterFeedKey !== prevFeedKey) {
+      return { verified: false, error: 'Inviter feed mismatch.' };
+    }
+
+    if (partyInvite.inviteeOwnerKey !== feedGenesis.ownerKey) {
+      return { verified: false, error: 'Invitee feed owner mismatch.' };
+    }
+
+    if (partyInvite.inviteeFeedKey !== feedGenesis.key) {
+      return { verified: false, error: 'Invitee feed key mismatch.' };
+    }
+
+    prevFeedKey = feedGenesis.key;
+  }
+
+  return { verified: true };
+};
