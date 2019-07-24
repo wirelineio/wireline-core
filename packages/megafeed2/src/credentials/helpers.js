@@ -207,19 +207,33 @@ export class AuthProvider {
 
 /**
  * Create party invite (written to feed of inviter).
+ * @param {Buffer} partyKey
  * @param {Object} inviter
  * @param {Object} invitee
- * @return {{inviterFeedKey, inviteeFeedKey, inviteeOwnerKey, type: string}}
+ * @return {{key, inviteeFeedKey, inviteeOwnerKey, type: string}}
  */
-export const createPartyInvite = (inviter, invitee) => {
+export const createPartyInvite = (partyKey, inviter, invitee) => {
+  console.assert(partyKey);
   console.assert(inviter);
+  console.assert(inviter.feedKey);
+  console.assert(inviter.secretKey);
   console.assert(invitee);
+  console.assert(invitee.ownerKey);
+  console.assert(invitee.feedKey);
 
-  return {
+  const partyInvite = {
     type: 'wrn:protobuf:wirelineio.party.Invite',
-    inviterFeedKey: keyStr(inviter.feedKey),
+    key: keyStr(inviter.feedKey),
+    partyKey: keyStr(partyKey),
     inviteeOwnerKey: keyStr(invitee.ownerKey),
     inviteeFeedKey: keyStr(invitee.feedKey)
+  };
+
+  const signature = signObject(partyInvite, inviter.secretKey);
+
+  return {
+    ...partyInvite,
+    signature
   };
 };
 
@@ -230,11 +244,16 @@ export const createPartyInvite = (inviter, invitee) => {
  * @return {{boolean, string}}
  */
 export const verifyPartyProofChain = (partyKey, chain) => {
+  console.assert(partyKey);
   console.assert(chain);
   console.assert(chain.length);
 
   const { partyGenesis } = chain[0];
+  console.assert(partyGenesis);
   console.assert(partyGenesis.type === 'wrn:protobuf:wirelineio.credential.PartyGenesis');
+
+  log(partyKey, partyGenesis);
+
   if (!verifyObject(partyGenesis)) {
     return { verified: false, error: 'Signature mismatch.' };
   }
@@ -262,8 +281,12 @@ export const verifyPartyProofChain = (partyKey, chain) => {
       return { verified: false, error: 'Party key mismatch.' };
     }
 
-    if (partyInvite.inviterFeedKey !== prevFeedKey) {
+    if (partyInvite.key !== prevFeedKey) {
       return { verified: false, error: 'Inviter feed mismatch.' };
+    }
+
+    if (partyInvite.partyKey !== feedGenesis.partyKey) {
+      return { verified: false, error: 'Party key mismatch.' };
     }
 
     if (partyInvite.inviteeOwnerKey !== feedGenesis.ownerKey) {
