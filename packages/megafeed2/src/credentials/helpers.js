@@ -245,19 +245,14 @@ export const createPartyInvite = (partyKey, inviter, invitee) => {
 };
 
 /**
- * Verify party invite chain.
+ * Verify party genesis block.
  * @param {string} partyKey
- * @param {Array{Object}} inviteChain
+ * @param {Object} partyGenesis
  * @param {Function} genesisBlockLoader
- * @return {{boolean, string}}
+ * @return {Promise<{verified: boolean}|{verified: boolean, error: string}>}
  */
-export const verifyPartyInviteChain = async (partyKey, inviteChain, genesisBlockLoader) => {
+const verifyPartyGenesisBlock = async (partyKey, partyGenesis, genesisBlockLoader) => {
   console.assert(partyKey);
-  console.assert(inviteChain);
-  console.assert(inviteChain.length);
-
-  // The invite chain ALWAYS begins with the party genesis block.
-  const partyGenesis = inviteChain[0];
   console.assert(partyGenesis);
   console.assert(partyGenesis.type === 'wrn:protobuf:wirelineio.credential.PartyGenesis');
 
@@ -278,59 +273,97 @@ export const verifyPartyInviteChain = async (partyKey, inviteChain, genesisBlock
     return { verified: false, error: 'Party genesis block mismatch.' };
   }
 
+  return { verified: true };
+};
+
+/**
+ * Verify party invite.
+ * Note: Can't reliably check for the party invite on existing feeds as it may not have been written yet.
+ * @param {string} partyKey
+ * @param {Object} partyInvite
+ * @param {Function} genesisBlockLoader
+ * @param {string} inviterFeedKey
+ * @return {Promise<{verified: boolean}|{verified: boolean, error: string}>}
+ */
+const verifyPartyInvite = async (partyKey, partyInvite, genesisBlockLoader, inviterFeedKey) => {
+  console.assert(partyInvite);
+  console.assert(partyInvite.type === 'wrn:protobuf:wirelineio.party.Invite');
+
+  // Verify signature on feed genesis block.
+  if (!verifyObject(partyInvite, 'inviterFeedKey')) {
+    return { verified: false, error: 'Signature mismatch.' };
+  }
+
+  // Does the invite link back to the previous party feed?
+  if (partyInvite.inviterFeedKey !== inviterFeedKey) {
+    return { verified: false, error: 'Inviter feed mismatch.' };
+  }
+
+  // Load the feed genesis block for more checks.
+  const feedGenesis = await genesisBlockLoader(partyInvite.inviteeFeedKey);
+  console.assert(feedGenesis);
+  console.assert(feedGenesis.type === 'wrn:protobuf:wirelineio.credential.FeedGenesis');
+
+  // Verify signature on feed genesis block.
+  if (!verifyObject(feedGenesis, 'feedKey')) {
+    return { verified: false, error: 'Signature mismatch.' };
+  }
+
+  // Are we talking about the same party?
+  if (partyKey !== feedGenesis.partyKey) {
+    return { verified: false, error: 'Party key mismatch.' };
+  }
+
+  // Are the party invite and feed genesis block referring to the same party?
+  if (partyInvite.partyKey !== feedGenesis.partyKey) {
+    return { verified: false, error: 'Party key mismatch.' };
+  }
+
+  // Are the party invite and feed genesis block referring to the same owner?
+  if (partyInvite.inviteeOwnerKey !== feedGenesis.ownerKey) {
+    return { verified: false, error: 'Invitee feed owner mismatch.' };
+  }
+
+  // Are the party invite and feed genesis block referring to the same feed key?
+  if (partyInvite.inviteeFeedKey !== feedGenesis.feedKey) {
+    return { verified: false, error: 'Invitee feed key mismatch.' };
+  }
+
+  return { verified: true };
+};
+
+/**
+ * Verify party invite chain.
+ * @param {string} partyKey
+ * @param {Array{Object}} inviteChain
+ * @param {Function} genesisBlockLoader
+ * @return {Promise<{verified: boolean}|{verified: boolean, error: string}>}
+ */
+export const verifyPartyInviteChain = async (partyKey, inviteChain, genesisBlockLoader) => {
+  console.assert(partyKey);
+  console.assert(inviteChain);
+  console.assert(inviteChain.length);
+
+  // The invite chain ALWAYS begins with the party genesis block.
+  const partyGenesis = inviteChain[0];
+  const { verified, error } = await verifyPartyGenesisBlock(partyKey, partyGenesis, genesisBlockLoader);
+  if (!verified) {
+    return { verified, error };
+  }
+
   // Walk the chain, verifying data.
   let inviterFeedKey = partyGenesis.feedKey;
   for (let i = 1; i < inviteChain.length; i++) {
     log(partyKey, inviteChain[i]);
 
     const partyInvite = inviteChain[i];
-    console.assert(partyInvite);
-    console.assert(partyInvite.type === 'wrn:protobuf:wirelineio.party.Invite');
-
-    // Verify signature on feed genesis block.
-    if (!verifyObject(partyInvite, 'inviterFeedKey')) {
-      return { verified: false, error: 'Signature mismatch.' };
+    const { verified, error } = await verifyPartyInvite(partyKey, partyInvite, genesisBlockLoader, inviterFeedKey);
+    if (!verified) {
+      return { verified, error };
     }
-
-    // Does the invite link back to the previous party feed?
-    if (partyInvite.inviterFeedKey !== inviterFeedKey) {
-      return { verified: false, error: 'Inviter feed mismatch.' };
-    }
-
-    // Load the feed genesis block for more checks.
-    const feedGenesis = await genesisBlockLoader(partyInvite.inviteeFeedKey);
-    console.assert(feedGenesis);
-    console.assert(feedGenesis.type === 'wrn:protobuf:wirelineio.credential.FeedGenesis');
-
-    // Verify signature on feed genesis block.
-    if (!verifyObject(feedGenesis, 'feedKey')) {
-      return { verified: false, error: 'Signature mismatch.' };
-    }
-
-    // Are we talking about the same party?
-    if (partyKey !== feedGenesis.partyKey) {
-      return { verified: false, error: 'Party key mismatch.' };
-    }
-
-    // Are the party invite and feed genesis block referring to the same party?
-    if (partyInvite.partyKey !== feedGenesis.partyKey) {
-      return { verified: false, error: 'Party key mismatch.' };
-    }
-
-    // Are the party invite and feed genesis block referring to the same owner?
-    if (partyInvite.inviteeOwnerKey !== feedGenesis.ownerKey) {
-      return { verified: false, error: 'Invitee feed owner mismatch.' };
-    }
-
-    // Are the party invite and feed genesis block referring to the same feed key?
-    if (partyInvite.inviteeFeedKey !== feedGenesis.feedKey) {
-      return { verified: false, error: 'Invitee feed key mismatch.' };
-    }
-
-    // Note: Can't reliably check for the party invite on existing feeds as it may not have been written yet.
 
     // Update the inviter feed key for the next round of checks.
-    inviterFeedKey = feedGenesis.feedKey;
+    inviterFeedKey = partyInvite.inviteeFeedKey;
   }
 
   return { verified: true };
