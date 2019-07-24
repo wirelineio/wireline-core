@@ -7,7 +7,7 @@ import crypto from 'hypercore-crypto';
 
 import { createCodec } from '../util/codec';
 
-import { createItem, createParty, signObject, verifyObject } from './helpers';
+import { createItem, createPartyGenesis, signObject, verifyObject } from './helpers';
 
 test('item genesis', async () => {
 
@@ -61,7 +61,7 @@ test('party genesis', async () => {
 
   const feedKeyPair = crypto.keyPair();
 
-  const party = createParty(user1.publicKey, feedKeyPair.publicKey);
+  const party = createPartyGenesis(user1.publicKey, feedKeyPair.publicKey);
 
   {
     const buffer = codec.encode({ type: 'wirelineio.credential.PartyGenesis', message: party });
@@ -72,7 +72,7 @@ test('party genesis', async () => {
     expect(message).toEqual(party);
 
     // Verify signature.
-    expect(verifyObject(party)).toBeTruthy();
+    expect(verifyObject(party, 'partyKey')).toBeTruthy();
   }
 
   {
@@ -81,13 +81,13 @@ test('party genesis', async () => {
 
     // Tampering the ownerKey doesn't work.
     partyClone.ownerKey = user2.publicKey;
-    expect(verifyObject(partyClone)).toBeFalsy();
+    expect(verifyObject(partyClone, 'partyKey')).toBeFalsy();
 
     // Verificaton MUST fail as the party needs to be signed with the party's private key, which has been burned.
     // Check not possible to claim ownership since burned private party key is required to sign block.
     // Sign with new owners secret key.
     delete partyClone.signature;
     const signature = signObject(party, user2.secretKey);
-    expect(verifyObject({ ...partyClone, signature })).toBeFalsy();
+    expect(verifyObject({ ...partyClone, signature }, 'partyKey')).toBeFalsy();
   }
 });

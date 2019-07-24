@@ -2,10 +2,14 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+import debug from 'debug';
 import crypto from 'hypercore-crypto';
 import canonicalStringify from 'canonical-json';
+import { isEqual } from 'lodash';
 
 import { keyStr } from '../util';
+
+const log = debug('helpers');
 
 /**
  * Creates an item (genesis message).
@@ -34,18 +38,20 @@ export const createItem = (ownerKey) => {
 };
 
 /**
- * Creates a party (genesis message).
+ * Creates a party genesis message.
+ * Signed with the secret key from the party keypair.
  * @param {Buffer} ownerKey
  * @param {Buffer} feedKey
  * @returns {Object} party
  */
-export const createParty = (ownerKey, feedKey) => {
+export const createPartyGenesis = (ownerKey, feedKey) => {
   console.assert(ownerKey);
+  console.assert(feedKey);
 
   const partyKeyPair = crypto.keyPair();
   const party = {
     type: 'wrn:protobuf:wirelineio.credential.PartyGenesis',
-    key: keyStr(partyKeyPair.publicKey),
+    partyKey: keyStr(partyKeyPair.publicKey),
     ownerKey: keyStr(ownerKey),
     feedKey: keyStr(feedKey)
   };
@@ -57,6 +63,34 @@ export const createParty = (ownerKey, feedKey) => {
 
   return {
     ...party,
+    signature
+  };
+};
+
+/**
+ * Creates a feed genesis message.
+ * Signed with the secret key of the feed (for easier out of band verification).
+ * @param {{publickey, secretKey}} feedKey
+ * @param {Buffer} ownerKey
+ * @param {Buffer} partyKey
+ * @returns {Object} feed
+ */
+export const createFeedGenesis = (feedKeyPair, ownerKey, partyKey) => {
+  console.assert(feedKeyPair);
+  console.assert(ownerKey);
+  console.assert(partyKey);
+
+  const feed = {
+    type: 'wrn:protobuf:wirelineio.credential.FeedGenesis',
+    feedKey: keyStr(feedKeyPair.publicKey),
+    ownerKey: keyStr(ownerKey),
+    partyKey: keyStr(partyKey)
+  };
+
+  const signature = signObject(feed, feedKeyPair.secretKey);
+
+  return {
+    ...feed,
     signature
   };
 };
@@ -126,14 +160,17 @@ export const signObject = (obj, secretKey) => {
 
 /**
  * Verify obj.
- * @param {Object} obj
+ * @param {Object} obj - Object to verify.
+ * @param {string} [keyAttr] - Public key attribute name.
  * @returns {boolean}
  */
-export const verifyObject = (obj) => {
+export const verifyObject = (obj, keyAttr = 'key') => {
   console.assert(obj);
 
-  const { key, signature } = obj;
+  const key = obj[keyAttr];
   console.assert(key);
+
+  const { signature } = obj;
   console.assert(signature);
 
   const clone = { ...obj };
@@ -173,3 +210,162 @@ export class AuthProvider {
     return signAuthProofPayload(data, this._keyPair.secretKey);
   }
 }
+
+/**
+ * Create party invite (written to feed of inviter).
+ * Signed with the secret key of the inviter.
+ * @param {Buffer} partyKey
+ * @param {Object} inviter
+ * @param {Object} invitee
+ * @return {{key, inviteeFeedKey, inviteeOwnerKey, type: string}}
+ */
+export const createPartyInvite = (partyKey, inviter, invitee) => {
+  console.assert(partyKey);
+  console.assert(inviter);
+  console.assert(inviter.keyPair);
+  console.assert(inviter.feedKey);
+  console.assert(invitee);
+  console.assert(invitee.ownerKey);
+  console.assert(invitee.feedKey);
+
+  const partyInvite = {
+    type: 'wrn:protobuf:wirelineio.party.Invite',
+    partyKey: keyStr(partyKey),
+    inviterOwnerKey: keyStr(inviter.keyPair.publicKey),
+    inviterFeedKey: keyStr(inviter.feedKey),
+    inviteeOwnerKey: keyStr(invitee.ownerKey),
+    inviteeFeedKey: keyStr(invitee.feedKey)
+  };
+
+  const signature = signObject(partyInvite, inviter.keyPair.secretKey);
+
+  return {
+    ...partyInvite,
+    signature
+  };
+};
+
+/**
+ * Verify party genesis block.
+ * @param {string} partyKey
+ * @param {Object} partyGenesis
+ * @param {Function} loadFeedGenesisBlock
+ * @return {Promise<{verified: boolean}|{verified: boolean, error: string}>}
+ */
+const verifyPartyGenesisBlock = async (partyKey, partyGenesis, loadFeedGenesisBlock) => {
+  console.assert(partyKey);
+  console.assert(partyGenesis);
+  console.assert(partyGenesis.type === 'wrn:protobuf:wirelineio.credential.PartyGenesis');
+
+  log(partyKey, partyGenesis);
+
+  // Verify signature on party genesis block.
+  if (!verifyObject(partyGenesis, 'partyKey')) {
+    return { verified: false, error: 'Signature mismatch.' };
+  }
+
+  // Are we talking about the same party?
+  if (partyKey !== partyGenesis.partyKey) {
+    return { verified: false, error: 'Party key mismatch.' };
+  }
+
+  // Check genesis block in the chain actually matches the one on the feed.
+  if (!isEqual(partyGenesis, await loadFeedGenesisBlock(partyGenesis.feedKey))) {
+    return { verified: false, error: 'Party genesis block mismatch.' };
+  }
+
+  return { verified: true };
+};
+
+/**
+ * Verify party invite.
+ * Note: Can't reliably check for the party invite on existing feeds as it may not have been written yet.
+ * @param {string} partyKey
+ * @param {Object} partyInvite
+ * @param {Function} loadFeedGenesisBlock
+ * @param {string} inviterFeedKey
+ * @return {Promise<{verified: boolean}|{verified: boolean, error: string}>}
+ */
+const verifyPartyInvite = async (partyKey, partyInvite, loadFeedGenesisBlock, inviterFeedKey) => {
+  console.assert(partyInvite);
+  console.assert(partyInvite.type === 'wrn:protobuf:wirelineio.party.Invite');
+
+  // Verify signature on invite.
+  if (!verifyObject(partyInvite, 'inviterOwnerKey')) {
+    return { verified: false, error: 'Signature mismatch.' };
+  }
+
+  // Does the invite link back to the previous party feed?
+  if (partyInvite.inviterFeedKey !== inviterFeedKey) {
+    return { verified: false, error: 'Inviter feed mismatch.' };
+  }
+
+  // Load the feed genesis block for more checks.
+  const feedGenesis = await loadFeedGenesisBlock(partyInvite.inviteeFeedKey);
+  console.assert(feedGenesis);
+  console.assert(feedGenesis.type === 'wrn:protobuf:wirelineio.credential.FeedGenesis');
+
+  // Verify signature on feed genesis block.
+  if (!verifyObject(feedGenesis, 'feedKey')) {
+    return { verified: false, error: 'Signature mismatch.' };
+  }
+
+  // Are we talking about the same party?
+  if (partyKey !== feedGenesis.partyKey) {
+    return { verified: false, error: 'Party key mismatch.' };
+  }
+
+  // Are the party invite and feed genesis block referring to the same party?
+  if (partyInvite.partyKey !== feedGenesis.partyKey) {
+    return { verified: false, error: 'Party key mismatch.' };
+  }
+
+  // Are the party invite and feed genesis block referring to the same owner?
+  if (partyInvite.inviteeOwnerKey !== feedGenesis.ownerKey) {
+    return { verified: false, error: 'Invitee feed owner mismatch.' };
+  }
+
+  // Are the party invite and feed genesis block referring to the same feed key?
+  if (partyInvite.inviteeFeedKey !== feedGenesis.feedKey) {
+    return { verified: false, error: 'Invitee feed key mismatch.' };
+  }
+
+  return { verified: true };
+};
+
+/**
+ * Verify party invite chain.
+ * @param {string} partyKey
+ * @param {Array{Object}} inviteChain
+ * @param {Function} loadFeedGenesisBlock
+ * @return {Promise<{verified: boolean}|{verified: boolean, error: string}>}
+ */
+export const verifyPartyInviteChain = async (partyKey, inviteChain, loadFeedGenesisBlock) => {
+  console.assert(partyKey);
+  console.assert(inviteChain);
+  console.assert(inviteChain.length);
+
+  // The invite chain ALWAYS begins with the party genesis block.
+  const partyGenesis = inviteChain[0];
+  const { verified, error } = await verifyPartyGenesisBlock(partyKey, partyGenesis, loadFeedGenesisBlock);
+  if (!verified) {
+    return { verified, error };
+  }
+
+  // Walk the chain, verifying data.
+  let inviterFeedKey = partyGenesis.feedKey;
+  for (let i = 1; i < inviteChain.length; i++) {
+    log(partyKey, inviteChain[i]);
+
+    const partyInvite = inviteChain[i];
+    const { verified, error } = await verifyPartyInvite(partyKey, partyInvite, loadFeedGenesisBlock, inviterFeedKey);
+    if (!verified) {
+      return { verified, error };
+    }
+
+    // Update the inviter feed key for the next round of checks.
+    inviterFeedKey = partyInvite.inviteeFeedKey;
+  }
+
+  return { verified: true };
+};
