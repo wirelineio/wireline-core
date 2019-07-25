@@ -12,6 +12,7 @@
   },
   "license": "GPL-3.0",
   "main": "index.js",
+  "browser": "dist/index.js",
   "scripts": {
     "build": "npm run clean && babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps",
     "clean": "del-cli dist",
