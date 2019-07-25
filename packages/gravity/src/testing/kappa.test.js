@@ -6,8 +6,7 @@ import debug from 'debug';
 import pify from 'pify';
 import waitForExpect from 'wait-for-expect';
 
-import { createMegafeed, createKeys } from '../megafeed/debug/generator'
-import { KappaManager } from '../megafeed/kappa-manager';
+import { KappaManager, createMegafeed, createKeys } from '@wirelineio/megafeed'
 import { random } from '../util/debug';
 import { keyStr, keyName } from '../util/keys';
 

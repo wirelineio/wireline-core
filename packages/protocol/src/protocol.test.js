@@ -6,15 +6,15 @@ import crypto from 'hypercore-crypto';
 import debug from 'debug';
 import pump from 'pump';
 
-import { sleep } from '../util/async';
-
 import { Extension } from './extension';
 import { Protocol } from './protocol';
 
 const log = debug('test');
 debug.enable('test,protocol');
 
-test('protocol', async done => {
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+test('protocol', async (done) => {
 
   // TODO(burdon): Recreate test with memory swarm.
 
@@ -22,7 +22,7 @@ test('protocol', async done => {
   const timeout = 1000;
 
   const waitOneWayMessage = {};
-  waitOneWayMessage.promise = new Promise(resolve => {
+  waitOneWayMessage.promise = new Promise((resolve) => {
     waitOneWayMessage.resolve = resolve;
   });
 
@@ -43,8 +43,8 @@ test('protocol', async done => {
         }
 
         const feedStore = {
-          'foo': ['f1', 'f2', 'f3'],
-          'bar': ['f3', 'f4']
+          foo: ['f1', 'f2', 'f3'],
+          bar: ['f3', 'f4']
         };
 
         switch (type) {
@@ -56,7 +56,7 @@ test('protocol', async done => {
 
           // Async response.
           case 'request': {
-            const results = topics.map(topic => {
+            const results = topics.map((topic) => {
               const keys = feedStore[topic] || [];
               return { topic, keys };
             });
@@ -81,7 +81,7 @@ test('protocol', async done => {
 
           // Error.
           default: {
-            throw new Error('Invalid type: ' + type);
+            throw new Error(`Invalid type: ${type}`);
           }
         }
       }))
@@ -90,7 +90,7 @@ test('protocol', async done => {
   protocol1.on('handshake', async (protocol) => {
     const keys = protocol.getExtension(extension);
 
-    keys.on('error', err => {
+    keys.on('error', (err) => {
       log('Error: %o', err);
     });
 
@@ -124,28 +124,28 @@ test('protocol', async done => {
       log('%o', topics);
     }
 
-    {
-      try {
-        await keys.send({ type: 'timeout' });
-      } catch (ex) {
-        expect(ex.code).toBe(408);  // timeout.
-        log('%o', ex);
-        done();
-      }
+    try {
+      await keys.send({ type: 'timeout' });
+    } catch (ex) {
+      expect(ex.code).toBe(408);  // timeout.
+      log('%o', ex);
+      done();
     }
 
-    {
-      try {
-        await keys.send({ type: 'xxx' });
-      } catch (ex) {
-        expect(ex.code).toBe(500);  // exception.
-        log('%o', ex);
-        done();
-      }
+    try {
+      await keys.send({ type: 'xxx' });
+    } catch (ex) {
+      expect(ex.code).toBe(500);  // exception.
+      log('%o', ex);
+      done();
     }
 
     log('%o', keys.stats);
   });
 
-  pump(protocol1.stream, protocol2.stream, protocol1.stream, (err) => { err && done(err); });
+  pump(protocol1.stream, protocol2.stream, protocol1.stream, (err) => {
+    if (err) {
+      done(err);
+    }
+  });
 });

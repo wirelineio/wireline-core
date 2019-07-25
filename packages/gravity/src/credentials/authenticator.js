@@ -4,7 +4,8 @@
 
 import { EventEmitter } from 'events';
 
-import { Extension } from '../protocol';
+import { Extension } from '@wirelineio/protocol';
+
 import { random } from '../util';
 
 import { createAuthProofPayload, verifyAuthProof } from './helpers';

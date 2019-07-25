@@ -54,7 +54,7 @@ export class MultifeedAdapter extends EventEmitter {
       process.nextTick(() => {
         this._ready = true;
         this.emit('ready');
-      })
+      });
     } catch (err) {
       process.nextTick(() => this.emit('error', err));
     }

@@ -6,7 +6,7 @@ import crypto from 'hypercore-crypto';
 import debug from 'debug';
 import pump from 'pump';
 
-import { Protocol, Extension } from '../protocol';
+import { Protocol, Extension } from '@wirelineio/protocol';
 import { keyStr, random } from '../util';
 
 import { AuthProvider, createAuthProofPayload, verifyAuthProof } from './helpers';

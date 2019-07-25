@@ -2,7 +2,6 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+export * from './debug';
 export * from './megafeed';
-export * from './util';
-export * from './protocol';
-export * from './node';
+export * from './kappa-manager';

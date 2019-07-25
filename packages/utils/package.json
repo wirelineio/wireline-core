@@ -17,7 +17,9 @@
     "test": "jest --verbose --passWithNoTests"
   },
   "dependencies": {
+    "chance": "^1.0.18",
     "debug": "^4.1.1",
+    "humanhash": "^1.0.4",
     "hypercore-crypto": "^1.0.0",
     "lodash": "^4.17.11",
     "loggly": "segmentio/loggly",

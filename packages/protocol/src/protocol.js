@@ -6,7 +6,7 @@ import debug from 'debug';
 import { EventEmitter } from 'events';
 import protocol from 'hypercore-protocol';
 
-import { discoveryKey, keyName } from '../util/keys';
+import { getDiscoveryKey, keyToHuman } from '@wirelineio/utils';
 
 import { Codec } from './codec';
 
@@ -30,8 +30,8 @@ export class ProtocolError extends Error {
   }
 
   toString() {
-    const parts = [ this.code ];
-    if (this.message) { parts.push(this.message ); }
+    const parts = [this.code];
+    if (this.message) { parts.push(this.message); }
     return `ProtocolError(${parts.join(', ')})`;
   }
 }
@@ -89,7 +89,7 @@ export class Protocol extends EventEmitter {
 
   toString() {
     const meta = {
-      id: keyName(this._stream.id),
+      id: keyToHuman(this._stream.id),
       extensions: Array.from(this._extensionMap.keys())
     };
 
@@ -195,7 +195,7 @@ export class Protocol extends EventEmitter {
     // See https://github.com/wirelineio/wireline-core/blob/master/docs/design/appendix.md#swarming--dat-protocol-handshake for details.
 
     // Initialize extensions.
-    this._extensionMap.forEach(extension => {
+    this._extensionMap.forEach((extension) => {
       this._stream.extensions.push(extension.name);
       extension.init(this);
     });
@@ -212,7 +212,7 @@ export class Protocol extends EventEmitter {
             return;
           }
 
-          log(`handshake extension "${name}": ${keyName(this._stream.id)} <=> ${keyName(this._stream.remoteId)}`);
+          log(`handshake extension "${name}": ${keyToHuman(this._stream.id)} <=> ${keyToHuman(this._stream.remoteId)}`);
           await extension.onHandshake(context);
         }
 
@@ -220,7 +220,7 @@ export class Protocol extends EventEmitter {
           return;
         }
 
-        log(`handshake: ${keyName(this._stream.id)} <=> ${keyName(this._stream.remoteId)}`);
+        log(`handshake: ${keyToHuman(this._stream.id)} <=> ${keyToHuman(this._stream.remoteId)}`);
         this.emit('handshake', this);
       } catch (err) {
         this._stream.destroy();
@@ -231,7 +231,7 @@ export class Protocol extends EventEmitter {
     // If this protocol stream is being created via a swarm connection event,
     // only the client side will know the topic (i.e. initial feed key to share).
     if (initialKey) {
-      this._discoveryKey = discoveryKey(initialKey);
+      this._discoveryKey = getDiscoveryKey(initialKey);
       this._initStream(initialKey);
     } else {
       // Wait for the peer to share the initial feed and see if we have the public key for that.
@@ -239,7 +239,7 @@ export class Protocol extends EventEmitter {
         initialKey = this._discoveryToPublicKey && this._discoveryToPublicKey(discoveryKey);
         if (!initialKey) {
           // Stream will get aborted soon as both sides haven't shared the same initial Dat feed.
-          console.warn('Public key not found for discovery key: ', keyName(this._stream.id, 'node'), keyName(discoveryKey));
+          console.warn('Public key not found for discovery key: ', keyToHuman(this._stream.id, 'node'), keyToHuman(discoveryKey));
 
           return;
         }
@@ -255,14 +255,14 @@ export class Protocol extends EventEmitter {
         this._stream.on('feed', (discoveryKey) => {
           const context = this.getContext();
 
-          this._extensionMap.forEach(extension => {
+          this._extensionMap.forEach((extension) => {
             extension.onFeed(context, discoveryKey);
           });
         });
       });
     }
 
-    log(keyName(this._stream.id, 'node'), 'initialized');
+    log(keyToHuman(this._stream.id, 'node'), 'initialized');
     return this;
   }
 
@@ -281,7 +281,7 @@ export class Protocol extends EventEmitter {
    * @private
    */
   _initStream(key) {
-    log(keyName(this._stream.id, 'node'), 'shared initial feed', keyName(this._discoveryKey));
+    log(keyToHuman(this._stream.id, 'node'), 'shared initial feed', keyToHuman(this._discoveryKey));
     this._feed = this._stream.feed(key);
     this._feed.on('extension', this._extensionHandler);
   }
@@ -292,7 +292,7 @@ export class Protocol extends EventEmitter {
   _extensionHandler = async (name, message) => {
     const extension = this._extensionMap.get(name);
     if (!extension) {
-      console.warn('Missing extension: ' + name);
+      console.warn(`Missing extension: ${name}`);
       this.emit('error');
       return;
     }

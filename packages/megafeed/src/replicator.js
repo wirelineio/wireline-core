@@ -4,8 +4,8 @@
 
 import { EventEmitter } from 'events';
 
-import { keyStr } from '../util/keys';
-import { Extension } from '../protocol';
+import { Extension } from '@wirelineio/protocol';
+import { keyToHex } from '@wirelineio/utils';
 
 
 /**
@@ -89,7 +89,7 @@ export class Replicator extends EventEmitter {
               metadata: { topic }
             });
           } catch (err) {
-            console.error(err)
+            console.error(err);
           }
         }));
       })
@@ -112,9 +112,9 @@ export class Replicator extends EventEmitter {
   async _messageHandler(protocol, context, message) {
     // TODO(burdon): Check credentials. By topic?
     // Sould be optional not a restriction to share feeds.
-    //if (!context.user) {
-      //throw new ProtocolError(401);
-    //}
+    // if (!context.user) {
+    // throw new ProtocolError(401);
+    // }
 
     const { type } = message;
     switch (type) {
@@ -140,11 +140,11 @@ export class Replicator extends EventEmitter {
       case 'get-keys': {
         const { topics } = message;
         const feedKeysByTopic = await Promise.all(topics.map(async (topic) => {
-          const feeds = await this._feedStore.loadFeeds(descriptor => {
+          const feeds = await this._feedStore.loadFeeds((descriptor) => {
             return descriptor.stat.metadata.topic === topic;
           });
 
-          const keys = feeds.map(feed => keyStr(feed.key));
+          const keys = feeds.map(feed => keyToHex(feed.key));
 
           // Share and replicate feeds over protocol stream.
           feeds.forEach((feed) => {
@@ -157,14 +157,14 @@ export class Replicator extends EventEmitter {
 
         return {
           feedKeysByTopic
-        }
+        };
       }
 
       //
       // Error.
       //
       default: {
-        throw new Error('Invalid type: ' + type);
+        throw new Error(`Invalid type: ${type}`);
       }
     }
   }

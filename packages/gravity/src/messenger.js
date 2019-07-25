@@ -5,8 +5,8 @@
 import debug from 'debug';
 import { EventEmitter } from 'events';
 
+import { Extension, ProtocolError } from '@wirelineio/protocol';
 import { keyName } from './util';
-import { Extension, ProtocolError } from './protocol';
 
 const log = debug('messenger');
 

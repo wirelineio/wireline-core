@@ -4,8 +4,8 @@
 
 import network from '@wirelineio/hyperswarm-network-memory';
 
-import { KappaManager } from '../megafeed/kappa-manager';
-import { createMegafeed } from '../megafeed';
+import { KappaManager, createMegafeed } from '@wirelineio/megafeed';
+
 import { Node } from '../node';
 import { random } from '../util';
 

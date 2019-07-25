@@ -20,7 +20,7 @@ export class Megafeed extends EventEmitter {
    * @param {Object} [options]
    */
   static async create(storage, options = {}) {
-    return await new Megafeed(storage, options).initialize();
+    return new Megafeed(storage, options).initialize();
   }
 
   /**
@@ -37,12 +37,12 @@ export class Megafeed extends EventEmitter {
 
     // Feeds manager instance
     this._feedStore = new FeedStore(this._db, storage, {
-        feedOptions: {
-          valueEncoding: options.valueEncoding
-        }
-      })
+      feedOptions: {
+        valueEncoding: options.valueEncoding
+      }
+    })
       .on('feed', (feed, stat) => {
-        this.emit('feed', feed, stat)
+        this.emit('feed', feed, stat);
 
         feed.on('sync', () => {
           this.emit('update', feed, stat);

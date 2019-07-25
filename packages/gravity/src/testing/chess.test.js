@@ -6,10 +6,11 @@ import debug from 'debug';
 import path from 'path';
 import waitForExpect from 'wait-for-expect';
 
+import { createKeys } from '@wirelineio/megafeed';
+
 import { random } from '../util/debug';
 import { createCodec } from '../util/codec';
 import { keyStr } from '../util';
-import { createKeys } from '../megafeed';
 
 import { ChessApp } from './chess';
 import { createChessApps, createPeer, playGameMoves } from './helpers';

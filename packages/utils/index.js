@@ -3,11 +3,12 @@
 //
 
 const { filterDescriptorByPattern, parsePartyPattern } = require('./src/glob');
-const { keyToHex, getDiscoveryKey, parseToKeys, keyToBuffer } = require('./src/keys');
+const { keyToHex, getDiscoveryKey, parseToKeys, keyToBuffer, keyToHuman } = require('./src/keys');
 const Locker = require('./src/locker');
 const { callbackPromise } = require('./src/promise-help');
 const MessageStore = require('./src/message-store');
 const bubblingEvents = require('./src/bubbling-events');
+const { random, times, latch } = require('./src/debug');
 
 module.exports = {
 
@@ -18,6 +19,7 @@ module.exports = {
   getDiscoveryKey,
   parseToKeys,
   keyToBuffer,
+  keyToHuman,
 
   Locker,
 
@@ -25,5 +27,11 @@ module.exports = {
 
   MessageStore,
 
-  bubblingEvents
+  bubblingEvents,
+
+  random,
+
+  times,
+
+  latch
 };

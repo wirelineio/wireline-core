@@ -5,11 +5,11 @@
 import debug from 'debug';
 import ram from 'random-access-memory';
 
+import { createKeys, Megafeed } from '@wirelineio/megafeed';
 import network from '@wirelineio/hyperswarm-network-memory';
 
 import { latch } from './util';
 import { Node } from './node';
-import { createKeys, Megafeed } from './megafeed';
 
 const log = debug('test');
 

@@ -8,10 +8,13 @@ import hypertrie from 'hypertrie';
 import pify from 'pify';
 
 import { FeedStore } from '@wirelineio/feed-store';
-
-import { keyStr, times } from '../../util';
+import { keyToHex, times } from '@wirelineio/utils';
 
 import { Megafeed } from '../megafeed';
+
+export const createKeyPairs = (num = 1) => times(num, crypto.keyPair);
+
+export const createKeys = (num = 1) => createKeyPairs(num).map(keyPair => keyPair.publicKey);
 
 /**
  * Generates feed data.
@@ -25,18 +28,15 @@ const generateFeedData = async (feedManager, options = {}) => {
   return Promise.all(topicKeys.map(async (topic) => {
     const feedKeyPairs = createKeyPairs(numFeedsPerTopic);
     await Promise.all(feedKeyPairs.map(async ({ publicKey, secretKey }) => {
-      const path = `feed/${keyStr(topic)}/${keyStr(publicKey)}`;
-      const feed = await feedManager.openFeed(path, { key: publicKey, secretKey, valueEncoding, metadata: { topic: keyStr(topic) } });
-      await Promise.all([...Array(numMessagesPerFeed).keys()].map(i => {
+      const path = `feed/${keyToHex(topic)}/${keyToHex(publicKey)}`;
+      const feed = await feedManager
+        .openFeed(path, { key: publicKey, secretKey, valueEncoding, metadata: { topic: keyToHex(topic) } });
+      await Promise.all([...Array(numMessagesPerFeed).keys()].map((i) => {
         return pify(feed.append.bind(feed))({ message: i });
-      }))
+      }));
     }));
   }));
 };
-
-export const createKeyPairs = (num = 1) => times(num, crypto.keyPair);
-
-export const createKeys = (num = 1) => createKeyPairs(num).map(keyPair => keyPair.publicKey);
 
 /**
  * Generates a Megafeed.

@@ -6,9 +6,9 @@ import crypto from 'hypercore-crypto';
 import debug from 'debug';
 import pump from 'pump';
 
-import { Protocol } from '../protocol';
-import { keyStr, latch } from '../util';
+import { Protocol } from '@wirelineio/protocol';
 
+import { keyStr, latch } from '../util';
 import { Authenticator } from './authenticator';
 import { AuthProvider } from './helpers';
 

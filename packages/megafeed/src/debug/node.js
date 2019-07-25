@@ -7,19 +7,15 @@ import { EventEmitter } from 'events';
 import pump from 'pump';
 import crypto from 'hypercore-crypto';
 
-import { keyStr, keyName, discoveryKey } from './util/keys';
-import { Protocol } from './protocol';
+import { Protocol } from '@wirelineio/protocol';
+import { keyToHex, keyToHuman, getDiscoveryKey } from '@wirelineio/utils';
 
-import { Messenger } from './messenger';
-
-const log = debug('node');
+const log = debug('megafeed:debug:node');
 
 /**
- * Manages streams between peers.
+ * Simulation of a peer.
  */
 export class Node extends EventEmitter {
-
-  // TODO(burdon): Move outside of megafeed pacakge.
 
   /**
    * @type {Map<{id, Protocol}>}
@@ -50,16 +46,13 @@ export class Node extends EventEmitter {
         await this._handleDisconnect(connection, peerId);
       });
 
-    // Enable ephemeral messages between peers.
-    this._messenger = new Messenger();
-
     // Virtual shared data store.
     this._megafeed = megafeed;
   }
 
   toString() {
     const meta = {
-      id: keyName(this._id),
+      id: keyToHex(this._id),
       peers: this._peerMap.size
     };
 
@@ -71,14 +64,6 @@ export class Node extends EventEmitter {
   }
 
   /**
-   * Check if currently connected to the swarm.
-   * @returns {boolean}
-   */
-  get isConnectedToSwarm() {
-    return !!this._rendezvousKey;
-  }
-
-  /**
    * Connect to the swarm. Triggers a `connection` event.
    * @param {{ publicKey, secretKey }} rendezvousKey - Shared secret with other peer (to establish a session).
    */
@@ -87,9 +72,9 @@ export class Node extends EventEmitter {
     console.assert(rendezvousKey);
     console.assert(!this._rendezvousKey, 'Already connected');
 
-    log(keyName(this._id), 'joining', keyName(rendezvousKey));
+    log(keyToHuman(this._id), 'joining', keyToHuman(rendezvousKey));
     this._rendezvousKey = rendezvousKey;
-    this._network.join(discoveryKey(this._rendezvousKey));
+    this._network.join(getDiscoveryKey(this._rendezvousKey));
 
     return this;
   }
@@ -101,37 +86,12 @@ export class Node extends EventEmitter {
     console.assert(this._rendezvousKey);
 
     // TODO(burdon): Error: premature close.
-    log(keyName(this._id), 'leaving', keyName(this._rendezvousKey));
+    log(keyToHuman(this._id), 'leaving', keyToHuman(this._rendezvousKey));
 
-    this._network.leave(discoveryKey(this._rendezvousKey));
+    this._network.leave(getDiscoveryKey(this._rendezvousKey));
     this._rendezvousKey = null;
 
     return this;
-  }
-
-  /**
-   * Sends a message to peers.
-   * @param message
-   * @param {[{string}]} peerKeys - array of peer IDs.
-   * @returns {Promise<[{ peerKey, response }]>}
-   */
-  async broadcastMessage(message, peerKeys = null) {
-    if (!peerKeys) {
-      peerKeys = Array.from(this._peerMap.keys());
-    }
-
-    const responses = [];
-    await Promise.all(peerKeys.map(async peerKey => {
-      const protocol = this._peerMap.get(peerKey);
-      const response = await this._messenger.broadcast(protocol, message);
-
-      responses.push({
-        peerKey,
-        response
-      })
-    }));
-
-    return responses;
   }
 
   /**
@@ -139,19 +99,16 @@ export class Node extends EventEmitter {
    */
   _createExtensions() {
     return [
-      this._messenger.createExtension(),
-
-      // TODO(burdon): Messenger test fails if this is declared first.
       ...this._megafeed.createExtensions()
     ];
   }
 
   async _handleConnect(stream, peerKey) {
-    log(keyName(this._id, 'node'), 'connected', keyName(peerKey));
+    log(keyToHuman(this._id, 'node'), 'connected', keyToHuman(peerKey));
 
     // Check if we know the rendezvous key for the given discovery key.
     const discoveryToPublicKey = (discoveryKey) => {
-      if (keyStr(discoveryKey) === keyStr(discoveryKey(this._rendezvousKey))) {
+      if (keyToHex(discoveryKey) === keyToHex(getDiscoveryKey(this._rendezvousKey))) {
         return this._rendezvousKey;
       }
 
@@ -160,41 +117,35 @@ export class Node extends EventEmitter {
     };
 
     // Create a new protocol stream.
-    let protocol = new Protocol({
+    const protocol = new Protocol({
       streamOptions: {
         id: this._id,
         live: true
       },
       discoveryToPublicKey
     })
-      // TODO(burdon): User identifier?
-      // Note: User and extension data is sent in the handshake message, which is the 2nd message exchanged between peers.
-      // Communication is encrypted from the 2nd message onward (https://datprotocol.github.io/how-dat-works/#encryption).
       .setUserData({ user: {} })
       .setExtensions(this._createExtensions())
       .init(this._rendezvousKey);
 
     // Connect the streams.
-    pump(protocol.stream, stream, protocol.stream, err => {
+    pump(protocol.stream, stream, protocol.stream, (err) => {
       if (err) {
-        // TODO(ashwin): `stream.destroy` issue? (See https://github.com/mafintosh/pump/issues/25).
-        if (err.message !== 'premature close') {
-          log('Stream error:', err);
-          this.emit(err);
-        }
+        log('Stream error:', err);
+        this.emit(err);
       }
     });
 
     // Handle the handshake.
     protocol.once('handshake', async () => {
-      this._peerMap.set(keyStr(peerKey), protocol);
+      this._peerMap.set(keyToHex(peerKey), protocol);
       this.emit('handshake', peerKey);
     });
   }
 
   async _handleDisconnect(stream, peerKey) {
     // Protocol streams will get disconnected via `pump`.
-    this._peerMap.delete(keyStr(peerKey));
-    log(keyName(this._id, 'node'), 'disconnected', keyName(peerKey));
+    this._peerMap.delete(keyToHex(peerKey));
+    log(keyToHuman(this._id, 'node'), 'disconnected', keyToHuman(peerKey));
   }
 }

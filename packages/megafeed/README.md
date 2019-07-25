@@ -1,6 +1,6 @@
-# Wireline FeedStore
+# Wireline Megafeed
 
-> A consistent store for your hypercore feeds.
+> Feed management and replication over the Dat Protocol.
 
 ## Install
 
@@ -19,3 +19,4 @@ PRs accepted.
 ## License
 
 GPL-3.0 © Wireline
+

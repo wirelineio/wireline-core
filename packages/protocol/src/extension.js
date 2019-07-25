@@ -7,7 +7,7 @@ import { EventEmitter } from 'events';
 import debug from 'debug';
 import uuid from 'uuid/v4';
 
-import { keyName } from '../util/keys';
+import { keyToHuman } from '@wirelineio/utils';
 
 import { Codec } from './codec';
 import { ProtocolError } from './protocol';
@@ -122,7 +122,7 @@ export class Extension extends EventEmitter {
    */
   init(protocol) {
     console.assert(!this._protocol);
-    log(`init[${this._name}]: ${keyName(protocol.id)}`);
+    log(`init[${this._name}]: ${keyToHuman(protocol.id)}`);
 
     this._protocol = protocol;
   }
@@ -164,7 +164,7 @@ export class Extension extends EventEmitter {
 
     try {
       // Process the message.
-      log(`received ${keyName(this._protocol.stream.id, 'node')}: ${keyName(id, 'msg')}`);
+      log(`received ${keyToHuman(this._protocol.stream.id, 'node')}: ${keyToHuman(id, 'msg')}`);
       const responseData = await this._messageHandler(this._protocol, context, requestData);
 
       if (options.oneway) {
@@ -173,7 +173,7 @@ export class Extension extends EventEmitter {
 
       // Send the response.
       const response = { id, message: responseData };
-      log(`responding ${keyName(this._protocol.stream.id, 'node')}: ${keyName(id, 'msg')}`);
+      log(`responding ${keyToHuman(this._protocol.stream.id, 'node')}: ${keyToHuman(id, 'msg')}`);
       this._protocol.feed.extension(this._name, this._options.codec.encode(response));
     } catch (ex) {
       if (options.oneway) {
@@ -225,10 +225,13 @@ export class Extension extends EventEmitter {
       return;
     }
 
+    // Trigger the callback.
+    const promise = {};
+
     // Set the callback to be called when the response is received.
     this._pendingMessages.set(request.id, async (context, response, error) => {
 
-      log(`response ${keyName(this._protocol.stream.id, 'node')}: ${keyName(request.id, 'msg')}`);
+      log(`response ${keyToHuman(this._protocol.stream.id, 'node')}: ${keyToHuman(request.id, 'msg')}`);
       this._stats.receive++;
       this.emit('receive', this._stats);
       promise.done = true;
@@ -247,8 +250,6 @@ export class Extension extends EventEmitter {
       promise.resolve({ context, response });
     });
 
-    // Trigger the callback.
-    const promise = {};
     return new Promise((resolve, reject) => {
       promise.resolve = resolve;
       promise.reject = reject;
@@ -259,7 +260,7 @@ export class Extension extends EventEmitter {
           if (!promise.done) {
             promise.expired = true;
             this._stats.error++;
-            reject({ code: 408 });
+            reject({ code: 408 }); // eslint-disable-line
           }
         }, this._options.timeout);
       }
@@ -273,7 +274,7 @@ export class Extension extends EventEmitter {
    * @returns {Boolean}
    */
   _send(request) {
-    log(`sending a message ${keyName(this._protocol.stream.id, 'node')}: ${keyName(request.id, 'msg')}`);
+    log(`sending a message ${keyToHuman(this._protocol.stream.id, 'node')}: ${keyToHuman(request.id, 'msg')}`);
     this._protocol.feed.extension(this._name, this._options.codec.encode(request));
 
     this._stats.send++;

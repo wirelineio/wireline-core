@@ -1,6 +1,6 @@
-# Wireline FeedStore
+# Wireline Hypercore Protocol
 
-> A consistent store for your hypercore feeds.
+> Protocol wrapper of hypercore-protocol.
 
 ## Install
 
@@ -19,3 +19,4 @@ PRs accepted.
 ## License
 
 GPL-3.0 © Wireline
+
