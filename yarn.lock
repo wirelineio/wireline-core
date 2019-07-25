@@ -1860,25 +1860,6 @@
     automerge "^0.10.0"
     uuid "^3.3.2"
 
-"@wirelineio/megafeed@^0.1.36":
-  version "0.1.36"
-  resolved "https://registry.yarnpkg.com/@wirelineio/megafeed/-/megafeed-0.1.36.tgz#147d42b607d9f8d8adfe8273abf7105b40fee43a"
-  integrity sha512-qMZS9uqExjwoH8cYtGZ1BG7ZPV2KWLao0eYg05HuV4J01zlCA8mW3geCACGwHgoMIC0JieDh4uxN/LFJTWbv+w==
-  dependencies:
-    "@wirelineio/codec-protobuf" "^0.1.36"
-    "@wirelineio/party" "^0.1.36"
-    "@wirelineio/utils" "^0.1.36"
-    debug "^4.1.1"
-    end-of-stream "^1.4.1"
-    hypercore "^6.24.0"
-    hypercore-crypto "^1.0.0"
-    hypertrie "^3.6.1"
-    multi-read-stream "^2.0.0"
-    pify "^4.0.1"
-    pump "^3.0.0"
-    random-access-file "^2.1.0"
-    through2 "^3.0.1"
-
 "@wirelineio/wire-inspect@^0.1.17":
   version "0.1.17"
   resolved "https://registry.yarnpkg.com/@wirelineio/wire-inspect/-/wire-inspect-0.1.17.tgz#24330c9d77dc628d20f667929ad7df1394e940a2"
@@ -4610,7 +4591,7 @@ hyperid@^2.0.2:
     uuid "^3.3.2"
     uuid-parse "^1.0.0"
 
-hypertrie@^3.4.3, hypertrie@^3.6.1, hypertrie@^3.7.0:
+hypertrie@^3.4.3, hypertrie@^3.6.1:
   version "3.7.1"
   resolved "https://registry.yarnpkg.com/hypertrie/-/hypertrie-3.7.1.tgz#eb954308abf0870cadec6fcfe730e5dd922f6e28"
   integrity sha512-2UlKAWuBJCN9f1KQomcviTY1cbPFIhgpRouHYL9s1YICIlUcttnpUYTbIHvjJJWftASJjiLnH/raLafHHDmM7Q==
