@@ -11,7 +11,6 @@
     "url": "git+https://github.com/wirelineio/wireline-core.git"
   },
   "license": "GPL-3.0",
-  "private": true,
   "main": "dist/es/index.js",
   "module": "dist/es/index.js",
   "scripts": {
@@ -57,5 +56,8 @@
     "mermaid.cli": "^0.5.1",
     "rimraf": "^2.6.3",
     "wait-for-expect": "^1.2.0"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  }  
 }
