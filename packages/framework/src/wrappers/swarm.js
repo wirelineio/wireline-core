@@ -5,7 +5,7 @@
 const discoverySwarmWebrtc = require('@geut/discovery-swarm-webrtc');
 const debug = require('debug')('dsuite:swarm');
 
-const { Protocol } = require('@wirelineio/megafeed2');
+const { Protocol } = require('@wirelineio/megafeed');
 const { getDiscoveryKey } = require('@wirelineio/utils');
 
 const Metric = require('../utils/metric');

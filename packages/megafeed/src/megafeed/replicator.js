@@ -88,7 +88,9 @@ export class Replicator extends EventEmitter {
               key: keyBuffer,
               metadata: { topic }
             });
-          } catch (err) {}
+          } catch (err) {
+            console.error(err)
+          }
         }));
       })
     );

@@ -2,7 +2,7 @@
   "name": "@wirelineio/megafeed",
   "version": "0.1.36",
   "description": "Manage multiple hypercore feeds.",
-  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/megafeed#readme",
+  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/megafeed2",
   "bugs": {
     "url": "https://github.com/wirelineio/wireline-core/issues"
   },
@@ -11,34 +11,51 @@
     "url": "git+https://github.com/wirelineio/wireline-core.git"
   },
   "license": "GPL-3.0",
-  "main": "index.js",
+  "private": true,
+  "main": "dist/es/index.js",
+  "module": "dist/es/index.js",
   "scripts": {
-    "lint": "eslint **/*.js --ignore-path ../../.eslintignore",
+    "build": "npm run clean && babel ./src --out-dir ./dist/es --ignore \"**/*.test.js\"",
+    "clean": "rm -rf dist",
+    "lint": "eslint ./src --ignore-path ../../.eslintignore",
     "test": "jest --verbose"
   },
   "dependencies": {
+    "@babel/runtime": "^7.4.3",
     "@wirelineio/codec-protobuf": "^0.1.35",
     "@wirelineio/feed-store": "^0.1.35",
-    "@wirelineio/party": "^0.1.35",
+    "@wirelineio/hyperswarm-network-memory": "^0.1.35",
+    "canonical-json": "^0.0.4",
     "@wirelineio/utils": "^0.1.35",
+    "chance": "^1.0.18",
+    "chess.js": "^0.10.2",
     "debug": "^4.1.1",
-    "end-of-stream": "^1.4.1",
-    "hypercore": "^6.24.0",
+    "humanhash": "^1.0.4",
+    "hypercore": "^7.0.0",
     "hypercore-crypto": "^1.0.0",
-    "hypertrie": "^3.6.1",
-    "multi-read-stream": "^2.0.0",
+    "hypercore-protocol": "^6.9.0",
+    "hypertrie": "^3.4.3",
+    "kappa-core": "^4.0.0",
+    "micromatch": "^4.0.2",
     "pify": "^4.0.1",
+    "protobufjs": "https://github.com/wirelineio/protobuf.js#wireline-dist",
     "pump": "^3.0.0",
-    "random-access-file": "^2.1.0",
-    "through2": "^3.0.1"
+    "random-access-memory": "^3.1.1",
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
+    "@babel/cli": "^7.4.4",
+    "@babel/core": "^7.4.3",
+    "@babel/plugin-proposal-class-properties": "^7.4.0",
+    "@babel/plugin-proposal-export-default-from": "^7.2.0",
+    "@babel/plugin-transform-runtime": "^7.0.0",
+    "@babel/preset-env": "^7.0.0",
+    "babel-eslint": "^10.0.2",
+    "babel-plugin-add-module-exports": "^1.0.2",
+    "babel-plugin-inline-import": "^3.0.0",
     "jest": "^24.5.0",
-    "random-access-memory": "^3.1.1",
-    "stream-to-promise": "^2.2.0",
-    "tempy": "^0.2.1"
-  },
-  "publishConfig": {
-    "access": "public"
+    "mermaid.cli": "^0.5.1",
+    "rimraf": "^2.6.3",
+    "wait-for-expect": "^1.2.0"
   }
 }

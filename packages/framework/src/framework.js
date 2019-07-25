@@ -9,7 +9,7 @@ const memdown = require('memdown');
 const pify = require('pify');
 const crypto = require('hypercore-crypto');
 
-const { Megafeed, KappaManager } = require('@wirelineio/megafeed2');
+const { Megafeed, KappaManager } = require('@wirelineio/megafeed');
 const { keyToHex } = require('@wirelineio/utils');
 
 const PartySerializer = require('./parties/party-serializer');
