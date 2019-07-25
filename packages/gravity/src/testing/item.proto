@@ -1,0 +1,25 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
+syntax = "proto3";
+
+package item;
+
+//
+// Item definition.
+//
+message Item {
+
+  // Item Type.
+  string type = 1;
+
+  // Item ID.
+  string id = 2;
+
+  // Public Key of item owner.
+  string ownerKey = 3;
+
+  // Signature.
+  string signature = 4;
+}

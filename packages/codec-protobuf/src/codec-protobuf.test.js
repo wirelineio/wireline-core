@@ -14,13 +14,14 @@ test('encode/decode message', async () => {
 
     expect(Buffer.isBuffer(buffer)).toBe(true);
 
-    const messageDecoded = codec.decode(buffer);
+    const { message: messageDecoded, type: typeDecoded } = codec.decode(buffer);
 
+    expect(typeDecoded).toBe(type);
     expect(messageDecoded).toEqual(message);
     expect(Buffer.isBuffer(messageDecoded.body)).toBe(true);
   };
 
-  expect.assertions(6);
+  expect.assertions(8);
 
   // Load from a protobufjs root.
   codec.load(await protobufjs.load(`${__dirname}/schema-test-two.proto`));

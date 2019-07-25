@@ -61,20 +61,33 @@ class Codec {
     return AnyType.encode({ type: typeName, value }).finish();
   }
 
-  decode(buffer) {
-    const { message } = this.decodeWithType(buffer);
+  decode(buffer, withType = true) {
+    const obj = this.decodeWithType(buffer);
+    if (withType) {
+      return obj;
+    }
 
-    return message;
+    return obj.message;
   }
 
   decodeWithType(buffer) {
     const { type: typeName, value } = AnyType.toObject(AnyType.decode(buffer));
 
-    const type = this.getType(typeName);
+    try {
+      const type = this._root.lookupType(typeName);
+      const message = type.toObject(type.decode(value));
 
-    const message = type.toObject(type.decode(value));
+      return { type: typeName, message };
+    } catch (err) {
+      // TODO(ashwin): Is there is better way to check if a type is supported?
+      if (err.message && err.message.startsWith('no such type:')) {
+        // Type not known, return raw buffer.
+        return { type: typeName, buffer };
+      }
 
-    return { type: typeName, message };
+      // Some other error, rethrow.
+      throw err;
+    }
   }
 }
 

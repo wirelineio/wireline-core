@@ -1,0 +1,39 @@
+{
+  "name": "@wirelineio/feed-store",
+  "version": "0.2.0-alpha.1",
+  "description": "A consistent store for your hypercore feeds.",
+  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/feed-store#readme",
+  "bugs": {
+    "url": "https://github.com/wirelineio/wireline-core/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wirelineio/wireline-core.git"
+  },
+  "license": "GPL-3.0",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint **/*.js --ignore-path ../../.eslintignore",
+    "protobuf": "pbjs -t json src/schema.proto -o src/schema.json",
+    "test": "jest --verbose"
+  },
+  "dependencies": {
+    "@wirelineio/codec-protobuf": "^0.2.0-alpha.1",
+    "@wirelineio/utils": "^0.2.0-alpha.1",
+    "debug": "^4.1.1",
+    "hypercore": "^6.24.0",
+    "hypercore-crypto": "^1.0.0",
+    "hypertrie": "^3.6.1",
+    "pify": "^4.0.1",
+    "random-access-file": "^2.1.0"
+  },
+  "devDependencies": {
+    "jest": "^24.5.0",
+    "random-access-memory": "^3.1.1",
+    "stream-to-promise": "^2.2.0",
+    "tempy": "^0.2.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

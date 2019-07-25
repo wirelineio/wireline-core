@@ -5,23 +5,16 @@
 const EventEmitter = require('events');
 const view = require('kappa-view-level');
 const sub = require('subleveldown');
+const pify = require('pify');
+
+const { keyToHex } = require('@wirelineio/utils');
 
 const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
-const { append } = require('../protocol/messages');
 
-module.exports = function ContactsView({ mega, db }) {
+module.exports = function ContactsView(viewId, db, core, { append, isLocal, author }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
-
-  let feed;
-  let feedKey;
-  mega.on('feed', (_feed) => {
-    if (_feed.name === 'control') {
-      feed = _feed;
-      feedKey = feed.key.toString('hex');
-    }
-  });
 
   const viewDB = sub(db, 'contacts', { valueEncoding: 'json' });
 
@@ -52,8 +45,7 @@ module.exports = function ContactsView({ mega, db }) {
           if (event === 'set-profile') {
             events.emit(event, value);
 
-            const isContact = value.author !== feedKey;
-            if (isContact) {
+            if (!isLocal(value)) {
               events.emit('contact', value);
             }
           }
@@ -64,18 +56,14 @@ module.exports = function ContactsView({ mega, db }) {
 
     api: {
 
-      // TODO(burdon): Comment.
-      key() {
-        return mega.key.toString('hex');
-      },
+      async getContacts(core, opts = {}) {
+        await pify(this.ready.bind(this))();
 
-      // TODO(burdon): Query?
-      getContacts(core, opts = {}) {
         const fromKey = uuid('profile');
         const toKey = `${fromKey}~`;
         const reader = viewDB.createValueStream({ gte: fromKey, lte: toKey, reverse: opts.reverse });
         return streamToList(reader, (msg, next) => {
-          if (msg.author === feedKey) {
+          if (!opts.all && isLocal(msg)) {
             return next(false);
           }
 
@@ -83,9 +71,11 @@ module.exports = function ContactsView({ mega, db }) {
         });
       },
 
-      async getProfile(core, { key = feedKey } = {}) {
+      async getProfile(core, { key } = {}) {
+        await pify(this.ready.bind(this))();
+
         try {
-          return await viewDB.get(uuid('profile', key));
+          return await viewDB.get(uuid('profile', key || keyToHex(author)));
         } catch (error) {
           if (error.notFound) {
             return;
@@ -96,12 +86,14 @@ module.exports = function ContactsView({ mega, db }) {
       },
 
       async setProfile(core, { data }) {
-        await append(feed, {
+        const msg = await append({
           type: 'contact.set-profile',
           data
         });
 
-        return { data };
+        events.emit('profile-updated', msg);
+
+        return msg;
       },
 
       events

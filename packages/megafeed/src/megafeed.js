@@ -2,85 +2,57 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const assert = require('assert');
-const { EventEmitter } = require('events');
+import { EventEmitter } from 'events';
+import hypertrie from 'hypertrie';
+import pify from 'pify';
 
-const pump = require('pump');
-const hypertrie = require('hypertrie');
-const multi = require('multi-read-stream');
-const eos = require('end-of-stream');
-const through = require('through2');
-const pify = require('pify');
+import { FeedStore } from '@wirelineio/feed-store';
 
-const { PartyMap, Party } = require('@wirelineio/party');
-const {
-  callbackPromise,
-  keyToHex,
-  keyToBuffer,
-  parsePartyPattern,
-  filterFeedByPattern,
-  bubblingEvents
-} = require('@wirelineio/utils');
+import { Replicator } from './replicator';
 
-const FeedMap = require('./feed-map');
-
-class Megafeed extends EventEmitter {
+/**
+ * A lightweight feed replication engine.
+ */
+export class Megafeed extends EventEmitter {
 
   /**
    * @param {RandomAccessStorage} storage
-   * @param {Buffer} key
-   * @param {Object} options
-   * @param {Object[]} options.feeds
-   * @param {Object} options.types
+   * @param {Object} [options]
    */
-  constructor(storage, key, options) {
+  static async create(storage, options = {}) {
+    return new Megafeed(storage, options).initialize();
+  }
+
+  /**
+   * @constructor
+   * @param {RandomAccessStorage} storage
+   * @param {Object} [options]
+   */
+  constructor(storage, options = {}) {
     super();
-    assert(storage, 'A default storage is required.');
+    console.assert(storage);
 
-    // TODO(burdon): Comment?
-    this.setMaxListeners(Infinity);
-
-    let rootKey = key;
-    let opts = options;
-
-    if (typeof rootKey === 'string') {
-      rootKey = keyToBuffer(rootKey);
-    }
-
-    if (!Buffer.isBuffer(rootKey) && !opts) {
-      opts = rootKey;
-      rootKey = null;
-    }
-
-    if (!opts) {
-      opts = {};
-    }
-
-    // We save all our personal information like the feed list in a private feed
-    this._db = hypertrie(storage, rootKey, { secretKey: opts.secretKey });
+    // We save all our personal information like the feed list in a private feed.
+    this._db = hypertrie(storage, options.publicKey, { secretKey: options.secretKey });
 
     // Feeds manager instance
-    this._feeds = new FeedMap(this._db, storage, {
-      types: opts.types,
+    this._feedStore = new FeedStore(this._db, storage, {
       feedOptions: {
-        valueEncoding: opts.valueEncoding
+        valueEncoding: options.valueEncoding
       }
-    });
+    })
+      .on('feed', (feed, stat) => {
+        this.emit('feed', feed, stat);
 
-    // Parties manager instance
-    this._parties = new PartyMap(this._db, {
-      ready: () => this.ready(),
-      findFeed: ({ discoveryKey }) => this.feedByDK(discoveryKey)
-    });
+        feed.on('sync', () => {
+          this.emit('update', feed, stat);
+        });
+      });
 
-    // Bubble events.
-    bubblingEvents(this, this._feeds, ['append', 'download', 'feed-add', 'feed', 'feed-remove']);
-    bubblingEvents(this, this._parties, ['party', 'peer-add', 'peer-remove']);
-
-    // everything is ready
-    this._isReady = false;
-
-    this._initialize();
+    // Manages feed replication.
+    this._replicator = new Replicator(this._feedStore)
+      .on('error', err => this.emit('error', err))
+      .on('update', topic => this.emit('update', topic));
   }
 
   get id() {
@@ -91,151 +63,57 @@ class Megafeed extends EventEmitter {
     return this._db.key;
   }
 
-  get discoveryKey() {
-    return this._db.discoveryKey;
-  }
-
   get secretKey() {
     return this._db.secretKey;
   }
 
-  // eslint-disable-next-line
-  get isMegafeed() {
-    return true;
+  toString() {
+    const meta = {};
+
+    return `Megafeed(${JSON.stringify(meta)})`;
   }
 
-  /** * Feeds API ** */
-
-  feed(...args) {
-    return this._feeds.feed(...args);
+  getFeedByPath(path) {
+    return this._feedStore.findFeed(descriptor => descriptor.path === path);
   }
 
-  feedByDK(...args) {
-    return this._feeds.feedByDK(...args);
+  getFeedByDK(key) {
+    console.assert(Buffer.isBuffer(key), 'Key should be a Buffer instance.');
+
+    return this._feedStore.findFeed(descriptor => descriptor.discoveryKey.equals(key));
   }
 
-  feeds(...args) {
-    return this._feeds.feeds(...args);
+  getFeeds() {
+    return this._feedStore.getFeeds();
   }
 
-  async addFeed(options) {
-    await this.ready();
-
-    return this._feeds.addFeed(options);
+  filterFeeds(cb) {
+    return this._feedStore.filterFeeds(cb);
   }
 
-  async deleteFeed(key) {
-    await this.ready();
-
-    return this._feeds.deleteFeed(key);
+  async openFeed(path, stat) {
+    return this._feedStore.openFeed(path, stat);
   }
 
-  async updateFeed(key, transform) {
-    await this.ready();
-
-    return this._feeds.updateFeed(key, transform);
+  async loadFeeds(cb) {
+    return this._feedStore.loadFeeds(cb);
   }
 
-  async loadFeeds(pattern, options) {
-    await this.ready();
-
-    return this._feeds.loadFeeds(pattern, options);
+  /**
+   * Creates a set of extensions for a new protocol stream.
+   */
+  createExtensions() {
+    return [
+      this._replicator.createExtension()
+    ];
   }
 
-  async persistFeed(feed, options) {
-    await this.ready();
-
-    return this._feeds.persistFeed(feed, options);
-  }
-
-  async closeFeed(key) {
-    await this.ready();
-
-    return this._feeds.closeFeed(key);
-  }
-
-  announceFeed(feed) {
-    this._feeds.announce(feed);
-  }
-
-  /** * Parties API ** */
-
-  addPeer(...args) {
-    return this._parties.addPeer(...args);
-  }
-
-  setRules(...args) {
-    return this._parties.setRules(...args);
-  }
-
-  async addParty(party) {
-    const newParty = party;
-
-    if (!newParty.rules) {
-      newParty.rules = 'megafeed:default';
-    }
-
-    return this._parties.addParty(newParty);
-  }
-
-  async setParty(party) {
-    // Just for compatibility with the old megafeed version.
-    return this.addParty(party);
-  }
-
-  party(...args) {
-    return this._parties.party(...args);
-  }
-
-  parties() {
-    return this._parties.list();
-  }
-
-  async loadParties(pattern) {
-    await this.ready();
-
-    return this._parties.loadParties(pattern);
-  }
-
-  replicate(options = {}) {
-    if (options.key && !this._parties.party(options.key)) {
-      const party = new Party({
-        key: options.key,
-        rules: Object.assign({
-          findFeed: ({ discoveryKey }) => this.feedByDK(discoveryKey)
-        }, this._defineDefaultPartyRules())
-      });
-
-      return party.replicate(options);
-    }
-    // Compatibility with the old version of dsuite core (for now).
-    return this._parties.replicate(options);
-  }
-
-  /** * Megafeed ** */
-
-  ready(cb = callbackPromise()) {
-    if (this._isReady) {
-      return cb();
-    }
-
-    this.on('ready', cb);
-
-    return cb.promise;
-  }
-
-  async close() {
-    const dbFeed = this._db.feed;
-
-    await this.ready();
-
-    await Promise.all(this.feeds().map(feed => pify(feed.close.bind(feed))()));
-
-    await pify(dbFeed.close.bind(dbFeed))();
+  async initialize() {
+    await this._feedStore.initialize();
+    return this;
   }
 
   async destroy() {
-    const dbFeed = this._db.feed;
     const warnings = [];
 
     try {
@@ -244,147 +122,24 @@ class Megafeed extends EventEmitter {
       warnings.push(err);
     }
 
-    const promisifyDestroy = s => pify(s.destroy.bind(s))()
-      .catch(destroyErr => warnings.push(destroyErr));
+    const promisifyDestroy = storage => pify(storage.destroy.bind(storage))()
+      .catch(err => warnings.push(err));
 
     const destroyStorage = (feed) => {
-      const s = feed._storage;
+      const storage = feed._storage;
       return Promise.all([
-        promisifyDestroy(s.bitfield),
-        promisifyDestroy(s.tree),
-        promisifyDestroy(s.data),
-        promisifyDestroy(s.key),
-        promisifyDestroy(s.secretKey),
-        promisifyDestroy(s.signatures),
+        promisifyDestroy(storage.bitfield),
+        promisifyDestroy(storage.tree),
+        promisifyDestroy(storage.data),
+        promisifyDestroy(storage.key),
+        promisifyDestroy(storage.secretKey),
+        promisifyDestroy(storage.signatures),
       ]);
     };
 
     await Promise.all([
-      destroyStorage(dbFeed),
-      ...this.feeds(true).filter(f => f.closed).map(f => destroyStorage(f)),
+      destroyStorage(this._db.feed),
+      ...this._feedStore.getFeeds().map(feed => destroyStorage(feed)),
     ]);
   }
-
-  watch(opts, cb) {
-    let options = opts;
-    let onMessage = cb;
-
-    if (typeof options === 'function') {
-      onMessage = options;
-      options = {};
-    }
-
-    const stream = this.createReadStream(Object.assign({}, options, { live: true }));
-
-    pump(stream, through.obj((data, _, next) => {
-      try {
-        const result = onMessage(data);
-        if (result && result.then) {
-          result
-            .then(() => {
-              next(null, data);
-            })
-            .catch((err) => {
-              next(err);
-            });
-        } else {
-          next(null, data);
-        }
-      } catch (err) {
-        next(err);
-      }
-    }), () => {});
-
-    return () => stream.destroy();
-  }
-
-  createReadStream(opts = {}) {
-    const streams = [];
-
-    let feeds = this.feeds();
-
-    const { filter } = opts;
-
-    if (filter) {
-      feeds = feeds.filter(feed => filterFeedByPattern(feed, filter));
-    }
-
-    feeds.forEach((feed) => {
-      streams.push(feed.createReadStream(opts));
-    });
-
-    const multiReader = multi.obj(streams);
-
-    const onFeed = (feed) => {
-      feed.ready(() => {
-        if (filter && !filterFeedByPattern(feed, filter)) {
-          return;
-        }
-
-        multiReader.add(feed.createReadStream(opts));
-      });
-    };
-
-    this.on('feed', onFeed);
-    eos(multiReader, () => this.removeListener('feed', onFeed));
-
-    return multiReader;
-  }
-
-  _initialize() {
-    this._parties.setRules(this._defineDefaultPartyRules());
-
-    this._feeds.initialize()
-      .then(() => {
-        this._isReady = true;
-        this.emit('ready');
-      })
-      .catch((err) => {
-        this.emit('ready', err);
-        this.emit('error', err);
-      });
-  }
-
-  _defineDefaultPartyRules() {
-    return {
-      name: 'megafeed:default',
-
-      handshake: async ({ peer }) => {
-        const { party } = peer;
-
-        const pattern = parsePartyPattern(party);
-
-        const feeds = this.feeds().filter(feed => filterFeedByPattern(feed, pattern));
-
-        await peer.introduceFeeds({
-          keys: feeds.map(feed => feed.key)
-        });
-
-        feeds.forEach(feed => peer.replicate(feed));
-
-        this.on('feed', async (feed) => {
-          if (!filterFeedByPattern(feed, pattern)) {
-            return;
-          }
-
-          await peer.introduceFeeds({
-            keys: [feed.key]
-          });
-          peer.replicate(feed);
-        });
-      },
-
-      onIntroduceFeeds: async ({ message, peer }) => {
-        const { key: partyKey } = peer.party;
-        const { keys } = message;
-
-        return Promise.all(
-          keys.map(key => this.addFeed({ name: `feed/${keyToHex(partyKey)}/${keyToHex(key)}`, key }))
-        );
-      }
-    };
-  }
 }
-
-module.exports = (...args) => new Megafeed(...args);
-module.exports.Megafeed = Megafeed;

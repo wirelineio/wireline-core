@@ -1,0 +1,51 @@
+{
+  "name": "@wirelineio/protocol",
+  "version": "0.2.0-alpha.1",
+  "description": "Protocol wrapper of hypercore-protocol.",
+  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/protocol#readme",
+  "bugs": {
+    "url": "https://github.com/wirelineio/wireline-core/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wirelineio/wireline-core.git"
+  },
+  "license": "GPL-3.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run clean && babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps",
+    "clean": "del-cli dist",
+    "lint": "eslint ./src --ignore-path ../../.eslintignore",
+    "test": "jest --verbose",
+    "posttest": "npm run lint",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "browserslist": [
+    "> 5%"
+  ],
+  "dependencies": {
+    "@wirelineio/utils": "^0.2.0-alpha.1",
+    "debug": "^4.1.1",
+    "hypercore-crypto": "^1.0.0",
+    "hypercore-protocol": "^6.11.1",
+    "pump": "^3.0.0",
+    "source-map-support": "^0.5.12",
+    "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.4.4",
+    "@babel/core": "^7.4.5",
+    "@babel/plugin-proposal-class-properties": "^7.5.5",
+    "@babel/plugin-proposal-export-default-from": "^7.5.2",
+    "@babel/preset-env": "^7.4.5",
+    "babel-jest": "^24.8.0",
+    "babel-plugin-add-module-exports": "^1.0.2",
+    "babel-plugin-inline-import": "^3.0.0",
+    "del-cli": "^2.0.0",
+    "eslint": "^5.16.0",
+    "jest": "^24.8.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

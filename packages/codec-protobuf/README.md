@@ -41,12 +41,12 @@ const obj = { type: 'Task', message: { id: 'task-0', value: 'test' } };
 
 const buffer = codec.encode(obj);
 
-codec.decode(buffer); // { id: 'task-0', value: 'test' }
+codec.decode(buffer); // { type: 'Task', message: { id: 'task-0', value: 'test' } }
 
 // It's compatible with the valueEncoding option of hypercore
 const feed = hypercore('./log', { valueEncoding: codec });
 
 feed.append(obj, () => {
-  feed.head(console.log) // { id: 'task-0', value: 'test' }
+  feed.head(console.log) // { type: 'Task', message: { id: 'task-0', value: 'test' } }
 });
 ```

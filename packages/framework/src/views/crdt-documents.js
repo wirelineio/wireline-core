@@ -9,9 +9,8 @@ const Y = require('yjs');
 
 const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
-const { append } = require('../protocol/messages');
 
-module.exports = function CRDTDocumentsView({ core, db, partyManager }, { viewId }) {
+module.exports = function CRDTDocumentsView(viewId, db, core, { append, isLocal, author }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
@@ -27,15 +26,11 @@ module.exports = function CRDTDocumentsView({ core, db, partyManager }, { viewId
         return [];
       }
 
-      const partyKey = partyManager.getPartyKeyFromFeedKey(msg.key);
-      value.partyKey = partyKey;
-
       const { itemId } = value.data;
-      core.api['items'].updatePartyByItemId(itemId, partyKey);
 
       const type = value.type.replace(`item.${viewId}.`, '');
       if (type === 'change') {
-        return [[uuid('change', partyKey, itemId, value.timestamp), value]];
+        return [[uuid('change', itemId, value.timestamp), value]];
       }
 
       return [];
@@ -55,10 +50,8 @@ module.exports = function CRDTDocumentsView({ core, db, partyManager }, { viewId
           if (event === 'change' && doc) {
             const { update } = value.data;
 
-            const localChange = value.author === doc.clientID;
-
             // Apply and emit changes only when from remote doc.
-            if (!localChange) {
+            if (!isLocal(value)) {
               Y.applyUpdate(doc, update, value.author);
               events.emit(`${viewId}.remote-change`, value.data.itemId, { update, origin: value.author, doc });
             }
@@ -67,19 +60,16 @@ module.exports = function CRDTDocumentsView({ core, db, partyManager }, { viewId
     },
 
     api: {
-      async create(core, { type, title = 'Untitled', partyKey }) {
-        const item = await core.api['items'].create({ type, title, partyKey });
+      async create(core, { type, title = 'Untitled' }) {
+        const item = await core.api['items'].create({ type, title });
         await core.api[viewId].init({ itemId: item.itemId });
         return item;
       },
 
       async init(core, { itemId }) {
-        const { feed } = core.api['items'].getPartyForItemId(itemId);
-        const publicKey = feed.key.toString('hex');
-
         // Local Yjs Doc for track changes.
         const doc = new Y.Doc();
-        doc.clientID = publicKey;
+        doc.clientID = author.toString('hex');
 
         // Send changes if local update occurs.
         doc.on('update', (update, origin) => {
@@ -88,7 +78,7 @@ module.exports = function CRDTDocumentsView({ core, db, partyManager }, { viewId
           // Do not send init changes (loaded from feed at loading phase).
           if (origin !== doc.clientID || origin === 'init') return;
 
-          append(feed, {
+          append({
             type: `item.${viewId}.change`,
             data: { itemId, update }
           });
@@ -131,10 +121,9 @@ module.exports = function CRDTDocumentsView({ core, db, partyManager }, { viewId
       },
 
       async getChanges(core, itemId, opts = {}) {
-        const { partyKey } = core.api['items'].getPartyForItemId(itemId);
         const query = { reverse: opts.reverse };
-        const fromKey = uuid('change', partyKey, itemId, opts.lastChange);
-        const toKey = `${uuid('change', partyKey, itemId)}~`;
+        const fromKey = uuid('change', itemId, opts.lastChange);
+        const toKey = `${uuid('change', itemId)}~`;
 
         if (opts.lastChange) {
           query.gt = fromKey;
@@ -150,8 +139,7 @@ module.exports = function CRDTDocumentsView({ core, db, partyManager }, { viewId
       },
 
       async appendChange(core, itemId, change) {
-        const { feed } = core.api['items'].getPartyForItemId(itemId);
-        const clientID = feed.key.toString('hex');
+        const clientID = author.toString('hex');
         const { update } = change;
 
         const doc = documents.get(itemId);
