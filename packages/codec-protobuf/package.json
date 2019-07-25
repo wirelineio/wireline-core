@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/codec-protobuf",
-  "version": "0.1.36",
+  "version": "0.2.0-alpha.0",
   "description": "Value encoding for protobuf.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/codec-protobuf#readme",
   "bugs": {

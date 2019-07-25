@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/feed-store",
-  "version": "0.1.35",
+  "version": "0.2.0-alpha.0",
   "description": "FeedStore.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/feedstore#readme",
   "bugs": {
@@ -18,8 +18,8 @@
     "test": "jest --verbose"
   },
   "dependencies": {
-    "@wirelineio/codec-protobuf": "^0.1.35",
-    "@wirelineio/utils": "^0.1.35",
+    "@wirelineio/codec-protobuf": "^0.2.0-alpha.0",
+    "@wirelineio/utils": "^0.2.0-alpha.0",
     "debug": "^4.1.1",
     "end-of-stream": "^1.4.1",
     "hypercore": "^6.24.0",
@@ -30,7 +30,6 @@
     "pump": "^3.0.0",
     "random-access-file": "^2.1.0",
     "through2": "^3.0.1"
-    
   },
   "devDependencies": {
     "jest": "^24.5.0",

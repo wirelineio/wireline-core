@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/signal",
-  "version": "0.1.36",
+  "version": "0.2.0-alpha.0",
   "description": "Wireline discovery-swarm-webrtc signal.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/signal#readme",
   "bugs": {
