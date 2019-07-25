@@ -59,4 +59,8 @@ export class MultifeedAdapter extends EventEmitter {
       process.nextTick(() => this.emit('error', err));
     }
   }
+
+  async destroy() {
+    return this._megafeed.destroy();
+  }
 }
