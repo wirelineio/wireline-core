@@ -3,14 +3,14 @@
 //
 
 const ContactsView = require('./contacts');
-const CRDTDocumentsView = require('./crdt-documents');
+const DocumentsView = require('./documents');
 const ItemsView = require('./items');
 const LogsView = require('./logs');
 const ChatLogsView = require('./chat-logs');
 
 module.exports.ViewTypes = {
   ContactsView,
-  CRDTDocumentsView,
+  DocumentsView,
   ItemsView,
   LogsView,
   ChatLogsView
@@ -32,12 +32,12 @@ module.exports.Views = [
 
   // Custom views.
   {
-    name: 'crdt-documents',
-    view: 'CRDTDocumentsView'
+    name: 'documents',
+    view: 'DocumentsView'
   },
   {
     name: 'presentations',
-    view: 'CRDTDocumentsView'
+    view: 'DocumentsView'
   },
 
   // TODO(burdon): Move to Launchpad?

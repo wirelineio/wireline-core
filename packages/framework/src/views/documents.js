@@ -10,7 +10,7 @@ const Y = require('yjs');
 const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
 
-module.exports = function CRDTDocumentsView(viewId, db, core, { append, isLocal, author }) {
+module.exports = function DocumentsView(viewId, db, core, { append, isLocal, author }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
