@@ -6,22 +6,24 @@ const { keyToHex } = require('@wirelineio/utils');
 
 const path = key => `framework/${keyToHex(key)}/profile`;
 
-exports.setProfile = (key, msg) => {
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem(path(key), JSON.stringify(msg));
-  }
-  return null;
+let profile = null;
 
+exports.setProfile = (key, msg) => {
+  profile = JSON.stringify(msg);
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(path(key), profile);
+  }
 };
 
 exports.getProfile = (key) => {
+  let local = profile;
   if (typeof localStorage !== 'undefined') {
-    try {
-      return JSON.parse(localStorage.getItem(path(key)));
-    } catch (err) {
-      // do nothing
-    }
+    local = localStorage.getItem(path(key));
   }
-
+  try {
+    return JSON.parse(local);
+  } catch (err) {
+    // do nothing
+  }
   return null;
 };
