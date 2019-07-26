@@ -5,30 +5,19 @@
 const EventEmitter = require('events');
 const view = require('kappa-view-level');
 const sub = require('subleveldown');
-
-const { createAutomergeWorker } = require('@wirelineio/automerge-worker');
-const { keyToHex } = require('@wirelineio/utils');
+const Y = require('yjs');
 
 const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
 
-module.exports = function DocumentsView(viewId, db, core, { append, author }) {
+module.exports = function DocumentsView(viewId, db, core, { append, isLocal, author }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
   const viewDB = sub(db, viewId, { valueEncoding: 'json' });
 
-  const automergeWorker = createAutomergeWorker();
-
-  const {
-    createDocument,
-    getDocumentState,
-    createDocumentFromChanges,
-    applyChanges,
-    getActorId,
-    applyChangesFromOps,
-    getDocumentContent
-  } = automergeWorker;
+  // Map of Y.Doc elements.
+  const documents = new Map();
 
   return view(viewDB, {
     map(msg) {
@@ -53,22 +42,19 @@ module.exports = function DocumentsView(viewId, db, core, { append, author }) {
         .sort((a, b) => a.value.timestamp - b.value.timestamp)
         .forEach(async ({ value }) => {
           const event = value.type.replace(`item.${viewId}.`, '');
+
           events.emit(event, value);
 
-          const state = await getDocumentState(value.data.itemId);
+          const doc = documents.get(value.data.itemId);
 
-          if (event === 'change' && state) {
-            const { itemId, changes } = value.data;
+          if (event === 'change' && doc) {
+            const { update } = value.data;
 
-            // Apply changes only when from remote doc.
-            const actorId = await getActorId(itemId);
-            const localChange = value.author === actorId;
-            if (!localChange) {
-              await applyChanges(itemId, changes);
+            // Apply and emit changes only when from remote doc.
+            if (!isLocal(value)) {
+              Y.applyUpdate(doc, update, value.author);
+              events.emit(`${viewId}.remote-change`, value.data.itemId, { update, origin: value.author, doc });
             }
-
-            const content = await getDocumentContent(itemId);
-            events.emit(`${viewId}.crdt`, itemId, content, localChange);
           }
         });
     },
@@ -81,51 +67,56 @@ module.exports = function DocumentsView(viewId, db, core, { append, author }) {
       },
 
       async init(core, { itemId }) {
-        const { changes } = await createDocument(keyToHex(author), itemId);
+        // Local Yjs Doc for track changes.
+        const doc = new Y.Doc();
+        doc.clientID = author.toString('hex');
 
-        // Publish initial change
-        await append({
-          type: `item.${viewId}.change`,
-          data: { itemId, changes }
+        // Send changes if local update occurs.
+        doc.on('update', (update, origin) => {
+
+          // Do not send remote changes.
+          // Do not send init changes (loaded from feed at loading phase).
+          if (origin !== doc.clientID || origin === 'init') return;
+
+          append({
+            type: `item.${viewId}.change`,
+            data: { itemId, update }
+          });
         });
 
-        return {
-          itemId
-        };
+        documents.set(itemId, doc);
+
+        return { doc };
       },
 
       async getById(core, itemId) {
-        const actorId = keyToHex(author);
 
-        const {
-          data: { title, type }
-        } = await core.api['items'].getInfo(itemId);
+        await new Promise(resolve => this.ready(resolve));
 
-        const state = await getDocumentState(itemId);
+        const { data: { title, type } } = await core.api['items'].getInfo(itemId);
 
-        if (!state) {
-          let changes = await core.api[viewId].getChanges(itemId);
+        let doc = documents.get(itemId);
 
-          if (!changes) {
+        if (!doc) {
+          const updates = await core.api[viewId].getChanges(itemId);
+
+          if (!updates) {
             throw new Error('Document not found:', itemId);
           }
 
-          // Flat batch changes
-          changes = changes.reduce((all, { data: { changes } }) => {
-            all.push(...changes);
-            return all;
-          }, []);
+          ({ doc } = await core.api[viewId].init({ itemId }));
 
-          await createDocumentFromChanges(actorId, itemId, changes);
+          updates.forEach(({ data: { update } }) => {
+            // Mark as an initial change so that it's not sent on update.
+            Y.applyUpdate(doc, update, 'init');
+          });
         }
-
-        const content = await getDocumentContent(itemId);
 
         return {
           itemId,
           type,
           title,
-          content
+          doc
         };
       },
 
@@ -147,32 +138,32 @@ module.exports = function DocumentsView(viewId, db, core, { append, author }) {
         return streamToList(reader);
       },
 
-      async appendChange(core, itemId, changes) {
-        const automergeChanges = await applyChangesFromOps(itemId, changes);
+      async appendChange(core, itemId, change) {
+        const clientID = author.toString('hex');
+        const { update } = change;
 
-        // Maybe not applied because debounce + batch
-        if (automergeChanges) {
-          return append({
-            type: `item.${viewId}.change`,
-            data: { itemId, changes: automergeChanges }
-          });
-        }
+        const doc = documents.get(itemId);
+
+        // Apply updates to view's doc.
+        Y.applyUpdate(doc, update, clientID);
       },
 
       onChange(core, itemId, cb) {
-        const handler = (id, content, localChange) => {
+        const handler = (id, { update, origin, doc }) => {
           if (id !== itemId) return;
 
           cb({
             itemId,
-            content,
-            localChange
+            update,
+            origin,
+            doc
           });
         };
 
-        events.on(`${viewId}.crdt`, handler);
+        events.on(`${viewId}.remote-change`, handler);
+
         return () => {
-          events.removeListener(`${viewId}.crdt`, handler);
+          events.removeListener(`${viewId}.remote-change`, handler);
         };
       },
 
