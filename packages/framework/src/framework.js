@@ -32,8 +32,8 @@ class Framework extends EventEmitter {
    * @param conf.keys.publicKey {Buffer}
    * @param conf.keys.secretKey {Buffer}
    * @param conf.hub {String|Array} Signalhub url for swarm connection.
-   * @param conf.isBot {Boolean} Sefines if dsuite is for a bot.
-   * @param conf.partyKey {Buffer} Sefines initial party key.
+   * @param conf.isBot {Boolean} Flag for bot peers.
+   * @param conf.partyKey {Buffer} Initial party key.
    * @param conf.maxPeers {Number} Maximum connections on swarm. Optional. Defaults: If isBot is true it is set to 64 otherwise 2.
    */
   // TODO(burdon): Non-optional variables (e.g., storage) should be actual params.
