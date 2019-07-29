@@ -215,7 +215,7 @@ class FeedStore extends EventEmitter {
    * Open a feed to FeedStore.
    *
    * If the feed already exists but is not loaded it will load the feed instead of
-   * create a new one.
+   * creating a new one.
    *
    * Similar to fs.open
    *
@@ -239,7 +239,7 @@ class FeedStore extends EventEmitter {
     }
 
     if (!descriptor && key && this.getDescriptorByKey(keyToBuffer(key))) {
-      throw new Error(`FeedStore: There is already a feed register with the public key "${keyToHex(stat.key)}"`);
+      throw new Error(`FeedStore: There is already a feed registered with the public key "${keyToHex(stat.key)}"`);
     }
 
     if (!descriptor) {
