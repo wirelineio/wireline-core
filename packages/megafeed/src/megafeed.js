@@ -10,6 +10,8 @@ import { FeedStore } from '@wirelineio/feed-store';
 
 import { Replicator } from './replicator';
 
+import packageJSON from '../package.json';
+
 /**
  * A lightweight feed replication engine.
  */
@@ -68,7 +70,9 @@ export class Megafeed extends EventEmitter {
   }
 
   toString() {
-    const meta = {};
+    const meta = {
+      version: packageJSON.version
+    };
 
     return `Megafeed(${JSON.stringify(meta)})`;
   }
