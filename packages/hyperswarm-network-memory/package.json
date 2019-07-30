@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/hyperswarm-network-memory",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Wireline hyperswarm network implementation in memory.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/hyperswarm-network-memory#readme",
   "bugs": {
