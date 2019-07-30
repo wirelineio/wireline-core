@@ -16,7 +16,6 @@ const PartySerializer = require('./parties/party-serializer');
 const { ViewTypes, Views } = require('./views/defs');
 const ViewManager = require('./views/view-manager');
 const { createSwarm } = require('./wrappers/swarm');
-const { getProfile, setProfile } = require('./utils/profile');
 
 /**
  * App framework.
@@ -35,17 +34,19 @@ class Framework extends EventEmitter {
    * @param conf.isBot {Boolean} Flag for bot peers.
    * @param conf.partyKey {Buffer} Initial party key.
    * @param conf.maxPeers {Number} Maximum connections on swarm. Optional. Defaults: If isBot is true it is set to 64 otherwise 2.
+   * @param conf.name {String} Name for the default profile.
    */
   // TODO(burdon): Non-optional variables (e.g., storage) should be actual params.
   constructor(conf = {}) {
     super();
-    console.assert(Buffer.isBuffer(conf.partyKey));
 
     this._conf = conf;
 
-    const { db, keys = crypto.keyPair(), storage = ram } = this._conf;
+    const { db, partyKey, keys = crypto.keyPair(), storage = ram, name } = this._conf;
+    console.assert(Buffer.isBuffer(partyKey));
     console.assert(keys.publicKey);
     console.assert(keys.secretKey);
+    console.assert(name);
 
     // Created on initialize.
     this._swarm = null;
@@ -63,7 +64,7 @@ class Framework extends EventEmitter {
     });
 
     // Import/export
-    this._partySerializer = new PartySerializer(this._mega, this._conf.partyKey);
+    this._partySerializer = new PartySerializer(this._mega, partyKey);
 
     // In-memory cache for views.
     this._db = db || levelup(memdown());
@@ -72,7 +73,7 @@ class Framework extends EventEmitter {
     this._kappaManager = new KappaManager(this._mega);
 
     // Create a single Kappa instance
-    const topic = keyToHex(this._conf.partyKey);
+    const topic = keyToHex(partyKey);
     this._kappa = this._kappaManager.getOrCreateKappa(topic);
 
     // Create a ViewManager
@@ -121,7 +122,8 @@ class Framework extends EventEmitter {
 
   async initialize() {
     console.assert(!this._initialized);
-    const topic = keyToHex(this._conf.partyKey);
+    const { partyKey, name } = this._conf;
+    const topic = keyToHex(partyKey);
 
     await this._mega.initialize();
 
@@ -140,14 +142,11 @@ class Framework extends EventEmitter {
     // Set Profile if name is provided.
     const profile = await this._kappa.api['contacts'].getProfile();
     if (!profile) {
-      const lastProfile = getProfile(this._mega.key);
-      const name = lastProfile ? lastProfile.data.username : this._conf.name;
-      const msg = await this._kappa.api['contacts'].setProfile({ data: { username: name } });
-      setProfile(this._mega.key, msg);
-      this._kappa.api['contacts'].events.on('profile-updated', (msg) => {
-        setProfile(this._mega.key, msg);
-      });
+      await this._kappa.api['contacts'].setProfile({ data: { username: name } });
     }
+    this._kappa.api['contacts'].events.on('profile-updated', (msg) => {
+      this.emit('profile-updated', msg);
+    });
 
     this._initialized = true;
     this.emit('ready');
