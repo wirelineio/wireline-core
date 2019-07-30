@@ -124,13 +124,10 @@ class Framework extends EventEmitter {
 
   toString() {
     const meta = {
-      version: packageJSON.version,
-      dependencies: [
-        this._mega.toString()
-      ]
+      version: packageJSON.version
     };
 
-    return `Framework(${JSON.stringify(meta)})`;
+    return `Framework(${JSON.stringify(meta)}) - ${this._mega.toString()}`;
   }
 
   async initialize() {
