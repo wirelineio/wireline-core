@@ -58,7 +58,7 @@ export class Megafeed extends EventEmitter {
   }
 
   get id() {
-    return this._db.id;
+    return this._db.feed.id;
   }
 
   get key() {

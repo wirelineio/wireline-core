@@ -10,7 +10,7 @@ const pify = require('pify');
 const crypto = require('hypercore-crypto');
 
 const { Megafeed, KappaManager } = require('@wirelineio/megafeed');
-const { keyToHex } = require('@wirelineio/utils');
+const { keyToHex, getDiscoveryKey } = require('@wirelineio/utils');
 
 const PartySerializer = require('./parties/party-serializer');
 const { ViewTypes, Views } = require('./views/defs');
@@ -50,9 +50,6 @@ class Framework extends EventEmitter {
     console.assert(keys.secretKey);
     console.assert(name);
 
-    // Created on initialize.
-    this._swarm = null;
-
     //
     // Megafeed
     //
@@ -82,6 +79,21 @@ class Framework extends EventEmitter {
     this._viewManager = new ViewManager(this._kappa, this._db, publicKey)
       .registerTypes(ViewTypes)
       .registerViews(Views);
+
+    const megaExtensions = [
+      this._mega.createExtensions.bind(this._mega)
+    ];
+
+    this._swarm = createSwarm(conf.id || this._mega.id, conf.partyKey, {
+      swarm: conf.swarm,
+      hub: conf.hub,
+      ice: conf.ice,
+      maxPeers: conf.maxPeers,
+      emit: this.emit.bind(this),
+      extensions: conf.extensions
+        ? [...conf.extensions, ...megaExtensions]
+        : megaExtensions,
+    });
 
     this._initialized = false;
   }
@@ -144,8 +156,8 @@ class Framework extends EventEmitter {
     // We need to load all the feeds with the related topic
     await this._mega.loadFeeds(({ stat }) => stat.metadata.topic === topic);
 
-    // Connect to the swarm.
-    this._swarm = createSwarm(this._mega, this._conf, this.emit.bind(this));
+    // Connect to the party.
+    this._connect();
 
     await pify(this._kappa.ready.bind(this._kappa))();
 
@@ -161,6 +173,16 @@ class Framework extends EventEmitter {
     this._initialized = true;
     this.emit('ready');
     return this;
+  }
+
+  _connect() {
+    const { partyKey } = this._conf;
+
+    process.nextTick(() => {
+      const value = { key: partyKey.toString('hex'), dk: getDiscoveryKey(partyKey).toString('hex') };
+      this._swarm.join(value.dk);
+      this.emit('metric.swarm.party', { value });
+    });
   }
 }
 

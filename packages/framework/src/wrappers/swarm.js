@@ -6,12 +6,28 @@ const discoverySwarmWebrtc = require('@geut/discovery-swarm-webrtc');
 const debug = require('debug')('dsuite:swarm');
 
 const { Protocol } = require('@wirelineio/protocol');
-const { getDiscoveryKey } = require('@wirelineio/utils');
+const { keyToHex } = require('@wirelineio/utils');
 
 const Metric = require('../utils/metric');
 const Config = require('../config');
 
 const isBrowser = typeof window !== 'undefined';
+
+function createExtensions(extensions) {
+  return extensions.reduce((result, next) => {
+    let extension = next;
+
+    if (typeof extension === 'function') {
+      extension = extension();
+    }
+
+    if (Array.isArray(extension)) {
+      return [...result, ...extension];
+    }
+
+    return [...result, extension];
+  }, []);
+}
 
 /**
  * Creates the swarm.
@@ -20,20 +36,22 @@ const isBrowser = typeof window !== 'undefined';
  * @param conf
  * @return {*|DiscoverySwarmWebrtc}
  */
-exports.createSwarm = (mega, conf, emit) => {
+exports.createSwarm = (id, topic, options = {}) => {
+  console.assert(id);
+  console.assert(topic);
 
-  // TODO(burdon): Removing control feed.
-  const id = mega.key.toString('hex');
+  id = keyToHex(id);
 
-  // TODO(burdon): Handle defaults externally (remove const here).
-  // Priority: conf => ENV => default (SIGNALHUB const).
-  const signalhub = conf.hub || process.env.SIGNALHUB || Config.SIGNALHUB;
-  const ice = JSON.parse(conf.ice || process.env.ICE_SERVERS || Config.ICE_SERVERS);
+  const signalhub = options.hub || process.env.SIGNALHUB || Config.SIGNALHUB;
+  const ice = JSON.parse(options.ice || process.env.ICE_SERVERS || Config.ICE_SERVERS);
+  const extensions = options.extensions || [];
+  const maxPeers = options.maxPeers || process.env.SWARM_MAX_PEERS;
+  const emit = options.emit || (() => {});
 
   debug('Connecting:', JSON.stringify({ signalhub, ice }));
   debug('PeerId:', id);
 
-  const swarm = conf.swarm || discoverySwarmWebrtc;
+  const swarm = options.swarm || discoverySwarmWebrtc;
 
   const sw = swarm({
     id,
@@ -41,7 +59,7 @@ exports.createSwarm = (mega, conf, emit) => {
     urls: Array.isArray(signalhub) ? signalhub : [signalhub],
 
     // Maximum number of peer candidates requested from the signaling server (but can have multiple in-coming).
-    maxPeers: conf.maxPeers || process.env.SWARM_MAX_PEERS || (conf.isBot ? 64 : 2),
+    maxPeers,
 
     // TODO(burdon): Get's the main hypercore stream (not actually the feed replication stream).
     stream: () => {
@@ -51,15 +69,15 @@ exports.createSwarm = (mega, conf, emit) => {
           live: true
         }
       })
-        .setExtensions(mega.createExtensions())
-        .init(conf.partyKey)
+        .setUserData({ peerId: id })
+        .setExtensions(createExtensions(extensions))
+        .init(topic)
         .stream;
       // TODO(martin): Should be dynamic using info.channel but for now static is fine.
       // .init(info.channel);
     },
 
     simplePeer: {
-      // Node client (e.g., for bots).
       wrtc: !isBrowser ? require('wrtc') : null, // eslint-disable-line global-require
       config: {
         iceServers: ice
@@ -67,22 +85,24 @@ exports.createSwarm = (mega, conf, emit) => {
     }
   });
 
-  process.nextTick(() => {
-    const value = { key: conf.partyKey.toString('hex'), dk: getDiscoveryKey(conf.partyKey).toString('hex') };
-    sw.join(value.dk);
-    emit('metric.swarm.party', { value });
-  });
+  const networkVisible = options.networkVisible && sw.signal && sw.signal.info;
 
-  if (!sw.signal) {
-    return sw;
-  }
+  const getPeersCount = (channel) => {
+    try {
+      return sw.peers(channel).filter(peer => peer.connected).length;
+    } catch (err) {
+      return 0;
+    }
+  };
+
+  const infoMessage = message => networkVisible && sw.signal.info(message);
 
   sw.on('connection', (peer, info) => {
-    sw.signal.info({ type: 'connection', channel: info.channel, peers: [id, info.id] });
+    infoMessage({ type: 'connection', channel: info.channel, peers: [id, info.id] });
 
     debug('Connection open:', info.id);
     emit('metric.swarm.connection-open', {
-      value: sw.peers(info.channel).filter(peer => peer.connected).length,
+      value: getPeersCount(info.channel),
       peer,
       info,
       swarm: sw
@@ -90,11 +110,11 @@ exports.createSwarm = (mega, conf, emit) => {
   });
 
   sw.on('connection-closed', (peer, info) => {
-    sw.signal.info({ type: 'disconnection', channel: info.channel, peers: [id, info.id] });
+    infoMessage({ type: 'disconnection', channel: info.channel, peers: [id, info.id] });
 
     debug('Connection closed:', info.id);
     emit('metric.swarm.connection-closed', {
-      value: sw.peers(info.channel).filter(peer => peer.connected).length,
+      value: getPeersCount(info.channel),
       peer,
       info,
       swarm: sw
@@ -125,19 +145,21 @@ exports.createSwarm = (mega, conf, emit) => {
     });
   });
 
-  sw.on('info', (info) => {
-    const value = {
-      id,
-      channel: info.channel,
-      connections: info.connections
-    };
+  if (networkVisible) {
+    sw.on('info', (info) => {
+      const value = {
+        id,
+        channel: info.channel,
+        connections: info.connections
+      };
 
-    emit('metric.swarm.network-updated', {
-      value: new Metric(value, value => value.connections.length),
-      info,
-      swarm: sw
+      emit('metric.swarm.network-updated', {
+        value: new Metric(value, value => value.connections.length),
+        info,
+        swarm: sw
+      });
     });
-  });
+  }
 
   return sw;
 };

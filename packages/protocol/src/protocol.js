@@ -5,6 +5,7 @@
 import debug from 'debug';
 import { EventEmitter } from 'events';
 import protocol from 'hypercore-protocol';
+import eos from 'end-of-stream';
 
 import { getDiscoveryKey, keyToHuman } from '@wirelineio/utils';
 
@@ -178,6 +179,7 @@ export class Protocol extends EventEmitter {
     return this;
   }
 
+
   /**
    * Initializes the protocol stream, creating a feed.
    *
@@ -261,6 +263,14 @@ export class Protocol extends EventEmitter {
         });
       });
     }
+
+    eos(this._stream, (err) => {
+      const context = this.getContext();
+
+      this._extensionMap.forEach((extension) => {
+        extension.onClose(err, context);
+      });
+    });
 
     log(keyToHuman(this._stream.id, 'node'), 'initialized');
     return this;

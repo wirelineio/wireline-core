@@ -27,6 +27,7 @@
   "dependencies": {
     "@wirelineio/utils": "^0.2.5",
     "debug": "^4.1.1",
+    "end-of-stream": "^1.4.1",
     "hypercore-crypto": "^1.0.0",
     "hypercore-protocol": "^6.11.1",
     "pump": "^3.0.0",

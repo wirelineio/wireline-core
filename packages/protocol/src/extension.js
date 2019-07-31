@@ -39,6 +39,12 @@ export class Extension extends EventEmitter {
   _handshakeHandler = null;
 
   /**
+   * Close handler.
+   * @type {Function<{protocol, context}>}
+   */
+  _closeHandler = null;
+
+  /**
    * Message handler.
    * @type {Function<{protocol, context, message}>}
    */
@@ -94,6 +100,17 @@ export class Extension extends EventEmitter {
   }
 
   /**
+   * Sets the close stream handler.
+   * @param {Function<{protocol, context}>} closeHandler - Close handler.
+   * @returns {Extension}
+   */
+  setCloseHandler(closeHandler) {
+    this._closeHandler = closeHandler;
+
+    return this;
+  }
+
+  /**
    * Sets the message handler.
    * @param {Function<{protocol, context, message}>} messageHandler - Async message handler.
    * @returns {Extension}
@@ -135,6 +152,17 @@ export class Extension extends EventEmitter {
   onHandshake(context) {
     if (this._handshakeHandler) {
       this._handshakeHandler(this._protocol, context);
+    }
+  }
+
+  /**
+   * Close event.
+   *
+   * @param {Object} context
+   */
+  onClose(error, context) {
+    if (this._closeHandler) {
+      this._closeHandler(error, this._protocol, context);
     }
   }
 
