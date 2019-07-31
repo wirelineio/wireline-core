@@ -17,6 +17,8 @@ const { ViewTypes, Views } = require('./views/defs');
 const ViewManager = require('./views/view-manager');
 const { createSwarm } = require('./wrappers/swarm');
 
+const packageJSON = require('../package.json');
+
 /**
  * App framework.
  */
@@ -118,6 +120,14 @@ class Framework extends EventEmitter {
 
   get partySerializer() {
     return this._partySerializer;
+  }
+
+  toString() {
+    const meta = {
+      version: packageJSON.version
+    };
+
+    return `Framework(${JSON.stringify(meta)}) - ${this._mega}`;
   }
 
   async initialize() {
