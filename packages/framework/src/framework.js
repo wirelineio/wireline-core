@@ -127,7 +127,7 @@ class Framework extends EventEmitter {
       version: packageJSON.version
     };
 
-    return `Framework(${JSON.stringify(meta)}) - ${this._mega}`;
+    return `Framework(${JSON.stringify(meta)})`;
   }
 
   async initialize() {
