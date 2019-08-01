@@ -117,7 +117,7 @@ export class PeerChat extends EventEmitter {
     }
 
     this._peers.set(keyToHex(peerId), protocol);
-    this.emit('peer:joined', peerId);
+    this.emit('peer:joined', peerId, protocol);
   }
 
   /**
