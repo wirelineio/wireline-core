@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/megafeed",
-  "version": "0.2.9-beta.0",
+  "version": "0.2.9-beta.1",
   "description": "Feed management and replication over the Dat Protocol.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/megafeed#readme",
   "bugs": {
@@ -25,9 +25,9 @@
     "> 5%"
   ],
   "dependencies": {
-    "@wirelineio/feed-store": "^0.2.9-beta.0",
-    "@wirelineio/protocol": "^0.2.9-beta.0",
-    "@wirelineio/utils": "^0.2.9-beta.0",
+    "@wirelineio/feed-store": "^0.2.9-beta.1",
+    "@wirelineio/protocol": "^0.2.9-beta.1",
+    "@wirelineio/utils": "^0.2.9-beta.1",
     "debug": "^4.1.1",
     "hypercore-crypto": "^1.0.0",
     "hypertrie": "^3.7.1",
@@ -43,7 +43,7 @@
     "@babel/plugin-proposal-class-properties": "^7.5.5",
     "@babel/plugin-proposal-export-default-from": "^7.5.2",
     "@babel/preset-env": "^7.4.5",
-    "@wirelineio/hyperswarm-network-memory": "^0.2.9-beta.0",
+    "@wirelineio/hyperswarm-network-memory": "^0.2.9-beta.1",
     "babel-jest": "^24.8.0",
     "babel-plugin-add-module-exports": "^1.0.2",
     "babel-plugin-inline-import": "^3.0.0",
