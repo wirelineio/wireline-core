@@ -21,18 +21,15 @@ export class PeerChat extends EventEmitter {
   /**
    * @constructor
    * @param {string} peerId
-   * @param {string} topic
    * @param {Function} peerMessageHandler
    */
-  constructor(peerId, topic, peerMessageHandler) {
+  constructor(peerId, peerMessageHandler) {
     super();
 
     console.assert(Buffer.isBuffer(peerId));
-    console.assert(Buffer.isBuffer(topic));
     console.assert(peerMessageHandler);
 
     this._peerId = peerId;
-    this._topic = topic;
     this._peerMessageHandler = peerMessageHandler;
   }
 
