@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/gravity",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Simulator.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/gravity",
   "private": true,
@@ -24,8 +24,8 @@
     "@babel/runtime": "^7.4.3",
     "@wirelineio/codec-protobuf": "^0.2.5",
     "@wirelineio/hyperswarm-network-memory": "^0.2.5",
-    "@wirelineio/megafeed": "^0.2.7",
-    "@wirelineio/protocol": "^0.2.7",
+    "@wirelineio/megafeed": "^0.2.8",
+    "@wirelineio/protocol": "^0.2.8",
     "@wirelineio/utils": "^0.2.7",
     "canonical-json": "^0.0.4",
     "chance": "^1.0.18",
