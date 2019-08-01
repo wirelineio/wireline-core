@@ -15,31 +15,39 @@ function keyToBuffer(key) {
   return Buffer.isBuffer(key) ? key : Buffer.from(key, 'hex');
 }
 
-exports.keyToHex = (key) => {
+function keyToHex(key) {
   if (Buffer.isBuffer(key)) {
     return key.toString('hex');
   }
 
   return key;
-};
+}
 
-exports.getDiscoveryKey = key => crypto.discoveryKey(keyToBuffer(key));
+function getDiscoveryKey(key) {
+  return crypto.discoveryKey(keyToBuffer(key));
+}
 
-exports.parseToKeys = (key) => {
+function parseToKeys(key) {
   const bKey = keyToBuffer(key);
   return {
     publicKey: bKey,
     discoveryKey: crypto.discoveryKey(bKey)
   };
-};
+}
 
-exports.keyToBuffer = keyToBuffer;
-
-exports.keyToHuman = (key, prefix) => {
-  const name = hasher.humanize(key.toString('hex'));
+function keyToHuman(key, prefix) {
+  const name = hasher.humanize(keyToHex(key));
   if (prefix) {
     return `${prefix}(${name})`;
   }
 
   return name;
+}
+
+module.exports = {
+  keyToBuffer,
+  keyToHex,
+  getDiscoveryKey,
+  parseToKeys,
+  keyToHuman
 };
