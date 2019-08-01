@@ -4,6 +4,8 @@
 
 import { EventEmitter } from 'events';
 
+import { keyToHex } from '@wirelineio/utils';
+
 import { Extension } from './extension';
 
 /**
@@ -25,8 +27,8 @@ export class PeerChat extends EventEmitter {
   constructor(peerId, topic, peerMessageHandler) {
     super();
 
-    console.assert(peerId);
-    console.assert(topic);
+    console.assert(Buffer.isBuffer(peerId));
+    console.assert(Buffer.isBuffer(topic));
     console.assert(peerMessageHandler);
 
     this._peerId = peerId;
@@ -81,7 +83,7 @@ export class PeerChat extends EventEmitter {
     console.assert(peerId);
     console.assert(message);
 
-    const peer = this._peers.get(peerId);
+    const peer = this._peers.get(keyToHex(peerId));
     if (!peer) {
       this.emit('peer:not-found', peerId);
       return;
@@ -112,12 +114,12 @@ export class PeerChat extends EventEmitter {
     console.assert(protocol);
     const { peerId } = protocol.getContext();
 
-    if (this._peers.has(peerId)) {
+    if (this._peers.has(keyToHex(peerId))) {
       this.emit('peer:already-connected', peerId);
       return;
     }
 
-    this._peers.set(peerId, protocol);
+    this._peers.set(keyToHex(peerId), protocol);
     this.emit('peer:joined', peerId);
   }
 
@@ -129,7 +131,7 @@ export class PeerChat extends EventEmitter {
   _removePeer(protocol) {
     console.assert(protocol);
     const { peerId } = protocol.getContext();
-    this._peers.delete(peerId);
+    this._peers.delete(keyToHex(peerId));
     this.emit('peer:left', peerId);
   }
 }

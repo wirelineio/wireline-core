@@ -36,7 +36,7 @@ function createExtensions(extensions) {
  * @param conf
  * @return {*|DiscoverySwarmWebrtc}
  */
-exports.createSwarm = (id, topic, options = {}) => {
+module.exports = function createSwarm(id, topic, options = {}) {
   console.assert(id);
   console.assert(topic);
 
@@ -85,7 +85,7 @@ exports.createSwarm = (id, topic, options = {}) => {
     }
   });
 
-  const networkVisible = options.networkVisible && sw.signal && sw.signal.info;
+  const hasSignal = sw.signal && sw.signal.info;
 
   const getPeersCount = (channel) => {
     try {
@@ -95,7 +95,7 @@ exports.createSwarm = (id, topic, options = {}) => {
     }
   };
 
-  const infoMessage = message => networkVisible && sw.signal.info(message);
+  const infoMessage = message => hasSignal && sw.signal.info(message);
 
   sw.on('connection', (peer, info) => {
     infoMessage({ type: 'connection', channel: info.channel, peers: [id, info.id] });
@@ -145,21 +145,19 @@ exports.createSwarm = (id, topic, options = {}) => {
     });
   });
 
-  if (networkVisible) {
-    sw.on('info', (info) => {
-      const value = {
-        id,
-        channel: info.channel,
-        connections: info.connections
-      };
+  sw.on('info', (info) => {
+    const value = {
+      id,
+      channel: info.channel,
+      connections: info.connections
+    };
 
-      emit('metric.swarm.network-updated', {
-        value: new Metric(value, value => value.connections.length),
-        info,
-        swarm: sw
-      });
+    emit('metric.swarm.network-updated', {
+      value: new Metric(value, value => value.connections.length),
+      info,
+      swarm: sw
     });
-  }
+  });
 
   return sw;
 };

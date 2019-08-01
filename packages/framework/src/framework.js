@@ -15,7 +15,7 @@ const { keyToHex, getDiscoveryKey } = require('@wirelineio/utils');
 const PartySerializer = require('./parties/party-serializer');
 const { ViewTypes, Views } = require('./views/defs');
 const ViewManager = require('./views/view-manager');
-const { createSwarm } = require('./wrappers/swarm');
+const createSwarm = require('./wrappers/swarm');
 
 const packageJSON = require('../package.json');
 
