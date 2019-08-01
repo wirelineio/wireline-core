@@ -10,9 +10,10 @@ const pify = require('pify');
 const crypto = require('hypercore-crypto');
 
 const { Megafeed, KappaManager } = require('@wirelineio/megafeed');
-const { keyToHex, getDiscoveryKey } = require('@wirelineio/utils');
+const { keyToHex } = require('@wirelineio/utils');
 
 const PartySerializer = require('./parties/party-serializer');
+const PartyManager = require('./parties/party-manager');
 const { ViewTypes, Views } = require('./views/defs');
 const ViewManager = require('./views/view-manager');
 const createSwarm = require('./wrappers/swarm');
@@ -64,6 +65,7 @@ class Framework extends EventEmitter {
 
     // Import/export
     this._partySerializer = new PartySerializer(this._mega, partyKey);
+    this._partyManager = new PartyManager(partyKey);
 
     // In-memory cache for views.
     this._db = db || levelup(memdown());
@@ -93,6 +95,7 @@ class Framework extends EventEmitter {
       extensions: conf.extensions
         ? [...conf.extensions, ...megaExtensions]
         : megaExtensions,
+      discoveryToPublicKey: dk => this._partyManager.findPartyByDiscovery(dk)
     });
 
     this._initialized = false;
@@ -134,6 +137,10 @@ class Framework extends EventEmitter {
     return this._partySerializer;
   }
 
+  get partyManager() {
+    return this._partyManager;
+  }
+
   toString() {
     const meta = {
       version: packageJSON.version
@@ -157,7 +164,8 @@ class Framework extends EventEmitter {
     await this._mega.loadFeeds(({ stat }) => stat.metadata.topic === topic);
 
     // Connect to the party.
-    this._connect();
+    const party = this.connect(partyKey);
+    this.emit('metric.swarm.party', { key: keyToHex(party.key), dk: keyToHex(party.dk) });
 
     await pify(this._kappa.ready.bind(this._kappa))();
 
@@ -175,14 +183,10 @@ class Framework extends EventEmitter {
     return this;
   }
 
-  _connect() {
-    const { partyKey } = this._conf;
-
-    process.nextTick(() => {
-      const value = { key: partyKey.toString('hex'), dk: getDiscoveryKey(partyKey).toString('hex') };
-      this._swarm.join(value.dk);
-      this.emit('metric.swarm.party', { value });
-    });
+  connect(partyKey) {
+    const party = this._partyManager.setParty(partyKey);
+    this._swarm.join(party.dk);
+    return party;
   }
 }
 
