@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/feed-store",
-  "version": "0.2.5",
+  "version": "0.2.7",
   "description": "A consistent store for your hypercore feeds.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/feed-store#readme",
   "bugs": {
@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@wirelineio/codec-protobuf": "^0.2.5",
-    "@wirelineio/utils": "^0.2.5",
+    "@wirelineio/utils": "^0.2.7",
     "debug": "^4.1.1",
     "hypercore": "^6.24.0",
     "hypercore-crypto": "^1.0.0",
