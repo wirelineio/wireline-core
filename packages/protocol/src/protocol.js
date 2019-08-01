@@ -7,7 +7,7 @@ import { EventEmitter } from 'events';
 import protocol from 'hypercore-protocol';
 import eos from 'end-of-stream';
 
-import { getDiscoveryKey, keyToHuman } from '@wirelineio/utils';
+import { keyToHuman } from '@wirelineio/utils';
 
 import { Codec } from './codec';
 
@@ -75,7 +75,7 @@ export class Protocol extends EventEmitter {
     super();
 
     // TODO(ashwin): Check Codec() only called when the option is null.
-    const { discoveryToPublicKey, codec = new Codec(), streamOptions } = options;
+    const { discoveryToPublicKey = key => key, codec = new Codec(), streamOptions } = options;
 
     this._discoveryToPublicKey = discoveryToPublicKey;
 
@@ -107,10 +107,6 @@ export class Protocol extends EventEmitter {
 
   get feed() {
     return this._feed;
-  }
-
-  get discoveryKey() {
-    return this._discoveryKey;
   }
 
   get extensions() {
@@ -188,7 +184,7 @@ export class Protocol extends EventEmitter {
    * @param {string} [initialKey]
    * @returns {Protocol}
    */
-  init(initialKey) {
+  init(discoveryKey) {
     console.assert(!this._init);
 
     // TODO(ashwin): Set at end of function (we might crash).
@@ -230,15 +226,18 @@ export class Protocol extends EventEmitter {
       }
     });
 
+    let initialKey = null;
+
     // If this protocol stream is being created via a swarm connection event,
     // only the client side will know the topic (i.e. initial feed key to share).
-    if (initialKey) {
-      this._discoveryKey = getDiscoveryKey(initialKey);
+    if (discoveryKey) {
+      initialKey = this._discoveryToPublicKey(discoveryKey);
       this._initStream(initialKey);
     } else {
       // Wait for the peer to share the initial feed and see if we have the public key for that.
-      this._stream.once('feed', (discoveryKey) => {
-        initialKey = this._discoveryToPublicKey && this._discoveryToPublicKey(discoveryKey);
+      this._stream.once('feed', async (discoveryKey) => {
+        initialKey = this._discoveryToPublicKey(discoveryKey);
+
         if (!initialKey) {
           // Stream will get aborted soon as both sides haven't shared the same initial Dat feed.
           console.warn('Public key not found for discovery key: ', keyToHuman(this._stream.id, 'node'), keyToHuman(discoveryKey));
@@ -251,7 +250,6 @@ export class Protocol extends EventEmitter {
           return;
         }
 
-        this._discoveryKey = discoveryKey;
         this._initStream(initialKey);
 
         this._stream.on('feed', (discoveryKey) => {
@@ -291,7 +289,6 @@ export class Protocol extends EventEmitter {
    * @private
    */
   _initStream(key) {
-    log(keyToHuman(this._stream.id, 'node'), 'shared initial feed', keyToHuman(this._discoveryKey));
     this._feed = this._stream.feed(key);
     this._feed.on('extension', this._extensionHandler);
   }
