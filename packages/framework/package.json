@@ -18,7 +18,6 @@
   },
   "dependencies": {
     "@geut/discovery-swarm-webrtc": "^2.0.0-alpha.19",
-    "@wirelineio/automerge-worker": "^0.1.12",
     "@wirelineio/megafeed": "^0.2.5",
     "@wirelineio/protocol": "^0.2.5",
     "@wirelineio/utils": "^0.2.5",
