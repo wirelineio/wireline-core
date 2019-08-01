@@ -6,7 +6,7 @@ const discoverySwarmWebrtc = require('@geut/discovery-swarm-webrtc');
 const debug = require('debug')('dsuite:swarm');
 
 const { Protocol } = require('@wirelineio/protocol');
-const { keyToHex, getDiscoveryKey } = require('@wirelineio/utils');
+const { keyToHex, getDiscoveryKey, keyToBuffer } = require('@wirelineio/utils');
 
 const Metric = require('../utils/metric');
 const Config = require('../config');
@@ -82,7 +82,7 @@ module.exports = function createSwarm(id, topic, options = {}) {
       })
         .setUserData({ peerId: id })
         .setExtensions(createExtensions(extensions))
-        .init(channel)
+        .init(keyToBuffer(channel))
         .stream;
       // TODO(martin): Should be dynamic using info.channel but for now static is fine.
       // .init(info.channel);
