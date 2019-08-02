@@ -126,7 +126,7 @@ export class Node extends EventEmitter {
     })
       .setUserData({ user: {} })
       .setExtensions(this._createExtensions())
-      .init(this._rendezvousKey);
+      .init(getDiscoveryKey(this._rendezvousKey));
 
     // Connect the streams.
     pump(protocol.stream, stream, protocol.stream, (err) => {

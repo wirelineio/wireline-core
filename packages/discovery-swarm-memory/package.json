@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/discovery-swarm-memory",
-  "version": "0.2.5",
+  "version": "0.2.9-beta.2",
   "description": "Wireline discovery swarm implementation in memory.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/discovery-swarm-memory#readme",
   "bugs": {
@@ -25,14 +25,14 @@
     "> 5%"
   ],
   "dependencies": {
-    "@wirelineio/hyperswarm-network-memory": "^0.2.5",
+    "@wirelineio/hyperswarm-network-memory": "^0.2.9-beta.2",
     "pump": "^3.0.0"
   },
   "publishConfig": {
     "access": "public"
   },
   "devDependencies": {
-    "@babel/cli": "^7.4.4",
+    "@babel/cli": "7.4.4",
     "@babel/core": "^7.4.5",
     "@babel/preset-env": "^7.4.5",
     "babel-jest": "^24.8.0",
@@ -41,5 +41,6 @@
     "jest": "^24.8.0",
     "pify": "^4.0.1",
     "random-access-memory": "^3.1.1"
-  }
+  },
+  "gitHead": "0364698ca71eaf38d892bfc0c6f9b9c7d0f3cb00"
 }

@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/gravity",
-  "version": "0.2.8",
+  "version": "0.2.9-beta.2",
   "description": "Simulator.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/gravity",
   "private": true,
@@ -22,11 +22,11 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.4.3",
-    "@wirelineio/codec-protobuf": "^0.2.5",
-    "@wirelineio/hyperswarm-network-memory": "^0.2.5",
-    "@wirelineio/megafeed": "^0.2.8",
-    "@wirelineio/protocol": "^0.2.8",
-    "@wirelineio/utils": "^0.2.7",
+    "@wirelineio/codec-protobuf": "^0.2.9-beta.2",
+    "@wirelineio/hyperswarm-network-memory": "^0.2.9-beta.2",
+    "@wirelineio/megafeed": "^0.2.9-beta.2",
+    "@wirelineio/protocol": "^0.2.9-beta.2",
+    "@wirelineio/utils": "^0.2.9-beta.2",
     "canonical-json": "^0.0.4",
     "chance": "^1.0.18",
     "chess.js": "^0.10.2",
@@ -45,7 +45,7 @@
     "uuid": "^3.3.2"
   },
   "devDependencies": {
-    "@babel/cli": "^7.4.4",
+    "@babel/cli": "7.4.4",
     "@babel/core": "^7.4.3",
     "@babel/plugin-proposal-class-properties": "^7.4.0",
     "@babel/plugin-proposal-export-default-from": "^7.2.0",

@@ -6,7 +6,7 @@ const discoverySwarmWebrtc = require('@geut/discovery-swarm-webrtc');
 const debug = require('debug')('dsuite:swarm');
 
 const { Protocol } = require('@wirelineio/protocol');
-const { keyToHex } = require('@wirelineio/utils');
+const { keyToHex, getDiscoveryKey, keyToBuffer } = require('@wirelineio/utils');
 
 const Metric = require('../utils/metric');
 const Config = require('../config');
@@ -42,11 +42,11 @@ module.exports = function createSwarm(id, topic, options = {}) {
 
   id = keyToHex(id);
 
+  const { extensions = [], emit = () => {}, discoveryToPublicKey } = options;
+
   const signalhub = options.hub || process.env.SIGNALHUB || Config.SIGNALHUB;
   const ice = JSON.parse(options.ice || process.env.ICE_SERVERS || Config.ICE_SERVERS);
-  const extensions = options.extensions || [];
   const maxPeers = options.maxPeers || process.env.SWARM_MAX_PEERS;
-  const emit = options.emit || (() => {});
 
   debug('Connecting:', JSON.stringify({ signalhub, ice }));
   debug('PeerId:', id);
@@ -62,8 +62,19 @@ module.exports = function createSwarm(id, topic, options = {}) {
     maxPeers,
 
     // TODO(burdon): Get's the main hypercore stream (not actually the feed replication stream).
-    stream: () => {
+    stream: ({ channel }) => {
       return new Protocol({
+        discoveryToPublicKey: (dk) => {
+          if (dk.equals(getDiscoveryKey(topic))) {
+            return topic;
+          }
+
+          if (discoveryToPublicKey) {
+            return discoveryToPublicKey(dk);
+          }
+
+          return null;
+        },
         streamOptions: {
           id,
           live: true
@@ -71,10 +82,8 @@ module.exports = function createSwarm(id, topic, options = {}) {
       })
         .setUserData({ peerId: id })
         .setExtensions(createExtensions(extensions))
-        .init(topic)
+        .init(keyToBuffer(channel))
         .stream;
-      // TODO(martin): Should be dynamic using info.channel but for now static is fine.
-      // .init(info.channel);
     },
 
     simplePeer: {
