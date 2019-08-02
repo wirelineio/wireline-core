@@ -3,10 +3,10 @@
 //
 
 import { EventEmitter } from 'events';
+import eos from 'end-of-stream';
 
 import { Extension } from '@wirelineio/protocol';
 import { keyToHex } from '@wirelineio/utils';
-
 
 /**
  * Manages key exchange and feed replication.
@@ -95,10 +95,16 @@ export class Replicator extends EventEmitter {
       })
     );
 
-    this._feedStore.on('feed', (feed, stat) => {
+    const onFeed = (feed, stat) => {
       if (topics.includes(stat.metadata.topic)) {
         this._replicate(protocol, feed);
       }
+    };
+
+    this._feedStore.on('feed', onFeed);
+
+    eos(protocol.stream, () => {
+      this._feedStore.removeListener('feed', onFeed);
     });
   }
 
