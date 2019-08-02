@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/discovery-swarm-memory",
-  "version": "0.2.9-beta.2",
+  "version": "0.2.9",
   "description": "Wireline discovery swarm implementation in memory.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/discovery-swarm-memory#readme",
   "bugs": {
@@ -25,7 +25,7 @@
     "> 5%"
   ],
   "dependencies": {
-    "@wirelineio/hyperswarm-network-memory": "^0.2.9-beta.2",
+    "@wirelineio/hyperswarm-network-memory": "^0.2.9",
     "pump": "^3.0.0"
   },
   "publishConfig": {
