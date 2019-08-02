@@ -84,8 +84,6 @@ module.exports = function createSwarm(id, topic, options = {}) {
         .setExtensions(createExtensions(extensions))
         .init(keyToBuffer(channel))
         .stream;
-      // TODO(martin): Should be dynamic using info.channel but for now static is fine.
-      // .init(info.channel);
     },
 
     simplePeer: {
