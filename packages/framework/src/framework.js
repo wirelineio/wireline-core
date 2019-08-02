@@ -188,6 +188,13 @@ class Framework extends EventEmitter {
     this._swarm.join(party.dk);
     return party;
   }
+
+  disconnect(partyKey) {
+    const party = this._partyManager.setParty(partyKey);
+    this._swarm.leave(party.dk);
+    return party;
+  }
+
 }
 
 module.exports = Framework;
