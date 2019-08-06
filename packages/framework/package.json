@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/framework",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "description": "Application Framework.",
   "homepage": "https://github.com/wirelineio/wireline-core#readme",
   "bugs": {
@@ -18,9 +18,9 @@
   },
   "dependencies": {
     "@geut/discovery-swarm-webrtc": "^2.0.0-alpha.19",
-    "@wirelineio/megafeed": "^0.2.10",
-    "@wirelineio/protocol": "^0.2.10",
-    "@wirelineio/utils": "^0.2.10",
+    "@wirelineio/megafeed": "^0.2.11",
+    "@wirelineio/protocol": "^0.2.11",
+    "@wirelineio/utils": "^0.2.11",
     "@wirelineio/wire-inspect": "^0.1.17",
     "bufferutil": "^4.0.1",
     "charwise": "^3.0.1",
