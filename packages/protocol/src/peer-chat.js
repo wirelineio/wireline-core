@@ -44,7 +44,9 @@ export class PeerChat extends EventEmitter {
         this._addPeer(protocol);
       })
       .setCloseHandler((err, protocol) => {
-        if (err) {
+        // This errors can happen all the time without been an issue.
+        const protocolErrors = ['Remote timed out', 'premature close'];
+        if (err && !protocolErrors.includes(err.message)) {
           console.warn(err.message);
         }
         this._removePeer(protocol);
