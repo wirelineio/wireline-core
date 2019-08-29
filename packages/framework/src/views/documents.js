@@ -48,12 +48,15 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
           const doc = documents.get(value.data.itemId);
 
           if (event === 'change' && doc) {
-            const { update } = value.data;
+            const { delta } = value.data;
 
             // Apply and emit changes only when from remote doc.
             if (!isLocal(value)) {
-              Y.applyUpdate(doc, update, value.author);
-              events.emit(`${viewId}.remote-change`, value.data.itemId, { update, origin: value.author, doc });
+              doc.transact(() => {
+                doc.getText('content').applyDelta(delta);
+              }, value.author);
+
+              events.emit(`${viewId}.remote-change`, value.data.itemId, { delta, origin: value.author, doc });
             }
           }
         });
@@ -72,7 +75,9 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
         doc.clientID = author.toString('hex');
 
         // Send changes if local update occurs.
-        doc.on('update', (update, origin) => {
+        doc.getText('content').observe((event, transaction) => {
+          const { delta } = event;
+          const { doc, origin } = transaction;
 
           // Do not send remote changes.
           // Do not send init changes (loaded from feed at loading phase).
@@ -80,7 +85,7 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
 
           append({
             type: `item.${viewId}.change`,
-            data: { itemId, update }
+            data: { itemId, delta }
           });
         });
 
@@ -106,9 +111,11 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
 
           ({ doc } = await core.api[viewId].init({ itemId }));
 
-          updates.forEach(({ data: { update } }) => {
-            // Mark as an initial change so that it's not sent on update.
-            Y.applyUpdate(doc, update, 'init');
+          // Mark as an initial change so that it's not sent on update.
+          doc.transact(() => {
+            updates.forEach(({ data: { delta } }) => {
+              doc.getText('content').applyDelta(delta);
+            }, 'init');
           });
         }
 
@@ -140,21 +147,24 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
 
       async appendChange(core, itemId, change) {
         const clientID = author.toString('hex');
-        const { update } = change;
+        const { delta } = change;
 
         const doc = documents.get(itemId);
 
         // Apply updates to view's doc.
-        Y.applyUpdate(doc, update, clientID);
+        doc.transact(() => {
+          // Update shared content.
+          doc.getText('content').applyDelta(delta.ops);
+        }, clientID);
       },
 
       onChange(core, itemId, cb) {
-        const handler = (id, { update, origin, doc }) => {
+        const handler = (id, { delta, origin, doc }) => {
           if (id !== itemId) return;
 
           cb({
             itemId,
-            update,
+            delta,
             origin,
             doc
           });
