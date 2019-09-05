@@ -16,6 +16,7 @@ const getContent = doc => doc.getText('content');
 const getContentAsString = doc => getContent(doc).toString();
 const getContentHash = doc => objectHash(getContentAsString(doc));
 const getContentAsDelta = doc => new Delta(getContent(doc).toDelta());
+const isNewLineDelta = delta => delta.ops.length === 2 && delta.ops[0].retain !== undefined && delta.ops[1].insert === '\n';
 
 module.exports = function DocumentsView(viewId, db, core, { append, isLocal, author }) {
   const events = new EventEmitter();
@@ -25,7 +26,13 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
 
   const eventCRDTChange = `${viewId}.crdt-change`;
 
+  /**
+   * @type{Map<string, Y.Doc>}
+   */
   const documents = new Map();
+  /**
+   * @type{Map<string, Delta>}
+   */
   const beforeTransactionDeltas = new Map();
 
   return view(viewDB, {
@@ -169,7 +176,15 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
         const doc = documents.get(itemId);
 
         doc.transact(() => {
-          deltas.forEach(delta => doc.getText('content').applyDelta(delta.ops));
+          deltas.forEach((delta) => {
+
+            if (isNewLineDelta(delta)) {
+              // If new line => applyDelta is not triggering update.
+              return doc.getText('content').insert(delta.ops[0].retain, '\n');
+            }
+
+            doc.getText('content').applyDelta(delta.ops);
+          });
         }, { source: 'local', hash, author: author.toString('hex') });
       },
 
