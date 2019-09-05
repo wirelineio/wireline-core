@@ -4,11 +4,18 @@
 
 const EventEmitter = require('events');
 const view = require('kappa-view-level');
+const objectHash = require('object-hash');
+const Delta = require('quill-delta');
 const sub = require('subleveldown');
 const Y = require('yjs');
 
 const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
+
+const getContent = doc => doc.getText('content');
+const getContentAsString = doc => getContent(doc).toString();
+const getContentHash = doc => objectHash(getContentAsString(doc));
+const getContentAsDelta = doc => new Delta(getContent(doc).toDelta());
 
 module.exports = function DocumentsView(viewId, db, core, { append, isLocal, author }) {
   const events = new EventEmitter();
@@ -16,8 +23,10 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
 
   const viewDB = sub(db, viewId, { valueEncoding: 'json' });
 
-  // Map of Y.Doc elements.
+  const eventCRDTChange = `${viewId}.crdt-change`;
+
   const documents = new Map();
+  const beforeTransactionDeltas = new Map();
 
   return view(viewDB, {
     map(msg) {
@@ -30,7 +39,7 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
 
       const type = value.type.replace(`item.${viewId}.`, '');
       if (type === 'change') {
-        return [[uuid('change', itemId, value.timestamp), value]];
+        return [[uuid(type, itemId, value.timestamp), value]];
       }
 
       return [];
@@ -41,23 +50,19 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
         .filter(msg => msg.value.type.startsWith(`item.${viewId}`))
         .sort((a, b) => a.value.timestamp - b.value.timestamp)
         .forEach(async ({ value }) => {
-          const event = value.type.replace(`item.${viewId}.`, '');
+          const { type, data, author } = value;
+          const event = type.replace(`item.${viewId}.`, '');
 
           events.emit(event, value);
 
-          const doc = documents.get(value.data.itemId);
+          if (event === 'change' && !isLocal(value)) {
+            const { itemId, update, hash } = data;
 
-          if (event === 'change' && doc) {
-            const { delta } = value.data;
+            if (!documents.has(itemId)) return;
 
-            // Apply and emit changes only when from remote doc.
-            if (!isLocal(value)) {
-              doc.transact(() => {
-                doc.getText('content').applyDelta(delta);
-              }, value.author);
+            const doc = documents.get(itemId);
 
-              events.emit(`${viewId}.remote-change`, value.data.itemId, { delta, origin: value.author, doc });
-            }
+            Y.applyUpdate(doc, update, { source: 'remote', hash, author });
           }
         });
     },
@@ -65,33 +70,67 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
     api: {
       async create(core, { type, title = 'Untitled' }) {
         const item = await core.api['items'].create({ type, title });
-        await core.api[viewId].init({ itemId: item.itemId });
+        await core.api[viewId].init(item.itemId);
         return item;
       },
 
-      async init(core, { itemId }) {
+      async init(core, itemId) {
         // Local Yjs Doc for track changes.
         const doc = new Y.Doc();
-        doc.clientID = author.toString('hex');
 
-        // Send changes if local update occurs.
-        doc.getText('content').observe((event, transaction) => {
-          const { delta } = event;
-          const { doc, origin } = transaction;
+        doc.on('beforeTransaction', (transaction, doc) => {
+          beforeTransactionDeltas.set(itemId, getContentAsDelta(doc));
+        });
 
-          // Do not send remote changes.
-          // Do not send init changes (loaded from feed at loading phase).
-          if (origin !== doc.clientID || origin === 'init') return;
+        doc.on('update', async (update, origin) => {
+          const { author, source, hash } = origin;
+          const newHash = getContentHash(doc);
+          const newDelta = getContentAsDelta(doc);
 
-          append({
-            type: `item.${viewId}.change`,
-            data: { itemId, delta }
-          });
+          switch (source) {
+            case 'local': {
+              await append({
+                type: `item.${viewId}.change`,
+                data: { itemId, update, hash: newHash }
+              });
+
+              if (newHash !== hash) {
+                // UI different from CRDT.
+                events.emit(eventCRDTChange, itemId, { delta: newDelta, hash: newHash, author, merge: true });
+              }
+
+              break;
+            }
+            case 'remote': {
+              // Diff contents between peers.
+              if (hash !== newHash) {
+                await append({
+                  type: `item.${viewId}.change`,
+                  data: { itemId, update: Y.encodeStateAsUpdate(doc), hash: newHash }
+                });
+
+                events.emit(eventCRDTChange, itemId, { delta: newDelta, hash: newHash, author, merge: true });
+              } else {
+                // Send only delta updates to the UI.
+                const previousDelta = beforeTransactionDeltas.get(itemId);
+                const delta = previousDelta.diff(newDelta);
+
+                if (delta.ops.length === 0) return;
+
+                events.emit(eventCRDTChange, itemId, { delta, hash: newHash, author });
+              }
+
+              break;
+            }
+            default:
+              // Init
+              break;
+          }
         });
 
         documents.set(itemId, doc);
 
-        return { doc };
+        return doc;
       },
 
       async getById(core, itemId) {
@@ -109,13 +148,11 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
             throw new Error('Document not found:', itemId);
           }
 
-          ({ doc } = await core.api[viewId].init({ itemId }));
+          doc = await core.api[viewId].init(itemId);
 
-          // Mark as an initial change so that it's not sent on update.
-          doc.transact(() => {
-            updates.forEach(({ data: { delta } }) => {
-              doc.getText('content').applyDelta(delta);
-            }, 'init');
+          updates.forEach(({ data: { update } }) => {
+            // Mark as an initial change so that it's not sent on update.
+            Y.applyUpdate(doc, update, { source: 'init' });
           });
         }
 
@@ -125,6 +162,15 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
           title,
           doc
         };
+      },
+
+      async appendChange(core, itemId, change) {
+        const { deltas = [], hash } = change;
+        const doc = documents.get(itemId);
+
+        doc.transact(() => {
+          deltas.forEach(delta => doc.getText('content').applyDelta(delta.ops));
+        }, { source: 'local', hash, author: author.toString('hex') });
       },
 
       async getChanges(core, itemId, opts = {}) {
@@ -145,35 +191,20 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
         return streamToList(reader);
       },
 
-      async appendChange(core, itemId, change) {
-        const clientID = author.toString('hex');
-        const { delta } = change;
-
-        const doc = documents.get(itemId);
-
-        // Apply updates to view's doc.
-        doc.transact(() => {
-          // Update shared content.
-          doc.getText('content').applyDelta(delta.ops);
-        }, clientID);
-      },
-
       onChange(core, itemId, cb) {
-        const handler = (id, { delta, origin, doc }) => {
+        const handler = (id, handlerParams) => {
           if (id !== itemId) return;
 
           cb({
             itemId,
-            delta,
-            origin,
-            doc
+            ...handlerParams
           });
         };
 
-        events.on(`${viewId}.remote-change`, handler);
+        events.on(eventCRDTChange, handler);
 
         return () => {
-          events.removeListener(`${viewId}.remote-change`, handler);
+          events.removeListener(eventCRDTChange, handler);
         };
       },
 
