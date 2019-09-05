@@ -17,15 +17,15 @@ import { createChessApps, createPeer, playGameMoves } from './helpers';
 
 debug.enable('test,chess');
 
-const TEST_TIMEOUT = 50 * 1000;
+const TEST_TIMEOUT = 100 * 1000;
 
 jest.setTimeout(TEST_TIMEOUT);
 
 const log = debug('test');
 
 test('simultaneous chess games between peers', async (done) => {
-  const numPeers = 10;
   const numGames = 25;
+  const numPeers = 5;
 
   // Topic used to find peers interested in chess games.
   const [ gameTopic ] = createKeys(1);
@@ -51,7 +51,7 @@ test('simultaneous chess games between peers', async (done) => {
   }));
 
   // Create games between randomly chosen peers.
-  const games = [];
+  let games = [];
   for (let i = 0; i < numGames; i++) {
     const peer1 = random.pickone(peers);
     const peer2 = random.pickone(peers.filter(peer => peer !== peer1));
@@ -72,16 +72,20 @@ test('simultaneous chess games between peers', async (done) => {
   }
 
   await waitForExpect(async() => {
-    games.forEach(({ app1, app2 }) => {
-      // Both sides should finally sync.
-      expect(app1.gameOver).toBeTruthy();
-      expect(app2.gameOver).toBeTruthy();
-      expect(app1.position).toEqual(app2.position);
+    games = games.filter(({ app1, app2 }) => {
+      log(`A1 ${app1._itemId} Position: [${app1.position}] Result: ${app1.result}`);
+      log(`A2 ${app2._itemId} Position: [${app2.position}] Result: ${app2.result}`);
+
+      if (app1.gameOver && app2.gameOver && (app1.position === app2.position)) {
+        log(`Game ${app1._itemId} over and matched!`);
+        return false;
+      }
+      return true;
     });
 
-    games.forEach(({ app1 }) => {
-      log('Position: [', app1.position, '] Result:', app1.result);
-    });
+    log(`${games.length} games still playing.`);
+
+    expect(games.length).toEqual(0);
 
     done();
   }, TEST_TIMEOUT);

@@ -10,6 +10,7 @@ import network from '@wirelineio/hyperswarm-network-memory';
 
 import { latch } from './util';
 import { Node } from './node';
+import { keyName, discoveryKey } from './util/keys';
 
 const log = debug('test');
 
@@ -18,6 +19,8 @@ debug.enable('test,node,messenger,protocol,extension');
 const [ rendezvousKey ] = createKeys(1);
 
 test('broadcast messages between nodes', async (done) => {
+
+  log(`Using rendezousKey ${keyName(rendezvousKey)} (discovery: ${keyName(discoveryKey(rendezvousKey))})`);
 
   const node1 = new Node(network(), await Megafeed.create(ram)).joinSwarm(rendezvousKey);
   const node2 = new Node(network(), await Megafeed.create(ram)).joinSwarm(rendezvousKey);

@@ -151,13 +151,15 @@ export class Node extends EventEmitter {
     log(keyName(this._id, 'node'), 'connected', keyName(peerKey));
 
     // Check if we know the rendezvous key for the given discovery key.
-    const discoveryToPublicKey = (discoveryKey) => {
-      if (keyStr(discoveryKey) === keyStr(discoveryKey(this._rendezvousKey))) {
+    const discoveryToPublicKey = (key) => {
+      if (keyStr(key) === keyStr(discoveryKey(this._rendezvousKey))) {
         return this._rendezvousKey;
+      } else {
+        log(`key: ${keyName(key)} !== dk: ${keyName(discoveryKey(this._rendezvousKey))} of rk: ${keyName(this._rendezvousKey)}`);
       }
 
       // Matching rendezvous key not found (might have changed recently).
-      return  null;
+      return null;
     };
 
     // Create a new protocol stream.
@@ -173,7 +175,7 @@ export class Node extends EventEmitter {
       // Communication is encrypted from the 2nd message onward (https://datprotocol.github.io/how-dat-works/#encryption).
       .setUserData({ user: {} })
       .setExtensions(this._createExtensions())
-      .init(this._rendezvousKey);
+      .init(discoveryKey(this._rendezvousKey));
 
     // Connect the streams.
     pump(protocol.stream, stream, protocol.stream, err => {

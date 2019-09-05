@@ -18,7 +18,8 @@
     "build": "npm run clean && babel ./src --out-dir ./dist/es --ignore \"**/*.test.js\"",
     "clean": "rm -rf dist",
     "lint": "eslint ./src --ignore-path ../../.eslintignore",
-    "test": "jest --verbose"
+    "test": "jest --verbose",
+    "testij": "DEBUG=protocol,node jest --verbose --testMatch '**/chess.test.js'"
   },
   "dependencies": {
     "@babel/runtime": "^7.4.3",
