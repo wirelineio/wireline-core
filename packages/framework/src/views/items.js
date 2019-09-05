@@ -73,12 +73,31 @@ module.exports = function ItemsView(viewId, db, core, { append }) {
         };
       },
 
-      async getItems(core, opts = {}) {
+      /**
+       * @param core
+       * @param opts {Object} options config
+       * @param opts.archived {Boolean} Set to true to include archived items. Default to false.
+       * @param opts.reverse {Boolean} Set to true to return items in reverse order. Default to false.
+       */
+      async getItems(core, { archived = false, reverse = false } = {}) {
         const fromKey = uuid('metadata');
         const toKey = `${fromKey}~`;
-        const reader = viewDB.createValueStream({ gte: fromKey, lte: toKey, reverse: opts.reverse });
+        const reader = viewDB.createValueStream({ gte: fromKey, lte: toKey, reverse });
 
-        return streamToList(reader);
+        return streamToList(reader, (msg, next) => next(archived || !msg.data.archived));
+      },
+
+      /**
+       * @param core
+       * @param opts {Object} options config
+       * @param opts.reverse {Boolean} Set to true to return items in reverse order. Default to false.
+       */
+      async getArchivedItems(core, { reverse = false } = {}) {
+        const fromKey = uuid('metadata');
+        const toKey = `${fromKey}~`;
+        const reader = viewDB.createValueStream({ gte: fromKey, lte: toKey, reverse });
+
+        return streamToList(reader, (msg, next) => next(!!msg.data.archived));
       },
 
       async getInfo(core, itemId) {
@@ -94,6 +113,14 @@ module.exports = function ItemsView(viewId, db, core, { append }) {
         }
 
         return append({ type: 'item.metadata', data: { ...msg.data, ...data } });
+      },
+
+      async archive(core, itemId) {
+        await core.api['items'].setInfo({ itemId, archived: true });
+      },
+
+      async unarchive(core, itemId) {
+        await core.api['items'].setInfo({ itemId, archived: false });
       },
 
       onChange(core, itemId, cb) {
