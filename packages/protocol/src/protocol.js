@@ -233,6 +233,8 @@ export class Protocol extends EventEmitter {
     if (discoveryKey) {
       initialKey = this._discoveryToPublicKey(discoveryKey);
       if (!initialKey) {
+        // Continuing onward to initialize the stream without a key will fail, but the error thrown then
+        // is as apt as any we would construct and throw here, so we simply report the condition.
         console.error('init - Public key not found for discovery key: ', keyToHuman(this._stream.id, 'node'), keyToHuman(discoveryKey));
       }
       this._initStream(initialKey);
