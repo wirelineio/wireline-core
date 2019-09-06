@@ -232,6 +232,11 @@ export class Protocol extends EventEmitter {
     // only the client side will know the topic (i.e. initial feed key to share).
     if (discoveryKey) {
       initialKey = this._discoveryToPublicKey(discoveryKey);
+      if (!initialKey) {
+        // Continuing onward to initialize the stream without a key will fail, but the error thrown then
+        // is as apt as any we would construct and throw here, so we simply report the condition.
+        console.error('init - Public key not found for discovery key: ', keyToHuman(this._stream.id, 'node'), keyToHuman(discoveryKey));
+      }
       this._initStream(initialKey);
     } else {
       // Wait for the peer to share the initial feed and see if we have the public key for that.
@@ -240,7 +245,7 @@ export class Protocol extends EventEmitter {
 
         if (!initialKey) {
           // Stream will get aborted soon as both sides haven't shared the same initial Dat feed.
-          console.warn('Public key not found for discovery key: ', keyToHuman(this._stream.id, 'node'), keyToHuman(discoveryKey));
+          console.warn('init:stream:feed - Public key not found for discovery key: ', keyToHuman(this._stream.id, 'node'), keyToHuman(discoveryKey));
 
           return;
         }
