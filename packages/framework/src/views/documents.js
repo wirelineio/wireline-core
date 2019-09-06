@@ -86,6 +86,7 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
         const doc = new Y.Doc();
 
         doc.on('beforeTransaction', (transaction, doc) => {
+          if (transaction.origin.source !== 'remote') return;
           beforeTransactionDeltas.set(itemId, getContentAsDelta(doc));
         });
 
