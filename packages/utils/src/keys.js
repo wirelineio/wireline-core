@@ -44,10 +44,18 @@ function keyToHuman(key, prefix) {
   return name;
 }
 
+const keyMeta = (key) => {
+  return {
+    key: keyToHex(key),
+    name: keyToHuman(key)
+  };
+};
+
 module.exports = {
   keyToBuffer,
   keyToHex,
   getDiscoveryKey,
   parseToKeys,
-  keyToHuman
+  keyToHuman,
+  keyMeta
 };
