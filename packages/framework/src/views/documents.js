@@ -4,7 +4,6 @@
 
 const EventEmitter = require('events');
 const view = require('kappa-view-level');
-const objectHash = require('object-hash');
 const Delta = require('quill-delta');
 const sub = require('subleveldown');
 const Y = require('yjs');
@@ -13,8 +12,6 @@ const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
 
 const getContent = doc => doc.getText('content');
-const getContentAsString = doc => getContent(doc).toString();
-const getContentHash = doc => objectHash(getContentAsString(doc));
 const getContentAsDelta = doc => new Delta(getContent(doc).toDelta());
 const isNewLineDelta = delta => delta.ops.length === 2 && delta.ops[0].retain !== undefined && delta.ops[1].insert === '\n';
 
@@ -63,13 +60,13 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
           events.emit(event, value);
 
           if (event === 'change' && !isLocal(value)) {
-            const { itemId, update, hash } = data;
+            const { itemId, update } = data;
 
             if (!documents.has(itemId)) return;
 
             const doc = documents.get(itemId);
 
-            Y.applyUpdate(doc, update, { source: 'remote', hash, author });
+            Y.applyUpdate(doc, update, { source: 'remote', author });
           }
         });
     },
@@ -91,42 +88,27 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
         });
 
         doc.on('update', async (update, origin) => {
-          const { author, source, hash } = origin;
-          const newHash = getContentHash(doc);
+          const { author, source } = origin;
           const newDelta = getContentAsDelta(doc);
 
           switch (source) {
             case 'local': {
+              // Share update.
               await append({
                 type: `item.${viewId}.change`,
-                data: { itemId, update, hash: newHash }
+                data: { itemId, update }
               });
-
-              if (newHash !== hash) {
-                // UI different from CRDT.
-                events.emit(eventCRDTChange, itemId, { delta: newDelta, hash: newHash, author, merge: true });
-              }
 
               break;
             }
             case 'remote': {
-              // Diff contents between peers.
-              if (hash !== newHash) {
-                await append({
-                  type: `item.${viewId}.change`,
-                  data: { itemId, update: Y.encodeStateAsUpdate(doc), hash: newHash }
-                });
+              // Send only delta updates to the UI.
+              const previousDelta = beforeTransactionDeltas.get(itemId);
+              const delta = previousDelta.diff(newDelta);
 
-                events.emit(eventCRDTChange, itemId, { delta: newDelta, hash: newHash, author, merge: true });
-              } else {
-                // Send only delta updates to the UI.
-                const previousDelta = beforeTransactionDeltas.get(itemId);
-                const delta = previousDelta.diff(newDelta);
+              if (delta.ops.length === 0) return;
 
-                if (delta.ops.length === 0) return;
-
-                events.emit(eventCRDTChange, itemId, { delta, hash: newHash, author });
-              }
+              events.emit(eventCRDTChange, itemId, { delta, author });
 
               break;
             }
@@ -173,7 +155,7 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
       },
 
       async appendChange(core, itemId, change) {
-        const { deltas = [], hash } = change;
+        const { deltas = [] } = change;
         const doc = documents.get(itemId);
 
         doc.transact(() => {
@@ -186,7 +168,7 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
 
             doc.getText('content').applyDelta(delta.ops);
           });
-        }, { source: 'local', hash, author: author.toString('hex') });
+        }, { source: 'local', author: author.toString('hex') });
       },
 
       async getChanges(core, itemId, opts = {}) {
