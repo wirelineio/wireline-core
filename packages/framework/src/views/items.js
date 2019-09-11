@@ -129,7 +129,7 @@ module.exports = function ItemsView(viewId, db, core, { append }) {
             return;
           }
 
-          const { data } = await core.api['itmes'].getInfo(itemId);
+          const { data } = await core.api['items'].getInfo(itemId);
 
           cb({ ...data });
         };
