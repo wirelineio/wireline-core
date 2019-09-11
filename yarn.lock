@@ -2002,6 +2002,21 @@
   resolved "https://registry.yarnpkg.com/@types/yargs/-/yargs-12.0.12.tgz#45dd1d0638e8c8f153e87d296907659296873916"
   integrity sha512-SOhuU4wNBxhhTHxYaiG5NY4HBhDIDnJF60GU+2LqHAdKKer86//e4yg69aENCtQ04n0ovz+tq2YPME5t5yp4pw==
 
+"@types/yargs@^13.0.0":
+  version "13.0.2"
+  resolved "https://registry.yarnpkg.com/@types/yargs/-/yargs-13.0.2.tgz#a64674fc0149574ecd90ba746e932b5a5f7b3653"
+  integrity sha512-lwwgizwk/bIIU+3ELORkyuOgDjCh7zuWDFqRtPPhhVgq9N1F7CvLNKg1TX4f2duwtKQ0p044Au9r1PLIXHrIzQ==
+  dependencies:
+    "@types/yargs-parser" "*"
+
+"@wirelineio/discovery-swarm-memory@0.2.16":
+  version "0.2.16"
+  resolved "https://registry.yarnpkg.com/@wirelineio/discovery-swarm-memory/-/discovery-swarm-memory-0.2.16.tgz#33d1fcc89f2a0923fbad7038fb3f651fc4c1370d"
+  integrity sha512-wCteKx7oFCb4hwRiew1IEjT1byZKM5pzeqdWr3/ASHQ+Q2rGqia2u2rvMaVH2c/A48qh08wCdi4ANNnsAOKw4w==
+  dependencies:
+    "@wirelineio/hyperswarm-network-memory" "^0.2.16"
+    pump "^3.0.0"
+
 "@wirelineio/gravity@^0.2.15":
   version "0.2.15"
   resolved "https://registry.yarnpkg.com/@wirelineio/gravity/-/gravity-0.2.15.tgz#7b2b279043bec95c990c395b9305664d336d7224"
@@ -2041,6 +2056,13 @@
   version "0.2.15"
   resolved "https://registry.yarnpkg.com/@wirelineio/hyperswarm-network-memory/-/hyperswarm-network-memory-0.2.15.tgz#4d2813ebc0c2940197d5a52d18357bf456719008"
   integrity sha512-2prLD+Tk9BkPMxM/Q+F+vaJtQHCAeZNgkZ3lIbjkkiRRUI8Py8ZEPBKsCuZSY8l6eFBV4j0xGvOp69YwpLPjtA==
+  dependencies:
+    end-of-stream "^1.4.1"
+
+"@wirelineio/hyperswarm-network-memory@^0.2.16":
+  version "0.2.16"
+  resolved "https://registry.yarnpkg.com/@wirelineio/hyperswarm-network-memory/-/hyperswarm-network-memory-0.2.16.tgz#3703a8434b7e48511bb2b84a2cd97f7434fa46b3"
+  integrity sha512-IakODeHFf0itclcoMvT2XcjNtJ0wIQFLE52IlwTWCXo8wxfrqRQS9z/MqVFQSCDAMXt1IeZVcgTHZK+pCBhn+g==
   dependencies:
     end-of-stream "^1.4.1"
 
@@ -4754,7 +4776,7 @@ hypercore-protocol@^6.11.1, hypercore-protocol@^6.4.1, hypercore-protocol@^6.8.0
     sorted-indexof "^1.0.0"
     varint "^5.0.0"
 
-hypercore-protocol@^6.9.0:
+hypercore-protocol@^6.5.0, hypercore-protocol@^6.9.0:
   version "6.12.0"
   resolved "https://registry.yarnpkg.com/hypercore-protocol/-/hypercore-protocol-6.12.0.tgz#0fafa7c047a7e4c35b2d77639e2489f60d7b1a0d"
   integrity sha512-T3oy9/7QFejqJX2RGcCUU1944e5/eKbLlSz9JPTNN1QbYFJgat/r7eTyOO8SMSLUimUmQx6YBMKhgYbdKzp7Bw==
@@ -8084,25 +8106,6 @@ proto-list@~1.2.1:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/proto-list/-/proto-list-1.2.4.tgz#212d5bfe1318306a420f6402b8e26ff39647a849"
   integrity sha1-IS1b/hMYMGpCD2QCuOJv85ZHqEk=
-
-"protobufjs@git+https://github.com/wirelineio/protobuf.js.git#wireline-dist":
-  version "6.8.8"
-  uid ad757d3ffe2565f4deea8a4e1b4c2383ede574c4
-  resolved "git+https://github.com/wirelineio/protobuf.js.git#ad757d3ffe2565f4deea8a4e1b4c2383ede574c4"
-  dependencies:
-    "@protobufjs/aspromise" "^1.1.2"
-    "@protobufjs/base64" "^1.1.2"
-    "@protobufjs/codegen" "^2.0.4"
-    "@protobufjs/eventemitter" "^1.1.0"
-    "@protobufjs/fetch" "^1.1.0"
-    "@protobufjs/float" "^1.0.2"
-    "@protobufjs/inquire" "^1.1.0"
-    "@protobufjs/path" "^1.1.2"
-    "@protobufjs/pool" "^1.1.0"
-    "@protobufjs/utf8" "^1.1.0"
-    "@types/long" "^4.0.0"
-    "@types/node" "^10.1.0"
-    long "^4.0.0"
 
 "protobufjs@https://github.com/wirelineio/protobuf.js#wireline-dist":
   version "6.8.8"

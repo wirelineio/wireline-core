@@ -50,6 +50,7 @@
     "yjs": "13.0.0-93"
   },
   "devDependencies": {
+    "@wirelineio/discovery-swarm-memory": "0.2.16",
     "jest": "24.9.0"
   },
   "publishConfig": {
