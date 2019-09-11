@@ -1849,17 +1849,17 @@
   resolved "https://registry.yarnpkg.com/@types/yargs/-/yargs-12.0.12.tgz#45dd1d0638e8c8f153e87d296907659296873916"
   integrity sha512-SOhuU4wNBxhhTHxYaiG5NY4HBhDIDnJF60GU+2LqHAdKKer86//e4yg69aENCtQ04n0ovz+tq2YPME5t5yp4pw==
 
-"@wirelineio/gravity@^0.2.12":
-  version "0.2.13"
-  resolved "https://registry.yarnpkg.com/@wirelineio/gravity/-/gravity-0.2.13.tgz#6c9eb55f3eda6411513ed7e23d22a10c8c84085b"
-  integrity sha512-pJY8twTrpGt0BbN3isBhByzwAt5/RBm88M2yBzKPjgSCcEneoqsJ6geSi4geO0Nd9ijYL0aUo5P6SMasQFKVJQ==
+"@wirelineio/gravity@^0.2.15":
+  version "0.2.15"
+  resolved "https://registry.yarnpkg.com/@wirelineio/gravity/-/gravity-0.2.15.tgz#7b2b279043bec95c990c395b9305664d336d7224"
+  integrity sha512-BhcKGiRvNpR9SxKYkcz77Pld31hYOSj5xdD/ON3Aa/C1JYgWMNCSPDgq6bSZfz2e54uX0Zntptg3UFLPxPCQoQ==
   dependencies:
     "@babel/runtime" "^7.4.3"
-    "@wirelineio/codec-protobuf" "^0.2.12"
-    "@wirelineio/hyperswarm-network-memory" "^0.2.12"
-    "@wirelineio/megafeed" "^0.2.12"
-    "@wirelineio/protocol" "^0.2.12"
-    "@wirelineio/utils" "^0.2.12"
+    "@wirelineio/codec-protobuf" "^0.2.13"
+    "@wirelineio/hyperswarm-network-memory" "^0.2.15"
+    "@wirelineio/megafeed" "^0.2.13"
+    "@wirelineio/protocol" "^0.2.13"
+    "@wirelineio/utils" "^0.2.13"
     canonical-json "^0.0.4"
     chance "^1.0.18"
     chess.js "^0.10.2"
@@ -1881,6 +1881,13 @@
   version "0.2.12"
   resolved "https://registry.yarnpkg.com/@wirelineio/hyperswarm-network-memory/-/hyperswarm-network-memory-0.2.12.tgz#1a830055a075e86282467a832e12dbeb4ef65de6"
   integrity sha512-Fs8ZkRYmpt4yfGNoMNzTNRNRqcTApTjBO51Uz/mvGYZwMSBfbceXzvjHUm/bJV2N46WegeccsWuEVsNBL/liiA==
+  dependencies:
+    end-of-stream "^1.4.1"
+
+"@wirelineio/hyperswarm-network-memory@^0.2.15":
+  version "0.2.15"
+  resolved "https://registry.yarnpkg.com/@wirelineio/hyperswarm-network-memory/-/hyperswarm-network-memory-0.2.15.tgz#4d2813ebc0c2940197d5a52d18357bf456719008"
+  integrity sha512-2prLD+Tk9BkPMxM/Q+F+vaJtQHCAeZNgkZ3lIbjkkiRRUI8Py8ZEPBKsCuZSY8l6eFBV4j0xGvOp69YwpLPjtA==
   dependencies:
     end-of-stream "^1.4.1"
 
@@ -7461,6 +7468,25 @@ proto-list@~1.2.1:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/proto-list/-/proto-list-1.2.4.tgz#212d5bfe1318306a420f6402b8e26ff39647a849"
   integrity sha1-IS1b/hMYMGpCD2QCuOJv85ZHqEk=
+
+"protobufjs@git+https://github.com/wirelineio/protobuf.js.git#wireline-dist":
+  version "6.8.8"
+  uid ad757d3ffe2565f4deea8a4e1b4c2383ede574c4
+  resolved "git+https://github.com/wirelineio/protobuf.js.git#ad757d3ffe2565f4deea8a4e1b4c2383ede574c4"
+  dependencies:
+    "@protobufjs/aspromise" "^1.1.2"
+    "@protobufjs/base64" "^1.1.2"
+    "@protobufjs/codegen" "^2.0.4"
+    "@protobufjs/eventemitter" "^1.1.0"
+    "@protobufjs/fetch" "^1.1.0"
+    "@protobufjs/float" "^1.0.2"
+    "@protobufjs/inquire" "^1.1.0"
+    "@protobufjs/path" "^1.1.2"
+    "@protobufjs/pool" "^1.1.0"
+    "@protobufjs/utf8" "^1.1.0"
+    "@types/long" "^4.0.0"
+    "@types/node" "^10.1.0"
+    long "^4.0.0"
 
 "protobufjs@https://github.com/wirelineio/protobuf.js#wireline-dist":
   version "6.8.8"
