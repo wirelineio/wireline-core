@@ -7,7 +7,7 @@ import debug from 'debug';
 import network from '@wirelineio/hyperswarm-network-memory';
 import { keyToHex, latch } from '@wirelineio/utils';
 
-import { createKeys, createMegafeed, Node } from './debug';
+import { createKeys, createMegafeed, Node } from '@wirelineio/gravity';
 
 debug.enable('test,megafeed,replicator,feedmap,protocol,view,extension');
 
