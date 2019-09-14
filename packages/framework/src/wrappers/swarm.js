@@ -32,8 +32,9 @@ function createExtensions(extensions) {
 /**
  * Creates the swarm.
  *
- * @param mega
- * @param conf
+ * @param id
+ * @param topic
+ * @param options
  * @return {*|DiscoverySwarmWebrtc}
  */
 module.exports = function createSwarm(id, topic, options = {}) {
@@ -44,6 +45,7 @@ module.exports = function createSwarm(id, topic, options = {}) {
 
   const { extensions = [], emit = () => {}, discoveryToPublicKey } = options;
 
+  // TODO(burdon): IMPORTANT: Env vars should only be used by the root app. Otherwise must set in the function config.
   const signalhub = options.hub || process.env.SIGNALHUB || Config.SIGNALHUB;
   const ice = JSON.parse(options.ice || process.env.ICE_SERVERS || Config.ICE_SERVERS);
   const maxPeers = options.maxPeers || process.env.SWARM_MAX_PEERS;
@@ -51,40 +53,43 @@ module.exports = function createSwarm(id, topic, options = {}) {
   debug('Connecting:', JSON.stringify({ signalhub, ice }));
   debug('PeerId:', id);
 
+  const protocolOptions = {
+    discoveryToPublicKey: (dk) => {
+      if (dk.equals(getDiscoveryKey(topic))) {
+        return topic;
+      }
+
+      if (discoveryToPublicKey) {
+        return discoveryToPublicKey(dk);
+      }
+
+      return null;
+    },
+
+    streamOptions: {
+      id,
+      live: true
+    }
+  };
+
   const swarm = options.swarm || discoverySwarmWebrtc;
 
   const sw = swarm({
     id,
 
+    // TODO(burdon): Temp fix.
+    bootstrap: Array.isArray(signalhub) ? signalhub : [signalhub],
     urls: Array.isArray(signalhub) ? signalhub : [signalhub],
 
     // Maximum number of peer candidates requested from the signaling server (but can have multiple in-coming).
     maxPeers,
 
     // TODO(burdon): Get's the main hypercore stream (not actually the feed replication stream).
-    stream: ({ channel }) => {
-      return new Protocol({
-        discoveryToPublicKey: (dk) => {
-          if (dk.equals(getDiscoveryKey(topic))) {
-            return topic;
-          }
-
-          if (discoveryToPublicKey) {
-            return discoveryToPublicKey(dk);
-          }
-
-          return null;
-        },
-        streamOptions: {
-          id,
-          live: true
-        }
-      })
-        .setUserData({ peerId: id })
-        .setExtensions(createExtensions(extensions))
-        .init(keyToBuffer(channel))
-        .stream;
-    },
+    stream: ({ channel }) => new Protocol(protocolOptions)
+      .setUserData({ peerId: id })
+      .setExtensions(createExtensions(extensions))
+      .init(keyToBuffer(channel))
+      .stream,
 
     simplePeer: {
       wrtc: !isBrowser ? require('wrtc') : null, // eslint-disable-line global-require
