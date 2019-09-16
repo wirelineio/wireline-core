@@ -77,11 +77,8 @@ module.exports = function createSwarm(id, topic, options = {}) {
   const sw = swarm({
     id,
 
-    // TODO(burdon): Temp fix.
     bootstrap: Array.isArray(signalhub) ? signalhub : [signalhub],
-    urls: Array.isArray(signalhub) ? signalhub : [signalhub],
 
-    // Maximum number of peer candidates requested from the signaling server (but can have multiple in-coming).
     maxPeers,
 
     // TODO(burdon): Get's the main hypercore stream (not actually the feed replication stream).
@@ -103,78 +100,60 @@ module.exports = function createSwarm(id, topic, options = {}) {
 
   const getPeersCount = (channel) => {
     try {
-      return sw.peers(channel).filter(peer => peer.connected).length;
+      return sw.getPeers(channel).filter(peer => peer.connected).length;
     } catch (err) {
       return 0;
     }
   };
 
   const infoMessage = message => hasSignal && sw.signal.info(message);
-
-  const parseInfo = info => ({ id: keyToHex(info.id), channel: keyToHex(info.id) });
+  const parseInfo = info => ({ id: keyToHex(info.id), channel: keyToHex(info.channel) });
 
   sw.on('connection', (peer, info) => {
-    info = parseInfo(info);
+    infoMessage({ type: 'connection', channel: info.channel, from: id, to: info.id });
 
-    infoMessage({ type: 'connection', channel: info.channel, peers: [idHex, info.id] });
-
-    debug('Connection open:', info.id);
+    debug('Connection open:', keyToHex(info.id));
     emit('metric.swarm.connection-open', {
       value: getPeersCount(info.channel),
       peer,
-      info,
+      info: parseInfo(info),
       swarm: sw
     });
   });
 
   sw.on('connection-closed', (peer, info) => {
-    info = parseInfo(info);
+    infoMessage({ type: 'disconnection', channel: info.channel, from: id, to: info.id });
 
-    infoMessage({ type: 'disconnection', channel: info.channel, peers: [idHex, info.id] });
-
-    debug('Connection closed:', info.id);
+    debug('Connection closed:', keyToHex(info.id));
     emit('metric.swarm.connection-closed', {
       value: getPeersCount(info.channel),
       peer,
-      info,
+      info: parseInfo(info),
       swarm: sw
     });
   });
 
   sw.on('connection-error', (err, info) => {
-    info = parseInfo(info);
-
-    // If we have info.id the error is just an already closed connection.
-    if (info && info.id) {
-      debug(`Unreachable peer: ${info.id}. Peer might have disconnected.`);
-    } else {
-      debug('Connection error:', err);
-    }
-
     emit('metric.swarm.connection-error', {
       err,
-      info,
+      info: parseInfo(info),
       swarm: sw
     });
   });
 
   sw.on('reconnecting', (info) => {
-    info = parseInfo(info);
-
-    debug('Reconnecting:', info);
+    debug('Reconnecting:', parseInfo(info));
 
     emit('metric.swarm.reconnecting', {
-      info,
+      info: parseInfo(info),
       swarm: sw
     });
   });
 
   sw.on('info', (info) => {
-    info = parseInfo(info);
-
     const value = {
       id: idHex,
-      channel: info.channel,
+      channel: keyToHex(info.channel),
       connections: info.connections
     };
 
