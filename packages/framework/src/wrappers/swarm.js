@@ -41,7 +41,7 @@ module.exports = function createSwarm(id, topic, options = {}) {
   console.assert(id);
   console.assert(topic);
 
-  id = keyToHex(id);
+  const idHex = keyToHex(id);
 
   const { extensions = [], emit = () => {}, discoveryToPublicKey } = options;
 
@@ -51,7 +51,7 @@ module.exports = function createSwarm(id, topic, options = {}) {
   const maxPeers = options.maxPeers || process.env.SWARM_MAX_PEERS;
 
   debug('Connecting:', JSON.stringify({ signalhub, ice }));
-  debug('PeerId:', id);
+  debug('PeerId:', idHex);
 
   const protocolOptions = {
     discoveryToPublicKey: (dk) => {
@@ -67,7 +67,7 @@ module.exports = function createSwarm(id, topic, options = {}) {
     },
 
     streamOptions: {
-      id,
+      id: idHex,
       live: true
     }
   };
@@ -86,7 +86,7 @@ module.exports = function createSwarm(id, topic, options = {}) {
 
     // TODO(burdon): Get's the main hypercore stream (not actually the feed replication stream).
     stream: ({ channel }) => new Protocol(protocolOptions)
-      .setUserData({ peerId: id })
+      .setUserData({ peerId: idHex })
       .setExtensions(createExtensions(extensions))
       .init(keyToBuffer(channel))
       .stream,
@@ -111,8 +111,12 @@ module.exports = function createSwarm(id, topic, options = {}) {
 
   const infoMessage = message => hasSignal && sw.signal.info(message);
 
+  const parseInfo = info => ({ id: keyToHex(info.id), channel: keyToHex(info.id) });
+
   sw.on('connection', (peer, info) => {
-    infoMessage({ type: 'connection', channel: info.channel, peers: [id, info.id] });
+    info = parseInfo(info);
+
+    infoMessage({ type: 'connection', channel: info.channel, peers: [idHex, info.id] });
 
     debug('Connection open:', info.id);
     emit('metric.swarm.connection-open', {
@@ -124,7 +128,9 @@ module.exports = function createSwarm(id, topic, options = {}) {
   });
 
   sw.on('connection-closed', (peer, info) => {
-    infoMessage({ type: 'disconnection', channel: info.channel, peers: [id, info.id] });
+    info = parseInfo(info);
+
+    infoMessage({ type: 'disconnection', channel: info.channel, peers: [idHex, info.id] });
 
     debug('Connection closed:', info.id);
     emit('metric.swarm.connection-closed', {
@@ -136,6 +142,8 @@ module.exports = function createSwarm(id, topic, options = {}) {
   });
 
   sw.on('connection-error', (err, info) => {
+    info = parseInfo(info);
+
     // If we have info.id the error is just an already closed connection.
     if (info && info.id) {
       debug(`Unreachable peer: ${info.id}. Peer might have disconnected.`);
@@ -151,6 +159,8 @@ module.exports = function createSwarm(id, topic, options = {}) {
   });
 
   sw.on('reconnecting', (info) => {
+    info = parseInfo(info);
+
     debug('Reconnecting:', info);
 
     emit('metric.swarm.reconnecting', {
@@ -160,8 +170,10 @@ module.exports = function createSwarm(id, topic, options = {}) {
   });
 
   sw.on('info', (info) => {
+    info = parseInfo(info);
+
     const value = {
-      id,
+      id: idHex,
       channel: info.channel,
       connections: info.connections
     };
