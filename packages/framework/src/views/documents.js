@@ -4,16 +4,11 @@
 
 const EventEmitter = require('events');
 const view = require('kappa-view-level');
-const Delta = require('quill-delta');
 const sub = require('subleveldown');
 const Y = require('yjs');
 
 const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
-
-const getContent = doc => doc.getText('content');
-const getContentAsDelta = doc => new Delta(getContent(doc).toDelta());
-const isNewLineDelta = delta => delta.ops.length === 2 && delta.ops[0].retain !== undefined && delta.ops[1].insert === '\n';
 
 module.exports = function DocumentsView(viewId, db, core, { append, isLocal, author }) {
   const events = new EventEmitter();
@@ -27,10 +22,6 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
    * @type{Map<string, Y.Doc>}
    */
   const documents = new Map();
-  /**
-   * @type{Map<string, Delta>}
-   */
-  const beforeTransactionDeltas = new Map();
 
   return view(viewDB, {
     map(msg) {
@@ -42,7 +33,7 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
       const { itemId } = value.data;
 
       const type = value.type.replace(`item.${viewId}.`, '');
-      if (type === 'change') {
+      if (type === 'change' || type === 'create') {
         return [[uuid(type, itemId, value.timestamp), value]];
       }
 
@@ -75,6 +66,11 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
       async create(core, { type, title = 'Untitled' }) {
         const item = await core.api['items'].create({ type, title });
         await core.api[viewId].init(item.itemId);
+        await append({
+          type: `item.${viewId}.create`,
+          data: { itemId: item.itemId }
+        });
+
         return item;
       },
 
@@ -82,39 +78,21 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
         // Local Yjs Doc for track changes.
         const doc = new Y.Doc();
 
-        doc.on('beforeTransaction', (transaction, doc) => {
-          if (transaction.origin.source !== 'remote') return;
-          beforeTransactionDeltas.set(itemId, getContentAsDelta(doc));
-        });
-
         doc.on('update', async (update, origin) => {
           const { author, source } = origin;
-          const newDelta = getContentAsDelta(doc);
 
-          switch (source) {
-            case 'local': {
-              // Share update.
-              await append({
-                type: `item.${viewId}.change`,
-                data: { itemId, update }
-              });
+          if (source === 'local') {
+            // Share update.
+            await append({
+              type: `item.${viewId}.change`,
+              data: { itemId, update }
+            });
 
-              break;
-            }
-            case 'remote': {
-              // Send only delta updates to the UI.
-              const previousDelta = beforeTransactionDeltas.get(itemId);
-              const delta = previousDelta.diff(newDelta);
+            return;
+          }
 
-              if (delta.ops.length === 0) return;
-
-              events.emit(eventCRDTChange, itemId, { delta, author });
-
-              break;
-            }
-            default:
-              // Init
-              break;
+          if (source === 'remote') {
+            events.emit(eventCRDTChange, itemId, { update, author });
           }
         });
 
@@ -155,20 +133,9 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
       },
 
       async appendChange(core, itemId, change) {
-        const { deltas = [] } = change;
+        const { update } = change;
         const doc = documents.get(itemId);
-
-        doc.transact(() => {
-          deltas.forEach((delta) => {
-
-            if (isNewLineDelta(delta)) {
-              // If new line => applyDelta is not triggering update.
-              return doc.getText('content').insert(delta.ops[0].retain, '\n');
-            }
-
-            doc.getText('content').applyDelta(delta.ops);
-          });
-        }, { source: 'local', author: author.toString('hex') });
+        Y.applyUpdate(doc, update, { source: 'local', author: author.toString('hex') });
       },
 
       async getChanges(core, itemId, opts = {}) {
