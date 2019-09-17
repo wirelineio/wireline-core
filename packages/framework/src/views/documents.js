@@ -7,6 +7,8 @@ const view = require('kappa-view-level');
 const sub = require('subleveldown');
 const Y = require('yjs');
 
+const { keyToHex } = require('@wirelineio/utils');
+
 const { streamToList } = require('../utils/stream');
 const { uuid } = require('../utils/uuid');
 
@@ -135,7 +137,7 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
       async appendChange(core, itemId, change) {
         const { update } = change;
         const doc = documents.get(itemId);
-        Y.applyUpdate(doc, update, { source: 'local', author: author.toString('hex') });
+        Y.applyUpdate(doc, update, { source: 'local', author: keyToHex(author) });
       },
 
       async getChanges(core, itemId, opts = {}) {
