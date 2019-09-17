@@ -53,13 +53,13 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
           events.emit(event, value);
 
           if (event === 'change' && !isLocal(value)) {
-            const { itemId, update } = data;
+            const { itemId, update, selection } = data;
 
             if (!documents.has(itemId)) return;
 
             const doc = documents.get(itemId);
 
-            Y.applyUpdate(doc, update, { source: 'remote', author });
+            Y.applyUpdate(doc, update, { source: 'remote', author, selection });
           }
         });
     },
@@ -81,20 +81,20 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
         const doc = new Y.Doc();
 
         doc.on('update', async (update, origin) => {
-          const { author, source } = origin;
+          const { author, source, selection } = origin;
 
           if (source === 'local') {
             // Share update.
             await append({
               type: `item.${viewId}.change`,
-              data: { itemId, update }
+              data: { itemId, update, selection }
             });
 
             return;
           }
 
           if (source === 'remote') {
-            events.emit(eventCRDTChange, itemId, { update, author });
+            events.emit(eventCRDTChange, itemId, { update, author, selection });
           }
         });
 
@@ -135,9 +135,9 @@ module.exports = function DocumentsView(viewId, db, core, { append, isLocal, aut
       },
 
       async appendChange(core, itemId, change) {
-        const { update } = change;
+        const { update, selection } = change;
         const doc = documents.get(itemId);
-        Y.applyUpdate(doc, update, { source: 'local', author: keyToHex(author) });
+        Y.applyUpdate(doc, update, { source: 'local', author: keyToHex(author), selection });
       },
 
       async getChanges(core, itemId, opts = {}) {
