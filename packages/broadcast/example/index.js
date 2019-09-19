@@ -88,7 +88,6 @@ document.getElementById('remove-many-peers').addEventListener('click', () => {
 });
 
 view
-  .d3Force('center', null)
   .nodeVal(4)
   .nodeLabel('id')
   .nodeColor(node => (node.destroyed ? 'red' : node.color))
