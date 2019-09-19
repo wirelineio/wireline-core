@@ -1,0 +1,55 @@
+{
+  "name": "@wirelineio/broadcast",
+  "version": "0.2.17",
+  "description": "Broadcast messages.",
+  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/broadcast#readme",
+  "bugs": {
+    "url": "https://github.com/wirelineio/wireline-core/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wirelineio/wireline-core.git"
+  },
+  "license": "GPL-3.0",
+  "main": "index.js",
+  "browser": "dist/index.js",
+  "files": [
+    "dist",
+    "index.js"
+  ],
+  "scripts": {
+    "build": "npm run clean && npm run build:babel && npm run build:protobuf",
+    "build:babel": "babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps",
+    "build:protobuf": "pbjs -t json src/schema.proto -o dist/schema.json",
+    "clean": "del-cli dist",
+    "lint": "eslint ./src --ignore-path ../../.eslintignore",
+    "test": "jest --verbose",
+    "posttest": "npm run lint",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "browserslist": [
+    "> 5%"
+  ],
+  "dependencies": {
+    "@wirelineio/codec-protobuf": "^0.2.17",
+    "debug": "^4.1.1",
+    "source-map-support": "^0.5.12"
+  },
+  "devDependencies": {
+    "@babel/cli": "7.4.4",
+    "@babel/core": "^7.4.5",
+    "@babel/plugin-proposal-class-properties": "^7.5.5",
+    "@babel/plugin-proposal-export-default-from": "^7.5.2",
+    "@babel/preset-env": "^7.4.5",
+    "babel-jest": "^24.8.0",
+    "babel-plugin-add-module-exports": "^1.0.2",
+    "babel-plugin-inline-import": "^3.0.0",
+    "del-cli": "^2.0.0",
+    "eslint": "^5.16.0",
+    "jest": "^24.8.0",
+    "wait-for-expect": "^1.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
