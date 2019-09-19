@@ -9,6 +9,8 @@ const TOPIC = Buffer.from('batman');
 const graph = createGraph();
 const peersTitle = document.getElementById('peers-title');
 const connectionsTitle = document.getElementById('connections-title');
+const packetsSendedTitle = document.getElementById('packets-sended-title');
+const packetsReadedTitle = document.getElementById('packets-readed-title');
 const view = ForceGraph()(document.getElementById('graph'));
 
 const changePeerColor = (peer, color) => {
@@ -19,6 +21,9 @@ const changePeerColor = (peer, color) => {
 };
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+let packetsSended = 0;
+let packetsReaded = 0;
 
 const addPeer = () => {
   const peer = _addPeer(graph, TOPIC, {
@@ -31,6 +36,9 @@ const addPeer = () => {
       return peer.getPeers(TOPIC);
     },
     sender: async (packet, node) => {
+      packetsSended++;
+      packetsSendedTitle.innerHTML = packetsSended;
+
       view.pushParticle(peer.id.toString('hex'), node.id.toString('hex'), { speed: 0.02, color: 'red' });
 
       await delay(800);
@@ -42,18 +50,16 @@ const addPeer = () => {
       }
     },
     receiver: (onMessage) => {
-      const onData = (chunk) => {
-        onMessage(chunk);
-      };
-
-      peer.on('data', onData);
-      return () => peer.off('data', onData);
+      peer.on('data', onMessage);
+      return () => peer.off('data', onMessage);
     }
   });
 
   peer.broadcast = broadcast;
 
   broadcast.on('packet', async () => {
+    packetsReaded++;
+    packetsReadedTitle.innerHTML = packetsReaded;
     changePeerColor(peer, '#53c379');
   });
 
@@ -88,6 +94,8 @@ view
   .nodeColor(node => (node.destroyed ? 'red' : node.color))
   .graphData({ nodes: [], links: [] })
   .onNodeRightClick(async (node) => {
+    packetsSended = 0;
+    packetsReaded = 0;
     graph.forEachNode((node) => {
       node.data.color = null;
       graph.addNode(node.id, node.data);
