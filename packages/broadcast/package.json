@@ -12,7 +12,7 @@
   },
   "license": "GPL-3.0",
   "main": "index.js",
-  "browser": "dist/index.js",
+  "browser": "dist/broadcast.js",
   "files": [
     "dist",
     "index.js"
