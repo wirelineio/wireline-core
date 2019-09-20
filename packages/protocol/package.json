@@ -14,9 +14,9 @@
   "main": "index.js",
   "browser": "dist/index.js",
   "scripts": {
-    "build": "npm run clean && npm run build:babel && npm run build:protobuf",
-    "build:babel": "babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps",
-    "build:protobuf": "pbjs -t json src/schema.proto -o dist/schema.json",
+    "build": "npm run clean && npm run build:protobuf && npm run build:babel",
+    "build:babel": "babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps --copy-files",
+    "build:protobuf": "pbjs -t json src/schema.proto -o src/schema.json",
     "clean": "del-cli dist",
     "lint": "eslint ./src --ignore-path ../../.eslintignore",
     "test": "jest --verbose",

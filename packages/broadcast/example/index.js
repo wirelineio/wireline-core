@@ -101,7 +101,7 @@ view
     });
     const peer = graph.getNode(node.id).data;
     changePeerColor(peer, '#d950cd');
-    peer.broadcast.publish('hello');
+    peer.broadcast.publish(Buffer.from('hello'));
   });
 
 graph.on('changed', (changes) => {

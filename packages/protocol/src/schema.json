@@ -1,0 +1,42 @@
+{
+  "nested": {
+    "protocol": {
+      "nested": {
+        "Request": {
+          "fields": {
+            "id": {
+              "rule": "required",
+              "type": "bytes",
+              "id": 1
+            },
+            "error": {
+              "type": "bytes",
+              "id": 2
+            },
+            "data": {
+              "type": "bytes",
+              "id": 3
+            },
+            "options": {
+              "type": "bytes",
+              "id": 4
+            }
+          }
+        },
+        "PeerChatMessage": {
+          "fields": {
+            "type": {
+              "rule": "required",
+              "type": "string",
+              "id": 1
+            },
+            "data": {
+              "type": "bytes",
+              "id": 2
+            }
+          }
+        }
+      }
+    }
+  }
+}
