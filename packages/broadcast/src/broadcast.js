@@ -1,3 +1,7 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 import { EventEmitter } from 'events';
 import crypto from 'crypto';
 import Codec from '@wirelineio/codec-protobuf';
@@ -32,15 +36,20 @@ class Broadcast extends EventEmitter {
     this._scheduler = new Scheduler();
     this._codec = new Codec({ verify: true });
     this._codec.loadFromJSON(schema);
+
+    this.on('error', (err) => { debug(err); });
   }
 
-  async publish(data) {
+  async publish(data, { seq = crypto.randomBytes(32) } = {}) {
     if (!this._running) {
       console.warn('Broadcast not running.');
       return;
     }
 
-    const packet = { seq: crypto.randomBytes(32), data };
+    console.assert(Buffer.isBuffer(data));
+    console.assert(Buffer.isBuffer(seq));
+
+    const packet = { seq, data };
     await this._publish(packet);
   }
 
@@ -70,6 +79,7 @@ class Broadcast extends EventEmitter {
 
     this._scheduler.deleteTask('prune-cache');
     this._cleanReceiver();
+    debug('stop %h', this._id);
   }
 
   _buildLookup(lookup) {
@@ -83,32 +93,42 @@ class Broadcast extends EventEmitter {
         looking = null;
         debug('lookup of %h', this._id, this._peers);
       } catch (err) {
-        console.error(err);
+        this.emit('error', err);
         looking = null;
       }
     };
   }
 
   async _publish(packet) {
-    this._seenSeqs.set(packet.seq.toString('hex'), Date.now());
+    try {
+      this._seenSeqs.set(packet.seq.toString('hex'), Date.now());
 
-    await this._lookup();
+      await this._lookup();
 
-    const message = Object.assign({}, packet, { from: this._id });
+      const message = Object.assign({}, packet, { from: this._id });
 
-    const packetEncoded = this._codec.encode({
-      type: 'broadcast.Packet',
-      message
-    });
+      const packetEncoded = this._codec.encode({
+        type: 'broadcast.Packet',
+        message
+      });
 
-    const waitFor = this._peers.map((peer) => {
-      if (this._checkSeenPacketBy(message.seq, peer.id)) return;
+      const waitFor = this._peers.map(async (peer) => {
+        if (this._checkSeenPacketBy(message.seq, peer.id)) return;
 
-      debug('publish %h -> %h', this._id, peer.id, message);
-      return this._sender(packetEncoded, peer);
-    });
+        debug('publish %h -> %h', this._id, peer.id, message);
 
-    return Promise.all(waitFor);
+        try {
+          this._addSeenPacketBy(message.seq, peer.id);
+          await this._sender(packetEncoded, peer);
+        } catch (err) {
+          this.emit('error', err);
+        }
+      });
+
+      await Promise.all(waitFor);
+    } catch (err) {
+      this.emit('error', err);
+    }
   }
 
   _onPacket(packetEncoded) {
@@ -125,9 +145,12 @@ class Broadcast extends EventEmitter {
 
       this.emit('packet', packet, peer);
 
-      this._publish(packet).catch(err => console.error(err));
+      this._publish(packet).catch(() => {});
+
+      return packet;
     } catch (err) {
-      console.error(err);
+      this.emit('error', err);
+      throw err;
     }
   }
 

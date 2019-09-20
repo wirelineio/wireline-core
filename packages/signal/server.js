@@ -47,8 +47,6 @@ function createServer({ io }) {
     } catch (err) {
       console.error(err);
     }
-
-    request.forward();
   });
 }
 

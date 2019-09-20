@@ -779,10 +779,10 @@
     unique-filename "^1.1.1"
     which "^1.3.1"
 
-"@geut/discovery-swarm-webrtc@^2.2.0":
-  version "2.2.0"
-  resolved "https://registry.yarnpkg.com/@geut/discovery-swarm-webrtc/-/discovery-swarm-webrtc-2.2.0.tgz#1b1effd51e9f95120320be2735f5fced30473bcd"
-  integrity sha512-nd60TkHOP2q7lD74/JxFPper3Qts5KFSIwLo2TY9YZ/53i4QHPKmWZuZnmjiVvyKwS7d18xA2rNf+jwJi9oDoQ==
+"@geut/discovery-swarm-webrtc@^2.2.2":
+  version "2.2.2"
+  resolved "https://registry.yarnpkg.com/@geut/discovery-swarm-webrtc/-/discovery-swarm-webrtc-2.2.2.tgz#afff65bcb6cda347c7d65f7fb818a4dc93ee779a"
+  integrity sha512-g8yHRoXBDFP0aD4S90IL+/qFcWCVPuypDWnvOYaEHHVy24jCoxpYKtcRmh79NlFY0hrn+4Jg90nKG45bnvTXjA==
   dependencies:
     debug "^4.1.1"
     minimist "^1.2.0"

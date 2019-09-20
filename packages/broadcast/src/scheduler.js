@@ -1,3 +1,7 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 import { EventEmitter } from 'events';
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));

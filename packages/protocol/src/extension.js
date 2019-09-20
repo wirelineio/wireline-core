@@ -3,11 +3,11 @@
 //
 import assert from 'assert';
 import { EventEmitter } from 'events';
+import crypto from 'crypto';
 
 import debug from 'debug';
-import uuid from 'uuid/v4';
 
-import { keyToHuman } from '@wirelineio/utils';
+import { keyToHuman, keyToHex } from '@wirelineio/utils';
 
 import { Codec } from './codec';
 import { ProtocolError } from './protocol';
@@ -76,7 +76,7 @@ export class Extension extends EventEmitter {
 
     this._options = Object.assign({
       timeout: 2000,
-      codec: new Codec()
+      codec: new Codec({ binary: options.binary })
     }, options);
   }
 
@@ -173,13 +173,13 @@ export class Extension extends EventEmitter {
    * @param {Buffer} message
    */
   async onMessage(context, message) {
-    const { id, error, message: requestData, options = {} } = this._options.codec.decode(message);
+    const { id, error, data: requestData, options = {} } = this._options.codec.decode(message);
 
     // Check for a pending request.
     // TODO(burdon): Explicitely check code header property?
-    const senderCallback = this._pendingMessages.get(id);
+    const senderCallback = this._pendingMessages.get(keyToHex(id));
     if (senderCallback) {
-      this._pendingMessages.delete(id);
+      this._pendingMessages.delete(keyToHex(id));
       senderCallback(context, requestData, error);
       return;
     }
@@ -200,7 +200,7 @@ export class Extension extends EventEmitter {
       }
 
       // Send the response.
-      const response = { id, message: responseData };
+      const response = { id, data: responseData };
       log(`responding ${keyToHuman(this._protocol.stream.id, 'node')}: ${keyToHuman(id, 'msg')}`);
       this._protocol.feed.extension(this._name, this._options.codec.encode(response));
     } catch (ex) {
@@ -238,8 +238,8 @@ export class Extension extends EventEmitter {
     const { oneway = false } = options;
 
     const request = {
-      id: uuid(),
-      message,
+      id: crypto.randomBytes(32),
+      data: message,
       options: {
         oneway
       }
@@ -257,7 +257,7 @@ export class Extension extends EventEmitter {
     const promise = {};
 
     // Set the callback to be called when the response is received.
-    this._pendingMessages.set(request.id, async (context, response, error) => {
+    this._pendingMessages.set(keyToHex(request.id), async (context, response, error) => {
 
       log(`response ${keyToHuman(this._protocol.stream.id, 'node')}: ${keyToHuman(request.id, 'msg')}`);
       this._stats.receive++;

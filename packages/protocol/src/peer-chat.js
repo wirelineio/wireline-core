@@ -4,10 +4,14 @@
 
 import { EventEmitter } from 'events';
 
-import { keyToHex } from '@wirelineio/utils';
+import Broadcast from '@wirelineio/broadcast';
+import CodecProtobuf from '@wirelineio/codec-protobuf';
+import { keyToHex, keyToBuffer } from '@wirelineio/utils';
 
 import { Extension } from './extension';
 
+// eslint-disable-next-line
+import schema from './schema.json';
 /**
  * Peer chat.
  */
@@ -23,14 +27,48 @@ export class PeerChat extends EventEmitter {
    * @param {string} peerId
    * @param {Function} peerMessageHandler
    */
-  constructor(peerId, peerMessageHandler) {
+  constructor(peerId, peerMessageHandler = () => {}) {
     super();
 
     console.assert(Buffer.isBuffer(peerId));
     console.assert(peerMessageHandler);
 
     this._peerId = peerId;
-    this._peerMessageHandler = peerMessageHandler;
+    this._codec = new CodecProtobuf({ verify: true });
+    this._codec.loadFromJSON(schema);
+    this._onMessage = (protocol, context, message) => {
+      this.emit('message', message);
+      peerMessageHandler(protocol, context, message);
+    };
+    this._broadcast = new Broadcast({
+      id: this._peerId,
+      lookup: () => {
+        return Array.from(this._peers.values()).map((peer) => {
+          const { peerId } = peer.getContext();
+
+          return {
+            id: keyToBuffer(peerId),
+            protocol: peer
+          };
+        });
+      },
+      sender: (packet, peer) => {
+        this._sendPeerMessage(peer.protocol, packet);
+      },
+      receiver: (onPacket) => {
+        this._peerMessageHandler = (protocol, context, chunk) => {
+          const { type, data: message } = this._codec.decode(chunk, false);
+
+          try {
+            const packet = onPacket(message);
+            if (packet) this._onMessage(protocol, context, { type, message: packet.data.toString() });
+          } catch (err) {
+            this._onMessage(protocol, context, { type, message: message.toString() });
+          }
+        };
+      }
+    });
+    this._broadcast.run();
   }
 
   /**
@@ -38,7 +76,7 @@ export class PeerChat extends EventEmitter {
    * @return {Extension}
    */
   createExtension() {
-    return new Extension(PeerChat.EXTENSION_NAME)
+    return new Extension(PeerChat.EXTENSION_NAME, { binary: true })
       .setMessageHandler(this._peerMessageHandler)
       .setHandshakeHandler((protocol) => {
         this._addPeer(protocol);
@@ -61,15 +99,7 @@ export class PeerChat extends EventEmitter {
   async broadcastMessage(message) {
     console.assert(message);
 
-    if (!this._peers.size) {
-      this.emit('peer:not-found');
-      return;
-    }
-
-    this._peers.forEach((peer) => {
-      // Async broadcast, so don't (a)wait.
-      this._sendPeerMessage(peer, message);
-    });
+    await this._broadcast.publish(Buffer.from(message));
   }
 
   /**
@@ -88,7 +118,7 @@ export class PeerChat extends EventEmitter {
       return;
     }
 
-    await this._sendPeerMessage(peer, message);
+    await this._sendPeerMessage(peer, Buffer.from(message));
   }
 
   /**
@@ -100,7 +130,8 @@ export class PeerChat extends EventEmitter {
    */
   async _sendPeerMessage(peer, message) {
     const chat = peer.getExtension(PeerChat.EXTENSION_NAME);
-    await chat.send({ type: 'message', message }, { oneway: true });
+    const chunk = this._codec.encode({ type: 'protocol.PeerChatMessage', message: { type: 'message', data: message } });
+    await chat.send(chunk, { oneway: true });
   }
 
   /**

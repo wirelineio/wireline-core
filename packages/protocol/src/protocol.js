@@ -9,8 +9,6 @@ import eos from 'end-of-stream';
 
 import { keyToHuman } from '@wirelineio/utils';
 
-import { Codec } from './codec';
-
 const log = debug('protocol');
 
 /**
@@ -75,11 +73,9 @@ export class Protocol extends EventEmitter {
     super();
 
     // TODO(ashwin): Check Codec() only called when the option is null.
-    const { discoveryToPublicKey = key => key, codec = new Codec(), streamOptions } = options;
+    const { discoveryToPublicKey = key => key, streamOptions } = options;
 
     this._discoveryToPublicKey = discoveryToPublicKey;
-
-    this._codec = codec;
 
     this._streamOptions = streamOptions;
 
@@ -123,7 +119,7 @@ export class Protocol extends EventEmitter {
    * @returns {Protocol}
    */
   setUserData(data) {
-    this._stream.userData = this._codec.encode(data);
+    this._stream.userData = Buffer.from(JSON.stringify(data));
 
     return this;
   }
@@ -284,7 +280,11 @@ export class Protocol extends EventEmitter {
    * @returns {{}}
    */
   getContext() {
-    return this._codec.decode(this._stream.remoteUserData);
+    try {
+      return JSON.parse(this._stream.remoteUserData);
+    } catch (err) {
+      return {};
+    }
   }
 
   /**
