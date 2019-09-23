@@ -17,7 +17,7 @@
     "signal": "discovery-signal-webrtc -p 4000"
   },
   "dependencies": {
-    "@geut/discovery-swarm-webrtc": "^2.2.2",
+    "@geut/discovery-swarm-webrtc": "^2.2.3",
     "@wirelineio/megafeed": "^0.2.18-beta.0",
     "@wirelineio/protocol": "^0.2.18-beta.0",
     "@wirelineio/utils": "^0.2.18-beta.0",
