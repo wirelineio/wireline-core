@@ -74,8 +74,7 @@ class Framework extends EventEmitter {
     this._kappaManager = new KappaManager(this._mega);
 
     // Create a single Kappa instance
-    const topic = keyToHex(partyKey);
-    this._kappa = this._kappaManager.getOrCreateKappa(topic);
+    this._kappa = this._kappaManager.getOrCreateKappa(keyToHex(partyKey));
 
     // Create a ViewManager
     this._viewManager = new ViewManager(this._kappa, this._db, publicKey)
@@ -86,6 +85,7 @@ class Framework extends EventEmitter {
       this._mega.createExtensions.bind(this._mega)
     ];
 
+    // TODO(burdon): This should not happen in the constructor. It can fail.
     this._swarm = createSwarm(conf.id || this._mega.id, conf.partyKey, {
       swarm: conf.swarm,
       hub: conf.hub,

@@ -1,8 +1,8 @@
 {
-  "name": "@wirelineio/protocol",
+  "name": "@wirelineio/broadcast",
   "version": "0.2.18-beta.0",
-  "description": "Protocol wrapper of hypercore-protocol.",
-  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/protocol#readme",
+  "description": "Broadcast messages.",
+  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/broadcast#readme",
   "bugs": {
     "url": "https://github.com/wirelineio/wireline-core/issues"
   },
@@ -12,32 +12,28 @@
   },
   "license": "GPL-3.0",
   "main": "index.js",
-  "browser": "dist/index.js",
+  "browser": "dist/broadcast.js",
+  "files": [
+    "dist",
+    "index.js"
+  ],
   "scripts": {
     "build": "npm run clean && npm run build:protobuf && npm run build:babel",
     "build:babel": "babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps --copy-files",
     "build:protobuf": "pbjs -t json src/schema.proto -o src/schema.json",
     "clean": "del-cli dist",
     "lint": "eslint ./src --ignore-path ../../.eslintignore",
-    "test": "jest --verbose",
+    "test": "jest --verbose --passWithNoTests",
     "posttest": "npm run lint",
-    "prepublishOnly": "npm run test && npm run build",
-    "watch": "babel-watch ./src --out-dir ./dist --source-maps"
+    "prepublishOnly": "npm run test && npm run build"
   },
   "browserslist": [
     "> 5%"
   ],
   "dependencies": {
-    "@wirelineio/broadcast": "^0.2.18-beta.0",
     "@wirelineio/codec-protobuf": "^0.2.18-beta.0",
-    "@wirelineio/utils": "^0.2.18-beta.0",
     "debug": "^4.1.1",
-    "end-of-stream": "^1.4.1",
-    "hypercore-crypto": "^1.0.0",
-    "hypercore-protocol": "^6.11.1",
-    "pump": "^3.0.0",
-    "source-map-support": "^0.5.12",
-    "uuid": "^3.3.2"
+    "source-map-support": "^0.5.12"
   },
   "devDependencies": {
     "@babel/cli": "7.4.4",
@@ -50,10 +46,10 @@
     "babel-plugin-inline-import": "^3.0.0",
     "del-cli": "^2.0.0",
     "eslint": "^5.16.0",
-    "jest": "^24.8.0"
+    "jest": "^24.8.0",
+    "wait-for-expect": "^1.2.0"
   },
   "publishConfig": {
     "access": "public"
-  },
-  "gitHead": "0364698ca71eaf38d892bfc0c6f9b9c7d0f3cb00"
+  }
 }
