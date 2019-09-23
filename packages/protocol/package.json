@@ -35,6 +35,7 @@
     "end-of-stream": "^1.4.1",
     "hypercore-crypto": "^1.0.0",
     "hypercore-protocol": "^6.11.1",
+    "ngraph.graph": "^18.0.1",
     "pump": "^3.0.0",
     "source-map-support": "^0.5.12",
     "uuid": "^3.3.2"
