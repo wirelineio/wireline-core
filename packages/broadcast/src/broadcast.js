@@ -59,12 +59,14 @@ class Broadcast extends EventEmitter {
 
     this._scheduler.addTask('prune-cache', async () => {
       const now = Date.now();
-      this._seenSeqs.forEach((time, seq) => {
+      for (const [time, seq] of this._seenSeqs) {
         if ((now - time) > 10 * 1000) {
           this._seenSeqs.delete(seq);
           this._seenSeqsNeighbors.delete(seq);
+        } else {
+          break;
         }
-      });
+      }
     }, 10 * 1000);
 
     this._cleanReceiver = this._receiver(packetEncoded => this._onPacket(packetEncoded));

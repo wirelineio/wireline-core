@@ -37,8 +37,12 @@ export class PeerChat extends EventEmitter {
     this._codec = new CodecProtobuf({ verify: true });
     this._codec.loadFromJSON(schema);
     this._onMessage = (protocol, context, message) => {
-      this.emit('message', message);
-      peerMessageHandler(protocol, context, message);
+      try {
+        this.emit('message', message);
+        peerMessageHandler(protocol, context, message);
+      } catch (err) {
+        // do nothing
+      }
     };
     this._broadcast = new Broadcast({
       id: this._peerId,
