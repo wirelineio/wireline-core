@@ -53,7 +53,7 @@ class Codec {
       const err = type.verify(message);
 
       if (err) {
-        throw new Error(`CodecProtobuf: Verify error by ${err.message}`);
+        throw new Error(`CodecProtobuf: Verify error by ${err}`);
       }
     }
 
