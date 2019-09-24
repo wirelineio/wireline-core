@@ -27,7 +27,7 @@ let packetsReaded = 0;
 
 const addPeer = () => {
   const peer = _addPeer(graph, TOPIC, {
-    bootstrap: ['http://localhost:4000']
+    bootstrap: ['https://signal.wireline.ninja']
   });
 
   const broadcast = new Broadcast({

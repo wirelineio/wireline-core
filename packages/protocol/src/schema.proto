@@ -12,3 +12,12 @@ message PeerChatMessage {
   required string type = 1;
   bytes data = 2;
 }
+
+message Presence {
+  message Connection {
+    required bytes peerId = 1;
+    bool initiator = 2;
+  }
+  required bytes from = 1;
+  repeated Connection connections = 2;
+}

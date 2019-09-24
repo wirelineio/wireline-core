@@ -35,6 +35,35 @@
               "id": 2
             }
           }
+        },
+        "Presence": {
+          "fields": {
+            "from": {
+              "rule": "required",
+              "type": "bytes",
+              "id": 1
+            },
+            "connections": {
+              "rule": "repeated",
+              "type": "Connection",
+              "id": 2
+            }
+          },
+          "nested": {
+            "Connection": {
+              "fields": {
+                "peerId": {
+                  "rule": "required",
+                  "type": "bytes",
+                  "id": 1
+                },
+                "initiator": {
+                  "type": "bool",
+                  "id": 2
+                }
+              }
+            }
+          }
         }
       }
     }
