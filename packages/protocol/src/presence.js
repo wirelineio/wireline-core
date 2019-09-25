@@ -89,6 +89,10 @@ export class Presence extends EventEmitter {
     });
   }
 
+  get peerId() {
+    return this._peerId;
+  }
+
   get peers() {
     const list = [];
     this.network.forEachNode((node) => {
@@ -206,10 +210,13 @@ export class Presence extends EventEmitter {
 
   _updateNetwork({ from, connections = [] }) {
     const fromHex = keyToHex(from);
+
     const lastUpdate = Date.now();
-    if (this._neighbors.has(fromHex)) return;
+
     this.network.beginUpdate();
+
     this.network.addNode(fromHex, { lastUpdate });
+
     connections.forEach(({ peerId }) => {
       peerId = keyToHex(peerId);
       this.network.addNode(peerId, { lastUpdate });
@@ -218,6 +225,7 @@ export class Presence extends EventEmitter {
         this.network.addLink(source, target);
       }
     });
+
     this.network.endUpdate();
   }
 }
