@@ -29,6 +29,7 @@ export class Replicator extends EventEmitter {
     }, options);
 
     this._feedStore = feedStore;
+    this._peers = new Set();
   }
 
   toString() {
@@ -45,7 +46,8 @@ export class Replicator extends EventEmitter {
     return new Extension(Replicator.extension, { timeout: this._options.timeout })
       .on('error', err => this.emit(err))
       .setHandshakeHandler(this._handshakeHandler.bind(this))
-      .setMessageHandler(this._messageHandler.bind(this));
+      .setMessageHandler(this._messageHandler.bind(this))
+      .setCloseHandler(this._closeHandler.bind(this));
   }
 
   /**
@@ -73,39 +75,42 @@ export class Replicator extends EventEmitter {
     const extension = protocol.getExtension(Replicator.extension);
     console.assert(extension);
 
-    const topics = await this.getTopics(protocol);
+    try {
+      this._peers.add(protocol);
 
-    // Ask peer for topic feeds and create the feeds if they don't exist.
-    const { response: { feedKeysByTopic } } = await extension.send({ type: 'get-keys', topics });
-    await Promise.all(
-      feedKeysByTopic.map(async ({ topic, keys }) => {
-        await Promise.all(keys.map(async (key) => {
-          const path = `feed/${topic}/${key}`;
-          const keyBuffer = Buffer.from(key, 'hex');
+      const topics = await this.getTopics(protocol);
 
-          try {
-            await this._feedStore.openFeed(path, {
-              key: keyBuffer,
-              metadata: { topic }
-            });
-          } catch (err) {
-            // eslint-disable-next-line no-empty
-          }
-        }));
-      })
-    );
+      const { feedKeysByTopic, feeds } = await this._getFeedsByTopic(topics);
 
-    const onFeed = (feed, stat) => {
-      if (topics.includes(stat.metadata.topic)) {
+      await extension.send({ type: 'sync-keys', feedKeysByTopic }, { oneway: true });
+
+      feeds.forEach((feed) => {
         this._replicate(protocol, feed);
-      }
-    };
+      });
 
-    this._feedStore.on('feed', onFeed);
+      const onFeed = (feed, stat) => {
+        if (topics.includes(stat.metadata.topic)) {
+          const feedKeysByTopic = [{ topic: stat.metadata.topic, keys: [keyToHex(feed.key)] }];
+          this._peers.forEach(async (peer) => {
+            try {
+              await extension.send({ type: 'sync-keys', feedKeysByTopic  }, { oneway: true });
+              this._replicate(peer, feed);
+            } catch (err) {
+              console.warn('Replicator sync error: ', err.message);
+            }
+          });
+        }
+      };
 
-    eos(protocol.stream, () => {
-      this._feedStore.removeListener('feed', onFeed);
-    });
+      this._feedStore.on('feed', onFeed);
+
+      eos(protocol.stream, () => {
+        this._feedStore.removeListener('feed', onFeed);
+      });
+    } catch (err) {
+      console.warn('Replicator handshake error: ', err.message);
+      protocol.stream.destroy();
+    }
   }
 
   /**
@@ -141,29 +146,12 @@ export class Replicator extends EventEmitter {
       }
 
       //
-      // Get all feed keys by topic.
+      // The remote user wants to share keys with me.
       //
-      case 'get-keys': {
-        const { topics } = message;
-        const feedKeysByTopic = await Promise.all(topics.map(async (topic) => {
-          const feeds = await this._feedStore.loadFeeds((descriptor) => {
-            return descriptor.stat.metadata.topic === topic;
-          });
-
-          const keys = feeds.map(feed => keyToHex(feed.key));
-
-          // Share and replicate feeds over protocol stream.
-          feeds.forEach((feed) => {
-            // Start replicating.
-            this._replicate(protocol, feed);
-          });
-
-          return { topic, keys };
-        }));
-
-        return {
-          feedKeysByTopic
-        };
+      case 'sync-keys': {
+        const { feedKeysByTopic } = message;
+        await this._openFeeds(feedKeysByTopic);
+        break;
       }
 
       //
@@ -173,6 +161,10 @@ export class Replicator extends EventEmitter {
         throw new Error(`Invalid type: ${type}`);
       }
     }
+  }
+
+  _closeHandler(err, protocol) {
+    this._peers.delete(protocol);
   }
 
   /**
@@ -203,4 +195,42 @@ export class Replicator extends EventEmitter {
     return true;
   }
 
+  async _getFeedsByTopic(topics) {
+    const list = [];
+    const feedKeysByTopic = await Promise.all(topics.map(async (topic) => {
+      const feeds = await this._feedStore.loadFeeds((descriptor) => {
+        return descriptor.stat.metadata.topic === topic;
+      });
+
+      const keys = feeds.map((feed) => {
+        list.push(feed);
+        return keyToHex(feed.key);
+      });
+
+
+      return { topic, keys };
+    }));
+
+    return { feedKeysByTopic, feeds: list };
+  }
+
+  async _openFeeds(feedKeysByTopic) {
+    return Promise.all(
+      feedKeysByTopic.map(async ({ topic, keys }) => {
+        await Promise.all(keys.map(async (key) => {
+          const path = `feed/${topic}/${key}`;
+          const keyBuffer = Buffer.from(key, 'hex');
+
+          try {
+            await this._feedStore.openFeed(path, {
+              key: keyBuffer,
+              metadata: { topic }
+            });
+          } catch (err) {
+            // eslint-disable-next-line no-empty
+          }
+        }));
+      })
+    );
+  }
 }
