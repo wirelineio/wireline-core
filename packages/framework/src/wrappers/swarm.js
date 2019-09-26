@@ -8,7 +8,6 @@ const debug = require('debug')('dsuite:swarm');
 const { Protocol } = require('@wirelineio/protocol');
 const { keyToHex, getDiscoveryKey, keyToBuffer } = require('@wirelineio/utils');
 
-const Metric = require('../utils/metric');
 const Config = require('../config');
 
 const isBrowser = typeof window !== 'undefined';
@@ -96,8 +95,6 @@ module.exports = function createSwarm(id, topic, options = {}) {
     }
   });
 
-  const hasSignal = sw.signal && sw.signal.info;
-
   const getPeersCount = (channel) => {
     try {
       return sw.getPeers(channel).filter(peer => peer.connected).length;
@@ -106,12 +103,9 @@ module.exports = function createSwarm(id, topic, options = {}) {
     }
   };
 
-  const infoMessage = message => hasSignal && sw.signal.info(message);
   const parseInfo = info => ({ id: keyToHex(info.id), channel: keyToHex(info.channel) });
 
   sw.on('connection', (peer, info) => {
-    infoMessage({ type: 'connection', channel: info.channel, from: id, to: info.id });
-
     debug('Connection open:', keyToHex(info.id));
     emit('metric.swarm.connection-open', {
       value: getPeersCount(info.channel),
@@ -122,8 +116,6 @@ module.exports = function createSwarm(id, topic, options = {}) {
   });
 
   sw.on('connection-closed', (peer, info) => {
-    infoMessage({ type: 'disconnection', channel: info.channel, from: id, to: info.id });
-
     debug('Connection closed:', keyToHex(info.id));
     emit('metric.swarm.connection-closed', {
       value: getPeersCount(info.channel),
@@ -146,20 +138,6 @@ module.exports = function createSwarm(id, topic, options = {}) {
 
     emit('metric.swarm.reconnecting', {
       info: parseInfo(info),
-      swarm: sw
-    });
-  });
-
-  sw.on('info', (info) => {
-    const value = {
-      id: idHex,
-      channel: keyToHex(info.channel),
-      connections: info.connections
-    };
-
-    emit('metric.swarm.network-updated', {
-      value: new Metric(value, value => value.connections.length),
-      info,
       swarm: sw
     });
   });

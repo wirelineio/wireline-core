@@ -51,6 +51,10 @@ class Framework extends EventEmitter {
     console.assert(keys.secretKey);
     console.assert(name);
 
+    console.assert(!conf.id || (conf.id && Buffer.isBuffer(conf.id)));
+
+    this._id = conf.id || keys.publicKey;
+
     //
     // Megafeed
     //
@@ -77,7 +81,7 @@ class Framework extends EventEmitter {
     this._kappa = this._kappaManager.getOrCreateKappa(keyToHex(partyKey));
 
     // Create a ViewManager
-    this._viewManager = new ViewManager(this._kappa, this._db, publicKey)
+    this._viewManager = new ViewManager(this._kappa, this._db, this._id)
       .registerTypes(ViewTypes)
       .registerViews(Views);
 
@@ -86,7 +90,7 @@ class Framework extends EventEmitter {
     ];
 
     // TODO(burdon): This should not happen in the constructor. It can fail.
-    this._swarm = createSwarm(conf.id || this._mega.id, conf.partyKey, {
+    this._swarm = createSwarm(this._id, partyKey, {
       swarm: conf.swarm,
       hub: conf.hub,
       ice: conf.ice,
@@ -106,13 +110,17 @@ class Framework extends EventEmitter {
   //
 
   /**
-   * Author key representing the identity of the user in the network
+   * `id` representing the identity of the user in the network and the author of the changes in the feed.
    *
    * This is not a final solution. It's a hack to identify the user.
    *
    * @prop {Buffer}
    *
    */
+  get id() {
+    return this._id;
+  }
+
   get key() {
     return this._mega.key;
   }
