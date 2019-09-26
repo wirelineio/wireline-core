@@ -218,8 +218,21 @@ export class Protocol extends EventEmitter {
         this.emit('handshake', this);
       } catch (err) {
         this._stream.destroy();
-        this.emit('error', err);
+        console.warn(err);
       }
+
+      this._stream.on('feed', (discoveryKey) => {
+        try {
+          // We wait for the protocol initialization handshake before start sharing feeds.
+          const context = this.getContext();
+
+          this._extensionMap.forEach((extension) => {
+            extension.onFeed(context, discoveryKey);
+          });
+        } catch (err) {
+          console.warn(err);
+        }
+      });
     });
 
     let initialKey = null;
@@ -252,14 +265,6 @@ export class Protocol extends EventEmitter {
         }
 
         this._initStream(initialKey);
-
-        this._stream.on('feed', (discoveryKey) => {
-          const context = this.getContext();
-
-          this._extensionMap.forEach((extension) => {
-            extension.onFeed(context, discoveryKey);
-          });
-        });
       });
     }
 

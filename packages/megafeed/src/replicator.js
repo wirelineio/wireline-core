@@ -29,7 +29,7 @@ export class Replicator extends EventEmitter {
     }, options);
 
     this._feedStore = feedStore;
-    this._peers = new Set();
+    this._peers = new Map();
   }
 
   toString() {
@@ -47,7 +47,8 @@ export class Replicator extends EventEmitter {
       .on('error', err => this.emit(err))
       .setHandshakeHandler(this._handshakeHandler.bind(this))
       .setMessageHandler(this._messageHandler.bind(this))
-      .setCloseHandler(this._closeHandler.bind(this));
+      .setCloseHandler(this._closeHandler.bind(this))
+      .setFeedHandler(this._feedHandler.bind(this));
   }
 
   /**
@@ -76,9 +77,9 @@ export class Replicator extends EventEmitter {
     console.assert(extension);
 
     try {
-      this._peers.add(protocol);
-
       const topics = await this.getTopics(protocol);
+
+      this._peers.set(protocol, { topics });
 
       const { feedKeysByTopic, feeds } = await this._getFeedsByTopic(topics);
 
@@ -91,7 +92,7 @@ export class Replicator extends EventEmitter {
       const onFeed = (feed, stat) => {
         if (topics.includes(stat.metadata.topic)) {
           const feedKeysByTopic = [{ topic: stat.metadata.topic, keys: [keyToHex(feed.key)] }];
-          this._peers.forEach(async (peer) => {
+          this._peers.forEach(async (_, peer) => {
             try {
               await extension.send({ type: 'sync-keys', feedKeysByTopic  }, { oneway: true });
               this._replicate(peer, feed);
@@ -232,5 +233,18 @@ export class Replicator extends EventEmitter {
         }));
       })
     );
+  }
+
+  _feedHandler(protocol, _, discoveryKey) {
+    const { topics = [] } = this._peers.get(protocol) || {};
+
+    const feed = this._feedStore.findFeed((descriptor) => {
+      const topic = descriptor.stat.metadata && descriptor.stat.metadata.topic;
+      return descriptor.discoveryKey.equals(discoveryKey) && topics.includes(topic);
+    });
+
+    if (feed) {
+      this._replicate(protocol, feed);
+    }
   }
 }
