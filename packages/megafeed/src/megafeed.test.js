@@ -3,47 +3,57 @@
 //
 
 import debug from 'debug';
+import pump from 'pump';
+import crypto from 'crypto';
+import ram from 'random-access-memory';
+import waitForExpect from 'wait-for-expect';
 
-import network from '@wirelineio/hyperswarm-network-memory';
-import { keyToHex, latch } from '@wirelineio/utils';
+import { Protocol } from '@wirelineio/protocol';
+import { keyToHex, keyToBuffer } from '@wirelineio/utils';
 
-import { createKeys, createMegafeed, Node } from '@wirelineio/gravity';
+import { Megafeed } from './megafeed';
 
 debug.enable('test,megafeed,replicator,feedmap,protocol,view,extension');
 
-const topicKeys = createKeys(5);
+const createMegafeed = async (name, topic) => {
+  const mega = await Megafeed.create(ram, { valueEncoding: 'utf8' });
+  const feed = await mega.openFeed(`feed/${topic}/local`, { metadata: { topic } });
+  feed.append(`hi from ${name}`);
+  return { feed, mega };
+};
 
-const [rendezvousKey] = createKeys(1);
+const createConnect = topic => (mega1, mega2) => {
+  const protocol1 = new Protocol({
+    streamOptions: {
+      live: true
+    }
+  })
+    .setExtensions(mega1.createExtensions())
+    .init(keyToBuffer(topic));
 
-test('megafeed replicator', async (done) => {
-  const numFeedsPerTopic = 2;
-  const numMessagesPerFeed = 5;
+  const protocol2 = new Protocol({
+    streamOptions: {
+      live: true
+    }
+  })
+    .setExtensions(mega2.createExtensions())
+    .init(keyToBuffer(topic));
 
-  const megafeed1 = await createMegafeed({ topicKeys, numFeedsPerTopic, numMessagesPerFeed });
+  return pump(protocol1.stream, protocol2.stream, protocol1.stream);
+};
 
-  const megafeed2 = await createMegafeed();
+test('megafeed replicator', async () => {
 
-  const node1 = new Node(network(), megafeed1).joinSwarm(rendezvousKey);
-  const node2 = new Node(network(), megafeed2).joinSwarm(rendezvousKey);
+  const topic = keyToHex(crypto.randomBytes(32));
+  const connect = createConnect(topic);
 
-  const onUpdate = latch(topicKeys.length * numFeedsPerTopic, async () => {
-    const feeds1 = await megafeed1.getFeeds().sort((a, b) => (keyToHex(a.key) < keyToHex(b.key) ? -1 : 1));
-    const feeds2 = await megafeed2.getFeeds().sort((a, b) => (keyToHex(a.key) < keyToHex(b.key) ? -1 : 1));
+  const { mega: mega1 } = await createMegafeed('peerOne', topic);
+  const { mega: mega2 } = await createMegafeed('peerOne', topic);
 
-    expect(feeds1.length).toBe(feeds2.length);
-    expect(feeds2.length).toBe(topicKeys.length * numFeedsPerTopic);
+  connect(mega1, mega2, mega1);
 
-    feeds1.forEach((feed, index) => {
-      expect(keyToHex(feed.key)).toBe(keyToHex(feeds2[index].key));
-      expect(feeds2[index].length).toBe(feed.length);
-      expect(feeds2[index].length).toBe(numMessagesPerFeed);
-    });
-
-    node1.leaveSwarm();
-    node2.leaveSwarm();
-
-    done();
+  await waitForExpect(() => {
+    expect(mega1.getFeeds().length).toBe(2);
+    expect(mega2.getFeeds().length).toBe(2);
   });
-
-  megafeed2.on('update', onUpdate);
 });

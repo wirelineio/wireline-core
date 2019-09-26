@@ -53,8 +53,7 @@ export class Megafeed extends EventEmitter {
 
     // Manages feed replication.
     this._replicator = new Replicator(this._feedStore)
-      .on('error', err => this.emit('error', err))
-      .on('update', topic => this.emit('update', topic));
+      .on('error', err => this.emit('error', err));
   }
 
   get id() {

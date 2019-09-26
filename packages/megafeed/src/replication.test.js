@@ -98,23 +98,21 @@ test('feed store replication', async (done) => {
     return async (protocol) => {
       const keys = protocol.getExtension(extension);
 
-      {
-        // Ask peer for topics.
-        const { response: { topics } } = await keys.send({ type: 'list' });
+      // Ask peer for topics.
+      const { response: { topics } } = await keys.send({ type: 'list' });
 
-        // Ask peer for topic feeds and replicate.
-        const { response: { topics: feedsByTopic } } = await keys.send({ type: 'request', topics });
-        feedsByTopic.forEach(async ({ topic, keys }) => {
-          await Promise.all(keys.map(async (key) => {
-            const path = `feed/${topic}/${key}`;
-            const feed = await feedStore.openFeed(path, { key: Buffer.from(key, 'hex'), valueEncoding: 'json', metadata: { topic } });
+      // Ask peer for topic feeds and replicate.
+      const { response: { topics: feedsByTopic } } = await keys.send({ type: 'request', topics });
+      feedsByTopic.forEach(async ({ topic, keys }) => {
+        await Promise.all(keys.map(async (key) => {
+          const path = `feed/${topic}/${key}`;
+          const feed = await feedStore.openFeed(path, { key: Buffer.from(key, 'hex'), valueEncoding: 'json', metadata: { topic } });
 
-            // Share and replicate feeds over protocol stream.
-            protocol.stream.feed(key);
-            feed.replicate({ live: true, stream: protocol.stream });
-          }));
-        });
-      }
+          // Share and replicate feeds over protocol stream.
+          protocol.stream.feed(key);
+          feed.replicate({ live: true, stream: protocol.stream });
+        }));
+      });
     };
   };
 

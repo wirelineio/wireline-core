@@ -177,7 +177,7 @@ export class Protocol extends EventEmitter {
    *
    * https://github.com/mafintosh/hypercore-protocol
    *
-   * @param {string} [initialKey]
+   * @param {Buffer} [initialKey]
    * @returns {Protocol}
    */
   init(discoveryKey) {
