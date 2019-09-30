@@ -38,7 +38,7 @@ export class Presence extends EventEmitter {
     this._codec = new CodecProtobuf({ verify: true });
     this._codec.loadFromJSON(schema);
     this._neighbors = new Map();
-    this._peerTimeout = 60 * 1000;
+    this._peerTimeout = 2 * 60 * 1000;
 
     this._buildNetwork();
     this._buildBroadcast();
