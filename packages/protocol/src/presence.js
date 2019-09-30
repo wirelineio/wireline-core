@@ -117,7 +117,6 @@ export class Presence extends EventEmitter {
 
       if (networkUpdated) {
         log('network-updated', changes);
-        this.ping();
         this.emit('network-updated', changes, this.network);
       }
     });
@@ -208,6 +207,7 @@ export class Presence extends EventEmitter {
     this.network.endUpdate();
 
     this.emit('neighbor:joined', keyToBuffer(peerId), protocol);
+    this.ping();
   }
 
   /**
@@ -224,6 +224,7 @@ export class Presence extends EventEmitter {
     this._neighbors.delete(peerId);
     this._deleteNode(peerId);
     this.emit('neighbor:left', peerId);
+    this.ping();
   }
 
   _updateNetwork({ from, connections = [] }) {
