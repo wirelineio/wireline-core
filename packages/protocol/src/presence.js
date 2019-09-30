@@ -37,56 +37,12 @@ export class Presence extends EventEmitter {
     this._peerId = peerId;
     this._codec = new CodecProtobuf({ verify: true });
     this._codec.loadFromJSON(schema);
-
     this._neighbors = new Map();
-    this.network = createGraph();
-    this.network.addNode(keyToHex(this._peerId));
+    this._peerTimeout = 60 * 1000;
 
-    this._broadcast = new Broadcast({
-      id: this._peerId,
-      lookup: () => {
-        return Array.from(this._neighbors.values()).map((peer) => {
-          const { peerId } = peer.getContext();
-
-          return {
-            id: keyToBuffer(peerId),
-            protocol: peer
-          };
-        });
-      },
-      sender: async (packet, { protocol }) => {
-        const presence = protocol.getExtension(Presence.EXTENSION_NAME);
-        await presence.send(packet, { oneway: true });
-      },
-      receiver: (onPacket) => {
-        this._peerMessageHandler = (protocol, context, chunk) => {
-          onPacket(chunk);
-        };
-      }
-    });
-
-    this._broadcast.on('packet', (packet) => {
-      this.emit('remote-ping', this._codec.decode(packet.data, false));
-    });
-    this.network.on('changed', (changes) => {
-      this.emit('network-updated', changes, this.network);
-    });
-
-    this._broadcast.run();
-
-    this._initializeScheduler();
-
-    this.on('remote-ping', packet => this._updateNetwork(packet));
-    this.on('network-updated', (changes) => {
-      changes.forEach(({ changeType, node, link }) => {
-        if (changeType === 'update') return;
-
-        const type = changeType === 'add' ? 'joined' : 'left';
-
-        if (node) this.emit(`peer:${type}`, keyToBuffer(node.id));
-        if (link) this.emit(`connection:${type}`, keyToBuffer(link.fromId), keyToBuffer(link.toId));
-      });
-    });
+    this._buildNetwork();
+    this._buildBroadcast();
+    this._buildScheduler();
   }
 
   get peerId() {
@@ -124,14 +80,96 @@ export class Presence extends EventEmitter {
   }
 
   async ping() {
-    const message = {
-      from: this._peerId,
-      connections: Array.from(this._neighbors.values()).map((peer) => {
-        const { peerId } = peer.getContext();
-        return { peerId: keyToBuffer(peerId) };
-      })
-    };
-    return this._broadcast.publish(this._codec.encode({ type: 'protocol.Presence', message }));
+    try {
+      const message = {
+        from: this._peerId,
+        connections: Array.from(this._neighbors.values()).map((peer) => {
+          const { peerId } = peer.getContext();
+          return { peerId: keyToBuffer(peerId) };
+        })
+      };
+
+      await this._broadcast.publish(this._codec.encode({ type: 'protocol.Presence', message }));
+      log('ping', message);
+    } catch (err) {
+      console.warn(err);
+    }
+  }
+
+  _buildNetwork() {
+    this.network = createGraph();
+    this.network.addNode(keyToHex(this._peerId));
+    this.network.on('changed', (changes) => {
+      let networkUpdated = false;
+
+      changes.forEach(({ changeType, node, link }) => {
+        if (changeType === 'update') return;
+
+        networkUpdated = true;
+
+        const type = changeType === 'add' ? 'joined' : 'left';
+
+        if (node) this.emit(`peer:${type}`, keyToBuffer(node.id));
+        if (link) this.emit(`connection:${type}`, keyToBuffer(link.fromId), keyToBuffer(link.toId));
+      });
+
+      if (networkUpdated) {
+        log('network-updated', changes);
+        this.ping();
+        this.emit('network-updated', changes, this.network);
+      }
+    });
+  }
+
+  _buildBroadcast() {
+    this._broadcast = new Broadcast({
+      id: this._peerId,
+      lookup: () => {
+        return Array.from(this._neighbors.values()).map((peer) => {
+          const { peerId } = peer.getContext();
+
+          return {
+            id: keyToBuffer(peerId),
+            protocol: peer
+          };
+        });
+      },
+      sender: async (packet, { protocol }) => {
+        const presence = protocol.getExtension(Presence.EXTENSION_NAME);
+        await presence.send(packet, { oneway: true });
+      },
+      receiver: (onPacket) => {
+        this._peerMessageHandler = (protocol, context, chunk) => {
+          onPacket(chunk);
+        };
+      }
+    });
+
+    this._broadcast.on('packet', packet => this.emit('remote-ping', this._codec.decode(packet.data, false)));
+    this.on('remote-ping', packet => this._updateNetwork(packet));
+
+    this._broadcast.run();
+  }
+
+  _buildScheduler() {
+    this._pingInterval = setInterval(() => {
+      this.ping();
+    }, Math.floor(this._peerTimeout / 2));
+
+    this._pruneNetworkInterval = setInterval(() => {
+      const now = Date.now();
+      const localPeerId = keyToHex(this._peerId);
+      this.network.beginUpdate();
+      this.network.forEachNode((node) => {
+        if (node.id === localPeerId) return;
+        if (this._neighbors.has(node.id)) return;
+
+        if ((now - node.data.lastUpdate) > this._peerTimeout) {
+          this._deleteNode(node.id);
+        }
+      });
+      this.network.endUpdate();
+    }, Math.floor(this._peerTimeout / 2));
   }
 
   /**
@@ -156,12 +194,17 @@ export class Presence extends EventEmitter {
       return;
     }
 
+    this.network.beginUpdate();
+
     this._neighbors.set(peerId, protocol);
     this.network.addNode(peerId, { lastUpdate: Date.now() });
     const [source, target] = [keyToHex(this._peerId), peerId].sort();
     if (!this.network.hasLink(source, target)) {
       this.network.addLink(source, target);
     }
+
+    this.network.endUpdate();
+
     this.emit('neighbor:joined', keyToBuffer(peerId), protocol);
   }
 
@@ -177,35 +220,8 @@ export class Presence extends EventEmitter {
 
     const { peerId } = context;
     this._neighbors.delete(peerId);
-    this.network.removeNode(peerId);
-    this.network.forEachLinkedNode(peerId, (_, link) => {
-      this.network.removeLink(link);
-    });
+    this._deleteNode(peerId);
     this.emit('neighbor:left', peerId);
-  }
-
-  _initializeScheduler() {
-    this._pingInterval = setInterval(() => {
-      this.ping();
-    }, 2 * 1000);
-
-    this._pruneNetworkInterval = setInterval(() => {
-      const now = Date.now();
-      const localPeerId = keyToHex(this._peerId);
-      this.network.beginUpdate();
-      this.network.forEachNode((node) => {
-        if (node.id === localPeerId) return;
-        if (this._neighbors.has(node.id)) return;
-
-        if ((now - node.data.lastUpdate) > 5 * 1000) {
-          this.network.removeNode(node.id);
-          this.network.forEachLinkedNode(node.id, (_, link) => {
-            this.network.removeLink(link);
-          });
-        }
-      });
-      this.network.endUpdate();
-    }, 5 * 1000);
   }
 
   _updateNetwork({ from, connections = [] }) {
@@ -217,15 +233,46 @@ export class Presence extends EventEmitter {
 
     this.network.addNode(fromHex, { lastUpdate });
 
-    connections.forEach(({ peerId }) => {
+    connections = connections.map(({ peerId }) => {
       peerId = keyToHex(peerId);
       this.network.addNode(peerId, { lastUpdate });
       const [source, target] = [fromHex, peerId].sort();
-      if (!this.network.hasLink(source, target)) {
-        this.network.addLink(source, target);
+      return { source, target };
+    });
+
+    connections.forEach((conn) => {
+      if (!this.network.hasLink(conn.source, conn.target)) {
+        this.network.addLink(conn.source, conn.target);
       }
     });
 
+    this.network.forEachLinkedNode(fromHex, (_, link) => {
+      const toDelete = !connections.find(conn => conn.source === link.fromId && conn.target === link.toId);
+
+      if (!toDelete) {
+        return;
+      }
+
+      this.network.removeLink(link);
+
+      this._deleteNodeIfEmpty(link.fromId);
+      this._deleteNodeIfEmpty(link.toId);
+    });
+
     this.network.endUpdate();
+  }
+
+  _deleteNode(id) {
+    this.network.removeNode(id);
+    this.network.forEachLinkedNode(id, (_, link) => {
+      this.network.removeLink(link);
+    });
+  }
+
+  _deleteNodeIfEmpty(id) {
+    const links = this.network.getLinks(id) || [];
+    if (links.length === 0) {
+      this.network.removeNode(id);
+    }
   }
 }
