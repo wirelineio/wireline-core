@@ -29,16 +29,18 @@ export class Presence extends EventEmitter {
    * @param {string} peerId
    * @param {Function} peerMessageHandler
    */
-  constructor(peerId) {
+  constructor(peerId, options = {}) {
     super();
 
     console.assert(Buffer.isBuffer(peerId));
 
+    const { peerTimeout = 2 * 60 * 1000 } = options;
+
     this._peerId = peerId;
+    this._peerTimeout = peerTimeout;
     this._codec = new CodecProtobuf({ verify: true });
     this._codec.loadFromJSON(schema);
     this._neighbors = new Map();
-    this._peerTimeout = 2 * 60 * 1000;
 
     this._buildNetwork();
     this._buildBroadcast();

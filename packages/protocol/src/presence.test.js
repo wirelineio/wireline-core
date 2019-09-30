@@ -12,7 +12,7 @@ import { Presence } from './presence';
 import { Protocol } from './protocol';
 
 const log = debug('test');
-debug.enable('test,presence');
+debug.enable('test');
 
 const TIMEOUT = 16 * 1000;
 
@@ -21,7 +21,7 @@ jest.setTimeout(TIMEOUT);
 const createPeer = (publicKey) => {
   const peerId = crypto.randomBytes(6);
 
-  const presence = new Presence(peerId);
+  const presence = new Presence(peerId, { peerTimeout: 6 * 1000 });
   const stream = () => new Protocol({
     streamOptions: {
       live: true
