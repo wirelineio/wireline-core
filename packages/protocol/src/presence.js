@@ -108,10 +108,8 @@ export class Presence extends EventEmitter {
     this._broadcast.run();
 
     this._scheduler = setInterval(() => {
-      queueMicrotask(() => {
-        this._pruneNetwork();
-        this.ping();
-      });
+      this.ping();
+      queueMicrotask(() => this._pruneNetwork());
     }, Math.floor(this._peerTimeout / 2));
   }
 
