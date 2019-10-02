@@ -5,6 +5,7 @@
 import { EventEmitter } from 'events';
 import createGraph from 'ngraph.graph';
 import debug from 'debug';
+import queueMicrotask from 'queue-microtask';
 
 import Broadcast from '@wirelineio/broadcast';
 import CodecProtobuf from '@wirelineio/codec-protobuf';
@@ -44,7 +45,6 @@ export class Presence extends EventEmitter {
 
     this._buildNetwork();
     this._buildBroadcast();
-    this._buildScheduler();
   }
 
   get peerId() {
@@ -64,8 +64,10 @@ export class Presence extends EventEmitter {
    * @return {Extension}
    */
   createExtension() {
+    this.start();
+
     return new Extension(Presence.EXTENSION_NAME, { binary: true })
-      .setMessageHandler(this._peerMessageHandler)
+      .setMessageHandler(this._peerMessageHandler.bind(this))
       .setHandshakeHandler((protocol) => {
         log('handshake', protocol.getContext());
         this._addPeer(protocol);
@@ -96,6 +98,27 @@ export class Presence extends EventEmitter {
     } catch (err) {
       console.warn(err);
     }
+  }
+
+  start() {
+    if (this._scheduler) {
+      return;
+    }
+
+    this._broadcast.run();
+
+    this._scheduler = setInterval(() => {
+      queueMicrotask(() => {
+        this._pruneNetwork();
+        this.ping();
+      });
+    }, Math.floor(this._peerTimeout / 2));
+  }
+
+  stop() {
+    this._broadcast.stop();
+    clearInterval(this._scheduler);
+    this._scheduler = null;
   }
 
   _buildNetwork() {
@@ -140,37 +163,33 @@ export class Presence extends EventEmitter {
         await presence.send(packet, { oneway: true });
       },
       receiver: (onPacket) => {
-        this._peerMessageHandler = (protocol, context, chunk) => {
+        this.on('protocol-message', (protocol, context, chunk) => {
           onPacket(chunk);
-        };
+        });
       }
     });
 
     this._broadcast.on('packet', packet => this.emit('remote-ping', this._codec.decode(packet.data, false)));
     this.on('remote-ping', packet => this._updateNetwork(packet));
-
-    this._broadcast.run();
   }
 
-  _buildScheduler() {
-    this._pingInterval = setInterval(() => {
-      this.ping();
-    }, Math.floor(this._peerTimeout / 2));
+  _peerMessageHandler(protocol, context, chunk) {
+    this.emit('protocol-message', protocol, context, chunk);
+  }
 
-    this._pruneNetworkInterval = setInterval(() => {
-      const now = Date.now();
-      const localPeerId = keyToHex(this._peerId);
-      this.network.beginUpdate();
-      this.network.forEachNode((node) => {
-        if (node.id === localPeerId) return;
-        if (this._neighbors.has(node.id)) return;
+  _pruneNetwork() {
+    const now = Date.now();
+    const localPeerId = keyToHex(this._peerId);
+    this.network.beginUpdate();
+    this.network.forEachNode((node) => {
+      if (node.id === localPeerId) return;
+      if (this._neighbors.has(node.id)) return;
 
-        if ((now - node.data.lastUpdate) > this._peerTimeout) {
-          this._deleteNode(node.id);
-        }
-      });
-      this.network.endUpdate();
-    }, Math.floor(this._peerTimeout / 2));
+      if ((now - node.data.lastUpdate) > this._peerTimeout) {
+        this._deleteNode(node.id);
+      }
+    });
+    this.network.endUpdate();
   }
 
   /**
@@ -179,7 +198,6 @@ export class Presence extends EventEmitter {
    * @private
    */
   _addPeer(protocol) {
-    // TODO(ashwin): Is there a natural base class for peer management?
     console.assert(protocol);
     const context = protocol.getContext();
 
@@ -224,7 +242,17 @@ export class Presence extends EventEmitter {
     this._neighbors.delete(peerId);
     this._deleteNode(peerId);
     this.emit('neighbor:left', peerId);
-    this.ping();
+
+    if (this._neighbors.size > 0) {
+      return this.ping();
+    }
+
+    // We clear the network graph.
+    const localPeerId = keyToHex(this._peerId);
+    this.network.forEachNode((node) => {
+      if (node.id === localPeerId) return;
+      this._deleteNode(node.id);
+    });
   }
 
   _updateNetwork({ from, connections = [] }) {

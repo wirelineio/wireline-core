@@ -57,7 +57,7 @@ class Broadcast extends EventEmitter {
     if (this._running) return;
     this._running = true;
 
-    this._scheduler.addTask('prune-cache', async () => {
+    this._scheduler.addTask('prune-cache', () => {
       const now = Date.now();
       for (const [time, seq] of this._seenSeqs) {
         if ((now - time) > 10 * 1000) {
@@ -69,7 +69,7 @@ class Broadcast extends EventEmitter {
       }
     }, 10 * 1000);
 
-    this._cleanReceiver = this._receiver(packetEncoded => this._onPacket(packetEncoded));
+    this._cleanReceiver = this._receiver(packetEncoded => this._onPacket(packetEncoded)) || (() => {});
 
     this._scheduler.startTask('prune-cache');
     debug('running %h', this._id);

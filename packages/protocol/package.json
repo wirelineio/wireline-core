@@ -37,6 +37,7 @@
     "hypercore-protocol": "^6.11.1",
     "ngraph.graph": "^18.0.1",
     "pump": "^3.0.0",
+    "queue-microtask": "^1.1.2",
     "source-map-support": "^0.5.12",
     "uuid": "^3.3.2"
   },
