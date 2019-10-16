@@ -9,10 +9,16 @@ import createDebug from 'debug';
 
 // eslint-disable-next-line
 import schema from './schema.json';
-import Scheduler from './scheduler';
+import TimeLRUSet from './time-lru-set';
 
 createDebug.formatters.h = v => v.toString('hex').slice(0, 6);
 const debug = createDebug('broadcast');
+
+const msgId = (seqno, from) => {
+  console.assert(Buffer.isBuffer(seqno));
+  console.assert(Buffer.isBuffer(from));
+  return `${seqno.toString('hex')}:${from.toString('hex')}`;
+};
 
 class Broadcast extends EventEmitter {
   constructor(opts = {}) {
@@ -30,26 +36,24 @@ class Broadcast extends EventEmitter {
     this._receiver = onMessage => receiver(onMessage);
 
     this._running = false;
-    this._seenSeqs = new Map();
-    this._seenSeqsNeighbors = new Map();
+    this._seenSeqs = new TimeLRUSet({ maxAge: opts.maxAge });
     this._peers = [];
-    this._scheduler = new Scheduler();
     this._codec = new Codec({ verify: true });
     this._codec.loadFromJSON(schema);
 
     this.on('error', (err) => { debug(err); });
   }
 
-  async publish(data, { seq = crypto.randomBytes(32) } = {}) {
+  async publish(data, { seqno = crypto.randomBytes(32) } = {}) {
     if (!this._running) {
       console.warn('Broadcast not running.');
       return;
     }
 
     console.assert(Buffer.isBuffer(data));
-    console.assert(Buffer.isBuffer(seq));
+    console.assert(Buffer.isBuffer(seqno));
 
-    const packet = { seq, data };
+    const packet = { seqno, origin: this._id, data };
     await this._publish(packet);
   }
 
@@ -57,21 +61,8 @@ class Broadcast extends EventEmitter {
     if (this._running) return;
     this._running = true;
 
-    this._scheduler.addTask('prune-cache', () => {
-      const now = Date.now();
-      for (const [time, seq] of this._seenSeqs) {
-        if ((now - time) > 10 * 1000) {
-          this._seenSeqs.delete(seq);
-          this._seenSeqsNeighbors.delete(seq);
-        } else {
-          break;
-        }
-      }
-    }, 10 * 1000);
-
     this._cleanReceiver = this._receiver(packetEncoded => this._onPacket(packetEncoded)) || (() => {});
 
-    this._scheduler.startTask('prune-cache');
     debug('running %h', this._id);
   }
 
@@ -79,8 +70,8 @@ class Broadcast extends EventEmitter {
     if (!this._running) return;
     this._running = false;
 
-    this._scheduler.deleteTask('prune-cache');
     this._cleanReceiver();
+
     debug('stop %h', this._id);
   }
 
@@ -103,10 +94,12 @@ class Broadcast extends EventEmitter {
 
   async _publish(packet) {
     try {
-      this._seenSeqs.set(packet.seq.toString('hex'), Date.now());
+      // Seen it by me.
+      this._seenSeqs.add(msgId(packet.seqno, this._id));
 
       await this._lookup();
 
+      // I update the package to assign the from prop to me (the current sender).
       const message = Object.assign({}, packet, { from: this._id });
 
       const packetEncoded = this._codec.encode({
@@ -115,12 +108,13 @@ class Broadcast extends EventEmitter {
       });
 
       const waitFor = this._peers.map(async (peer) => {
-        if (this._checkSeenPacketBy(message.seq, peer.id)) return;
+        // Don't send the message to neighbors that already seen the message.
+        if (this._seenSeqs.has(msgId(message.seqno, peer.id))) return;
 
         debug('publish %h -> %h', this._id, peer.id, message);
 
         try {
-          this._addSeenPacketBy(message.seq, peer.id);
+          this._seenSeqs.add(msgId(message.seqno, peer.id));
           await this._sender(packetEncoded, peer);
         } catch (err) {
           this.emit('error', err);
@@ -137,9 +131,11 @@ class Broadcast extends EventEmitter {
     try {
       const { message: packet } = this._codec.decode(packetEncoded);
 
-      this._addSeenPacketBy(packet.seq, packet.from);
+      // Add the packet as "seen by the peer from".
+      this._seenSeqs.add(msgId(packet.seqno, packet.from));
 
-      if (this._seenSeqs.has(packet.seq.toString('hex'))) return;
+      // Check if already see this packet.
+      if (this._seenSeqs.has(msgId(packet.seqno, this._id))) return;
 
       const peer = this._peers.find(peer => peer.id.equals(packet.from));
 
@@ -154,21 +150,6 @@ class Broadcast extends EventEmitter {
       this.emit('error', err);
       throw err;
     }
-  }
-
-  _addSeenPacketBy(seq, id) {
-    seq = seq.toString('hex');
-    id = id.toString('hex');
-    const peers = this._seenSeqsNeighbors.get(seq) || new Set();
-    peers.add(id);
-    this._seenSeqsNeighbors.set(seq, peers);
-  }
-
-  _checkSeenPacketBy(seq, id) {
-    seq = seq.toString('hex');
-    id = id.toString('hex');
-    const peers = this._seenSeqsNeighbors.get(seq);
-    return peers && peers.has(id);
   }
 }
 

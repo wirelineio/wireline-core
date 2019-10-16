@@ -2,7 +2,8 @@ syntax = "proto3";
 package broadcast;
 
 message Packet {
-  required bytes seq = 1;
-  bytes data = 2;
+  bytes seqno = 1;
+  bytes origin = 2;
   bytes from = 3;
+  bytes data = 4;
 }
