@@ -33,7 +33,7 @@ been sent. This is used to avoid sending the same message to the same peer
 more than once. These records expire after some time to limit memory consumption by: `maxAge` and `maxSize`.
 
 <p align="center">
-  ![ezgif-1-276d9b93d2b4](https://user-images.githubusercontent.com/819446/66934639-2bb67980-f011-11e9-9c27-739b5ee5fd5c.gif)
+  <img src="https://user-images.githubusercontent.com/819446/66934639-2bb67980-f011-11e9-9c27-739b5ee5fd5c.gif" alt="graph">
 </p>
 
 ## Install
@@ -93,7 +93,7 @@ broadcast.publish(Buffer.from('Hello everyone'))
 broadcast.stop()
 ```
 
-You can check a real example in: [/example](/example)
+You can check a real example in: [example](https://github.com/wirelineio/wireline-core/tree/master/packages/broadcast/example)
 
 ## Contributing
 
