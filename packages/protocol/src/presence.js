@@ -146,24 +146,26 @@ export class Presence extends EventEmitter {
   _buildBroadcast() {
     this._broadcast = new Broadcast({
       id: this._peerId,
-      lookup: () => {
-        return Array.from(this._neighbors.values()).map((peer) => {
-          const { peerId } = peer.getContext();
+      middleware: {
+        lookup: () => {
+          return Array.from(this._neighbors.values()).map((peer) => {
+            const { peerId } = peer.getContext();
 
-          return {
-            id: keyToBuffer(peerId),
-            protocol: peer
-          };
-        });
-      },
-      sender: async (packet, { protocol }) => {
-        const presence = protocol.getExtension(Presence.EXTENSION_NAME);
-        await presence.send(packet, { oneway: true });
-      },
-      receiver: (onPacket) => {
-        this.on('protocol-message', (protocol, context, chunk) => {
-          onPacket(chunk);
-        });
+            return {
+              id: keyToBuffer(peerId),
+              protocol: peer
+            };
+          });
+        },
+        sender: async (packet, { protocol }) => {
+          const presence = protocol.getExtension(Presence.EXTENSION_NAME);
+          await presence.send(packet, { oneway: true });
+        },
+        receiver: (onPacket) => {
+          this.on('protocol-message', (protocol, context, chunk) => {
+            onPacket(chunk);
+          });
+        }
       }
     });
 
