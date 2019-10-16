@@ -5,6 +5,7 @@
 import { EventEmitter } from 'events';
 import createGraph from 'ngraph.graph';
 import debug from 'debug';
+import queueMicrotask from 'queue-microtask';
 
 import Broadcast from '@wirelineio/broadcast';
 import CodecProtobuf from '@wirelineio/codec-protobuf';
@@ -29,64 +30,21 @@ export class Presence extends EventEmitter {
    * @param {string} peerId
    * @param {Function} peerMessageHandler
    */
-  constructor(peerId) {
+  constructor(peerId, options = {}) {
     super();
 
     console.assert(Buffer.isBuffer(peerId));
 
+    const { peerTimeout = 2 * 60 * 1000 } = options;
+
     this._peerId = peerId;
+    this._peerTimeout = peerTimeout;
     this._codec = new CodecProtobuf({ verify: true });
     this._codec.loadFromJSON(schema);
-
     this._neighbors = new Map();
-    this.network = createGraph();
-    this.network.addNode(keyToHex(this._peerId));
 
-    this._broadcast = new Broadcast({
-      id: this._peerId,
-      lookup: () => {
-        return Array.from(this._neighbors.values()).map((peer) => {
-          const { peerId } = peer.getContext();
-
-          return {
-            id: keyToBuffer(peerId),
-            protocol: peer
-          };
-        });
-      },
-      sender: async (packet, { protocol }) => {
-        const presence = protocol.getExtension(Presence.EXTENSION_NAME);
-        await presence.send(packet, { oneway: true });
-      },
-      receiver: (onPacket) => {
-        this._peerMessageHandler = (protocol, context, chunk) => {
-          onPacket(chunk);
-        };
-      }
-    });
-
-    this._broadcast.on('packet', (packet) => {
-      this.emit('remote-ping', this._codec.decode(packet.data, false));
-    });
-    this.network.on('changed', (changes) => {
-      this.emit('network-updated', changes, this.network);
-    });
-
-    this._broadcast.run();
-
-    this._initializeScheduler();
-
-    this.on('remote-ping', packet => this._updateNetwork(packet));
-    this.on('network-updated', (changes) => {
-      changes.forEach(({ changeType, node, link }) => {
-        if (changeType === 'update') return;
-
-        const type = changeType === 'add' ? 'joined' : 'left';
-
-        if (node) this.emit(`peer:${type}`, keyToBuffer(node.id));
-        if (link) this.emit(`connection:${type}`, keyToBuffer(link.fromId), keyToBuffer(link.toId));
-      });
-    });
+    this._buildNetwork();
+    this._buildBroadcast();
   }
 
   get peerId() {
@@ -106,8 +64,10 @@ export class Presence extends EventEmitter {
    * @return {Extension}
    */
   createExtension() {
+    this.start();
+
     return new Extension(Presence.EXTENSION_NAME, { binary: true })
-      .setMessageHandler(this._peerMessageHandler)
+      .setMessageHandler(this._peerMessageHandler.bind(this))
       .setHandshakeHandler((protocol) => {
         log('handshake', protocol.getContext());
         this._addPeer(protocol);
@@ -124,14 +84,110 @@ export class Presence extends EventEmitter {
   }
 
   async ping() {
-    const message = {
-      from: this._peerId,
-      connections: Array.from(this._neighbors.values()).map((peer) => {
-        const { peerId } = peer.getContext();
-        return { peerId: keyToBuffer(peerId) };
-      })
-    };
-    return this._broadcast.publish(this._codec.encode({ type: 'protocol.Presence', message }));
+    try {
+      const message = {
+        from: this._peerId,
+        connections: Array.from(this._neighbors.values()).map((peer) => {
+          const { peerId } = peer.getContext();
+          return { peerId: keyToBuffer(peerId) };
+        })
+      };
+
+      await this._broadcast.publish(this._codec.encode({ type: 'protocol.Presence', message }));
+      log('ping', message);
+    } catch (err) {
+      console.warn(err);
+    }
+  }
+
+  start() {
+    if (this._scheduler) {
+      return;
+    }
+
+    this._broadcast.run();
+
+    this._scheduler = setInterval(() => {
+      this.ping();
+      queueMicrotask(() => this._pruneNetwork());
+    }, Math.floor(this._peerTimeout / 2));
+  }
+
+  stop() {
+    this._broadcast.stop();
+    clearInterval(this._scheduler);
+    this._scheduler = null;
+  }
+
+  _buildNetwork() {
+    this.network = createGraph();
+    this.network.addNode(keyToHex(this._peerId));
+    this.network.on('changed', (changes) => {
+      let networkUpdated = false;
+
+      changes.forEach(({ changeType, node, link }) => {
+        if (changeType === 'update') return;
+
+        networkUpdated = true;
+
+        const type = changeType === 'add' ? 'joined' : 'left';
+
+        if (node) this.emit(`peer:${type}`, keyToBuffer(node.id));
+        if (link) this.emit(`connection:${type}`, keyToBuffer(link.fromId), keyToBuffer(link.toId));
+      });
+
+      if (networkUpdated) {
+        log('network-updated', changes);
+        this.emit('network-updated', changes, this.network);
+      }
+    });
+  }
+
+  _buildBroadcast() {
+    this._broadcast = new Broadcast({
+      id: this._peerId,
+      lookup: () => {
+        return Array.from(this._neighbors.values()).map((peer) => {
+          const { peerId } = peer.getContext();
+
+          return {
+            id: keyToBuffer(peerId),
+            protocol: peer
+          };
+        });
+      },
+      sender: async (packet, { protocol }) => {
+        const presence = protocol.getExtension(Presence.EXTENSION_NAME);
+        await presence.send(packet, { oneway: true });
+      },
+      receiver: (onPacket) => {
+        this.on('protocol-message', (protocol, context, chunk) => {
+          onPacket(chunk);
+        });
+      }
+    });
+
+    this._broadcast.on('packet', packet => this.emit('remote-ping', this._codec.decode(packet.data, false)));
+    this.on('remote-ping', packet => this._updateNetwork(packet));
+  }
+
+  _peerMessageHandler(protocol, context, chunk) {
+    this.emit('protocol-message', protocol, context, chunk);
+  }
+
+  _pruneNetwork() {
+    const now = Date.now();
+    const localPeerId = keyToHex(this._peerId);
+    this.network.beginUpdate();
+    this.network.forEachNode((node) => {
+      if (node.id === localPeerId) return;
+      if (this._neighbors.has(node.id)) return;
+
+      if ((now - node.data.lastUpdate) > this._peerTimeout) {
+        this._deleteNode(node.id);
+      }
+    });
+    this.network.endUpdate();
   }
 
   /**
@@ -140,7 +196,6 @@ export class Presence extends EventEmitter {
    * @private
    */
   _addPeer(protocol) {
-    // TODO(ashwin): Is there a natural base class for peer management?
     console.assert(protocol);
     const context = protocol.getContext();
 
@@ -156,13 +211,19 @@ export class Presence extends EventEmitter {
       return;
     }
 
+    this.network.beginUpdate();
+
     this._neighbors.set(peerId, protocol);
     this.network.addNode(peerId, { lastUpdate: Date.now() });
     const [source, target] = [keyToHex(this._peerId), peerId].sort();
     if (!this.network.hasLink(source, target)) {
       this.network.addLink(source, target);
     }
+
+    this.network.endUpdate();
+
     this.emit('neighbor:joined', keyToBuffer(peerId), protocol);
+    this.ping();
   }
 
   /**
@@ -177,35 +238,19 @@ export class Presence extends EventEmitter {
 
     const { peerId } = context;
     this._neighbors.delete(peerId);
-    this.network.removeNode(peerId);
-    this.network.forEachLinkedNode(peerId, (_, link) => {
-      this.network.removeLink(link);
-    });
+    this._deleteNode(peerId);
     this.emit('neighbor:left', peerId);
-  }
 
-  _initializeScheduler() {
-    this._pingInterval = setInterval(() => {
-      this.ping();
-    }, 2 * 1000);
+    if (this._neighbors.size > 0) {
+      return this.ping();
+    }
 
-    this._pruneNetworkInterval = setInterval(() => {
-      const now = Date.now();
-      const localPeerId = keyToHex(this._peerId);
-      this.network.beginUpdate();
-      this.network.forEachNode((node) => {
-        if (node.id === localPeerId) return;
-        if (this._neighbors.has(node.id)) return;
-
-        if ((now - node.data.lastUpdate) > 5 * 1000) {
-          this.network.removeNode(node.id);
-          this.network.forEachLinkedNode(node.id, (_, link) => {
-            this.network.removeLink(link);
-          });
-        }
-      });
-      this.network.endUpdate();
-    }, 5 * 1000);
+    // We clear the network graph.
+    const localPeerId = keyToHex(this._peerId);
+    this.network.forEachNode((node) => {
+      if (node.id === localPeerId) return;
+      this._deleteNode(node.id);
+    });
   }
 
   _updateNetwork({ from, connections = [] }) {
@@ -217,15 +262,46 @@ export class Presence extends EventEmitter {
 
     this.network.addNode(fromHex, { lastUpdate });
 
-    connections.forEach(({ peerId }) => {
+    connections = connections.map(({ peerId }) => {
       peerId = keyToHex(peerId);
       this.network.addNode(peerId, { lastUpdate });
       const [source, target] = [fromHex, peerId].sort();
-      if (!this.network.hasLink(source, target)) {
-        this.network.addLink(source, target);
+      return { source, target };
+    });
+
+    connections.forEach((conn) => {
+      if (!this.network.hasLink(conn.source, conn.target)) {
+        this.network.addLink(conn.source, conn.target);
       }
     });
 
+    this.network.forEachLinkedNode(fromHex, (_, link) => {
+      const toDelete = !connections.find(conn => conn.source === link.fromId && conn.target === link.toId);
+
+      if (!toDelete) {
+        return;
+      }
+
+      this.network.removeLink(link);
+
+      this._deleteNodeIfEmpty(link.fromId);
+      this._deleteNodeIfEmpty(link.toId);
+    });
+
     this.network.endUpdate();
+  }
+
+  _deleteNode(id) {
+    this.network.removeNode(id);
+    this.network.forEachLinkedNode(id, (_, link) => {
+      this.network.removeLink(link);
+    });
+  }
+
+  _deleteNodeIfEmpty(id) {
+    const links = this.network.getLinks(id) || [];
+    if (links.length === 0) {
+      this.network.removeNode(id);
+    }
   }
 }

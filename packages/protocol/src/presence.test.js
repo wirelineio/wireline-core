@@ -12,7 +12,7 @@ import { Presence } from './presence';
 import { Protocol } from './protocol';
 
 const log = debug('test');
-debug.enable('test,presence');
+debug.enable('test');
 
 const TIMEOUT = 16 * 1000;
 
