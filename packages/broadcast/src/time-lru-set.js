@@ -1,3 +1,7 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 class ItemCache {
   constructor({ value, maxAge, onTimeout }) {
     this._value = value;
@@ -68,6 +72,14 @@ class TimeLRUSet {
     }
 
     return !!item;
+  }
+
+  clear() {
+    this._list = [];
+    this._map.forEach((value, key) => {
+      value.clear();
+      this._map.delete(key);
+    });
   }
 
   _updateLRU(value) {

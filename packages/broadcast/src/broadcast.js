@@ -24,7 +24,9 @@ class Broadcast extends EventEmitter {
   constructor(opts = {}) {
     super();
 
-    const { id, lookup, sender, receiver } = opts;
+    const { id, middleware = {}, maxAge = 10 * 1000, maxSize = 200 } = opts;
+    const { lookup, sender, receiver } = middleware;
+
     console.assert(id);
     console.assert(lookup);
     console.assert(sender);
@@ -33,10 +35,10 @@ class Broadcast extends EventEmitter {
     this._id = id;
     this._lookup = this._buildLookup(lookup);
     this._sender = (...args) => sender(...args);
-    this._receiver = onMessage => receiver(onMessage);
+    this._receiver = onPacket => receiver(onPacket);
 
     this._running = false;
-    this._seenSeqs = new TimeLRUSet({ maxAge: opts.maxAge });
+    this._seenSeqs = new TimeLRUSet({ maxAge, maxSize });
     this._peers = [];
     this._codec = new Codec({ verify: true });
     this._codec.loadFromJSON(schema);
@@ -71,6 +73,7 @@ class Broadcast extends EventEmitter {
     this._running = false;
 
     this._cleanReceiver();
+    this._seenSeqs.clear();
 
     debug('stop %h', this._id);
   }
@@ -131,10 +134,10 @@ class Broadcast extends EventEmitter {
     try {
       const { message: packet } = this._codec.decode(packetEncoded);
 
-      // Add the packet as "seen by the peer from".
+      // Cache the packet as "seen by the peer from".
       this._seenSeqs.add(msgId(packet.seqno, packet.from));
 
-      // Check if already see this packet.
+      // Check if I already see this packet.
       if (this._seenSeqs.has(msgId(packet.seqno, this._id))) return;
 
       const peer = this._peers.find(peer => peer.id.equals(packet.from));

@@ -30,8 +30,7 @@ const addPeer = () => {
     bootstrap: ['https://signal.wireline.ninja']
   });
 
-  const broadcast = new Broadcast({
-    id: peer.id,
+  const middleware = {
     lookup: () => {
       return peer.getPeers(TOPIC);
     },
@@ -53,6 +52,11 @@ const addPeer = () => {
       peer.on('data', onMessage);
       return () => peer.off('data', onMessage);
     }
+  };
+
+  const broadcast = new Broadcast({
+    id: peer.id,
+    middleware
   });
 
   peer.broadcast = broadcast;
@@ -64,6 +68,8 @@ const addPeer = () => {
   });
 
   broadcast.run();
+
+  window.broadcast = broadcast;
 };
 const removePeer = id => _removePeer(graph, id);
 const addMany = n => [...Array(n).keys()].forEach(() => addPeer());
