@@ -52,7 +52,7 @@ const middleware = {
     // Return the list of neighbors peers with the format:
     // [{ id: Buffer, ...extraArgs }, { id: Buffer, ...extraArgs }]
   },
-  sender: async (packet, node) => {
+  send: async (packet, node) => {
     // Define how to send your packets.
     // "packet" is the encoded message to send.
     // "node" is the peer object generate from the lookup.
@@ -63,7 +63,7 @@ const middleware = {
     // e.g. If node is a websocket
     node.send(packet);
   },
-  receiver: (onPacket) => {
+  subscribe: (onPacket) => {
     // Defines how to process incomming packets.
 
     // e.g. Using websockets
@@ -85,7 +85,7 @@ const broadcast = new Broadcast({
   maxSize: 200 // Limit of messages in the LRU cache.
 })
 
-// We initialize the middleware and listeners inside the broadcast.
+// We initialize the middleware and subscription inside the broadcast.
 broadcast.run()
 
 broadcast.publish(Buffer.from('Hello everyone'))

@@ -12,10 +12,10 @@ class Peer extends EventEmitter {
       id: this.id,
       middleware: {
         lookup: async () => Array.from(this._peers.values()),
-        sender: async (packet, node) => {
+        send: async (packet, node) => {
           node.send(packet);
         },
-        receiver: (onPacket) => {
+        subscribe: (onPacket) => {
           this.on('message', onPacket);
         }
       }

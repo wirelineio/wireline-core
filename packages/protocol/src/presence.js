@@ -157,11 +157,11 @@ export class Presence extends EventEmitter {
             };
           });
         },
-        sender: async (packet, { protocol }) => {
+        send: async (packet, { protocol }) => {
           const presence = protocol.getExtension(Presence.EXTENSION_NAME);
           await presence.send(packet, { oneway: true });
         },
-        receiver: (onPacket) => {
+        subscribe: (onPacket) => {
           this.on('protocol-message', (protocol, context, chunk) => {
             onPacket(chunk);
           });

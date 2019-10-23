@@ -34,7 +34,7 @@ const addPeer = () => {
     lookup: () => {
       return peer.getPeers(TOPIC);
     },
-    sender: async (packet, node) => {
+    send: async (packet, node) => {
       packetsSended++;
       packetsSendedTitle.innerHTML = packetsSended;
 
@@ -48,7 +48,7 @@ const addPeer = () => {
         console.error(err);
       }
     },
-    receiver: (onMessage) => {
+    subscribe: (onMessage) => {
       peer.on('data', onMessage);
       return () => peer.off('data', onMessage);
     }

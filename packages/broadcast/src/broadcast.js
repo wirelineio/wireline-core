@@ -25,17 +25,17 @@ class Broadcast extends EventEmitter {
     super();
 
     const { id, middleware = {}, maxAge = 10 * 1000, maxSize = 200 } = opts;
-    const { lookup, sender, receiver } = middleware;
+    const { lookup, send, subscribe } = middleware;
 
     console.assert(id);
     console.assert(lookup);
-    console.assert(sender);
-    console.assert(receiver);
+    console.assert(send);
+    console.assert(subscribe);
 
     this._id = id;
     this._lookup = this._buildLookup(lookup);
-    this._sender = (...args) => sender(...args);
-    this._receiver = onPacket => receiver(onPacket);
+    this._send = (...args) => send(...args);
+    this._subscribe = onPacket => subscribe(onPacket);
 
     this._running = false;
     this._seenSeqs = new TimeLRUSet({ maxAge, maxSize });
@@ -63,7 +63,7 @@ class Broadcast extends EventEmitter {
     if (this._running) return;
     this._running = true;
 
-    this._cleanReceiver = this._receiver(packetEncoded => this._onPacket(packetEncoded)) || (() => {});
+    this._subscription = this._subscribe(packetEncoded => this._onPacket(packetEncoded)) || (() => {});
 
     debug('running %h', this._id);
   }
@@ -72,7 +72,7 @@ class Broadcast extends EventEmitter {
     if (!this._running) return;
     this._running = false;
 
-    this._cleanReceiver();
+    this._subscription();
     this._seenSeqs.clear();
 
     debug('stop %h', this._id);
@@ -118,7 +118,7 @@ class Broadcast extends EventEmitter {
 
         try {
           this._seenSeqs.add(msgId(message.seqno, peer.id));
-          await this._sender(packetEncoded, peer);
+          await this._send(packetEncoded, peer);
         } catch (err) {
           this.emit('error', err);
         }
