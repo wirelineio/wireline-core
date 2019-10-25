@@ -4,18 +4,21 @@
       "nested": {
         "Packet": {
           "fields": {
-            "seq": {
-              "rule": "required",
+            "seqno": {
               "type": "bytes",
               "id": 1
             },
-            "data": {
+            "origin": {
               "type": "bytes",
               "id": 2
             },
             "from": {
               "type": "bytes",
               "id": 3
+            },
+            "data": {
+              "type": "bytes",
+              "id": 4
             }
           }
         }
