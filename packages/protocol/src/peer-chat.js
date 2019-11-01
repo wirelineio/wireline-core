@@ -56,10 +56,10 @@ export class PeerChat extends EventEmitter {
           };
         });
       },
-      sender: (packet, peer) => {
+      send: (packet, peer) => {
         this._sendPeerMessage(peer.protocol, packet);
       },
-      receiver: (onPacket) => {
+      subscribe: (onPacket) => {
         this._peerMessageHandler = (protocol, context, chunk) => {
           const { type, data: message } = this._codec.decode(chunk, false);
 
