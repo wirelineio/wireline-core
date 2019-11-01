@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/broadcast",
-  "version": "0.2.21",
+  "version": "0.2.22",
   "description": "Broadcast messages.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/broadcast#readme",
   "bugs": {
@@ -31,7 +31,7 @@
     "> 5%"
   ],
   "dependencies": {
-    "@wirelineio/codec-protobuf": "^0.2.21",
+    "@wirelineio/codec-protobuf": "^0.2.22",
     "debug": "^4.1.1",
     "source-map-support": "^0.5.12"
   },
