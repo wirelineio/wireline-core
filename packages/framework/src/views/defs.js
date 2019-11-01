@@ -28,41 +28,5 @@ module.exports.Views = [
   {
     name: 'items',
     view: 'ItemsView'
-  },
-
-  // Custom views.
-  {
-    name: 'documents',
-    view: 'DocumentsView'
-  },
-  {
-    name: 'presentations',
-    view: 'DocumentsView'
-  },
-
-  // TODO(burdon): Move to Launchpad?
-  // TODO(burdon): No need to register LogView since default?
-  {
-    name: 'graphs',
-    view: 'LogsView'
-  },
-  {
-    name: 'sketch',
-    view: 'LogsView'
-  },
-  {
-    name: 'kanban',
-    view: 'LogsView'
-  },
-
-  // Custom views.
-
-  {
-    name: 'chess',
-    view: 'LogsView'
-  },
-  {
-    name: 'chat',
-    view: 'ChatLogsView'
   }
 ];
