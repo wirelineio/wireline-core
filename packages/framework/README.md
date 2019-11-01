@@ -177,14 +177,9 @@ framework.partyManager.currentPartyKey
 
 ## Views
 
-We can distinct two different types of views: _core_ and _pads_. The `api` contains the following views (kappa):
+The `api` contains the following views (kappa):
 
 - `contacts`(core)
-- `documents`
-- `sheets`
-- `chess`
-- `graphs`
-- `sketches`
 
 ## Core Views
 
@@ -212,21 +207,20 @@ async framework.kappa.api['contacts'].setProfile({ key, data })
 async framework.kappa.api['contacts'].getContacts()
 ```
 
-## Pad Views
+## ViewTypes
 
-A pad view represents a type of item.
 
-- `logs`: Logs view are append-only log items.
-- `documents[crdt]`: A CRDT document represents changes that creates a single item by applying each change as a patch for a final item content.
+- `LogsView`: Logs view are append-only log items.
+- `DocumentsView`: A CRDT document represents changes that creates a single item by applying each change as a patch for a final item content.
 
-### `documents`
+### `view api`
 
 The documents view provides operations for handling collaborative text documents.
 
-#### documents.create(opts)
+#### create(opts)
 
 ```js
-async framework.kappa.api['documents'].create({ type, title = 'Untitled', partyKey })
+async framework.kappa.api[`${viewName}`].create({ type, title = 'Untitled', partyKey })
 ```
 
 Creates a new document.
@@ -234,32 +228,32 @@ Creates a new document.
 - `type`: This is the `pad` type. For creating a text document the type should be set to `document`. Note that this is driven from the pad code so it cannot be set by default in `framework-core`.
 - `partyKey`: Optional. If not provided it will use the `framework.currentPartyKey`.
 
-#### documents.getById(itemId)
+#### getById(itemId)
 
 ```js
-async framework.kappa.api['documents'].getById(itemId)
+async framework.kappa.api[`${viewName}`].getById(itemId)
 ```
 
 Retrieves a document by itemId.
 
-#### documents.appendChange(itemId, changes)
+#### appendChange(itemId, changes)
 
 ```js
-async framework.kappa.api['documents'].appendChange(itemId, changes)
+async framework.kappa.api[`${viewName}`].appendChange(itemId, changes)
 ```
 
 Append a new change message on the document with `itemId`.
 
-#### documents.getChanges(itemId, opts)
+#### getChanges(itemId, opts)
 
 ```js
-async framework.kappa.api['documents'].getChanges(itemId, { reverse, lastChange })
+async framework.kappa.api[`${viewName}`].getChanges(itemId, { reverse, lastChange })
 ```
 
-#### documents.onChange(itemId, cb)
+#### onChange(itemId, cb)
 
 ```js
-async framework.kappa.api['documents'].onChange(itemId, cb)
+async framework.kappa.api[`${viewName}`].onChange(itemId, cb)
 ```
 
 TBC
