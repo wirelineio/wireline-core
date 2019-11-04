@@ -87,7 +87,7 @@ class Framework extends EventEmitter {
       this._megafeed.createExtensions.bind(this._megafeed)
     ];
 
-    // TODO(burdon): This should not happen in the constructor. It can fail.
+    // TODO(burdon): This should not happen in the constructor. Move to initialize.
     this._swarm = createSwarm(this._id, partyKey, {
       swarm: conf.swarm,
       hub: conf.hub,
@@ -103,6 +103,7 @@ class Framework extends EventEmitter {
 
   //
   // Accessors
+  // TODO(burdon): Restrict accessors.
   //
 
   /**
@@ -125,6 +126,7 @@ class Framework extends EventEmitter {
     return this._swarm;
   }
 
+  // TODO(burdon): Rename megafeed.
   get mega() {
     return this._megafeed;
   }
@@ -171,6 +173,7 @@ class Framework extends EventEmitter {
     const party = this.connect(partyKey);
     this.emit('metric.swarm.party', { key: keyToHex(party.key), dk: keyToHex(party.dk) });
 
+    // TODO(burdon): ???
     await pify(this._kappa.ready.bind(this._kappa))();
 
     // Set Profile if name is provided.
