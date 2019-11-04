@@ -28,6 +28,4 @@ describe('feedStore', () => {
     expect(feed).toBeDefined();
     expect(feed).toBeInstanceOf(hypercore);
   });
-
-
 });

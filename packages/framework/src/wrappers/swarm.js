@@ -8,10 +8,15 @@ const debug = require('debug')('dsuite:swarm');
 const { Protocol } = require('@wirelineio/protocol');
 const { keyToHex, getDiscoveryKey, keyToBuffer } = require('@wirelineio/utils');
 
-const Config = require('../config');
-
 const isBrowser = typeof window !== 'undefined';
 
+// TODO(burdon): Remove defaults.
+const Defaults = {
+  SIGNALHUB: 'https://signal.wireline.ninja',
+  ICE_SERVERS: '[ { "urls": "stun:stun.wireline.ninja:3478" } ]'
+};
+
+// TODO(burdon): Why is this here?
 function createExtensions(extensions) {
   return extensions.reduce((result, next) => {
     let extension = next;
@@ -45,8 +50,8 @@ module.exports = function createSwarm(id, topic, options = {}) {
   const { extensions = [], emit = () => {}, discoveryToPublicKey } = options;
 
   // TODO(burdon): IMPORTANT: Env vars should only be used by the root app. Otherwise must set in the function config.
-  const signalhub = options.hub || process.env.SIGNALHUB || Config.SIGNALHUB;
-  const ice = JSON.parse(options.ice || process.env.ICE_SERVERS || Config.ICE_SERVERS);
+  const signalhub = options.hub || process.env.SIGNALHUB || Defaults.SIGNALHUB;
+  const ice = JSON.parse(options.ice || process.env.ICE_SERVERS || Defaults.ICE_SERVERS);
   const maxPeers = options.maxPeers || process.env.SWARM_MAX_PEERS;
 
   debug('Connecting:', JSON.stringify({ signalhub, ice }));

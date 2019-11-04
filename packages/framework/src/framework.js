@@ -46,12 +46,14 @@ class Framework extends EventEmitter {
     this._conf = conf;
 
     // TODO(burdon): Non-optional variables (e.g., storage) should be actual params.
-    const { id, name, db, partyKey, keys = crypto.keyPair(), storage = ram } = this._conf;
+    const { id, name, partyKey, db, keys = crypto.keyPair(), storage = ram } = this._conf;
     console.assert(!id || (id && Buffer.isBuffer(id)));
-    console.assert(name);
     console.assert(Buffer.isBuffer(partyKey));
     console.assert(keys.publicKey);
     console.assert(keys.secretKey);
+
+    // TODO(burdon): Remove.
+    console.assert(name);
 
     this._id = id || keys.publicKey;
 
@@ -162,14 +164,15 @@ class Framework extends EventEmitter {
 
     await this._megafeed.initialize();
 
-    // We set the feed where we are going to write messages.
+    // Set the feed where we are going to write messages.
     const feed = await this._megafeed.openFeed(`feed/${topic}/local`, { metadata: { topic } });
     this._viewManager.setWriterFeed(feed);
 
-    // We need to load all the feeds with the related topic
+    // Load all feeds with the related topic.
     await this._megafeed.loadFeeds(({ stat }) => stat.metadata.topic === topic);
 
     // Connect to the party.
+    // TODO(burdon): Don't assume party; call this externally.
     const party = this.connect(partyKey);
     this.emit('metric.swarm.party', { key: keyToHex(party.key), dk: keyToHex(party.dk) });
 
@@ -177,10 +180,12 @@ class Framework extends EventEmitter {
     await pify(this._kappa.ready.bind(this._kappa))();
 
     // Set Profile if name is provided.
+    // TODO(burdon): User name should not be provided to Framework.
     const profile = await this._kappa.api['contacts'].getProfile();
     if (!profile) {
       await this._kappa.api['contacts'].setProfile({ data: { username: name } });
     }
+
     this._kappa.api['contacts'].events.on('profile-updated', (msg) => {
       this.emit('profile-updated', msg);
     });
