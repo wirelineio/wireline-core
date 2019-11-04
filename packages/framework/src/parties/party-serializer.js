@@ -17,7 +17,7 @@ const { keyToHex } = require('@wirelineio/utils');
 class PartySerializer {
 
   constructor(mega, partyKey) {
-    this._mega = mega;
+    this._megafeed = mega;
     this._partyKey = partyKey;
   }
 
@@ -30,7 +30,7 @@ class PartySerializer {
   async serializeParty() {
     const topic = keyToHex(this._partyKey);
 
-    const partyFeeds = await this._mega.filterFeeds(({ stat }) => stat.metadata.topic === topic);
+    const partyFeeds = await this._megafeed.filterFeeds(({ stat }) => stat.metadata.topic === topic);
 
     // Read the messages from all party feeds.
     const reader = multi.obj(partyFeeds.map(feed => feed.createReadStream()));
@@ -68,7 +68,7 @@ class PartySerializer {
 
     const messages = JSON.parse(buffer);
 
-    const feed = await this._mega.openFeed(`feed/${topic}/local`, { metadata: { topic } });
+    const feed = await this._megafeed.openFeed(`feed/${topic}/local`, { metadata: { topic } });
 
     await Promise.all(messages.map(message => pify(feed.append.bind(feed))(message)));
 

@@ -36,7 +36,7 @@ export class KappaManager {
 
     // TODO(ashwin): How is kappa storage configured?
     const kappaInstance = this._kappaList.get(topic) || kappa(null, {
-      multifeed: new MultifeedAdapter(this._megafeed, topic)
+      multifeed: new MultifeedAdapter(this._megafeed, topic).initialize()
     });
 
     this._kappaList.set(topic, kappaInstance);

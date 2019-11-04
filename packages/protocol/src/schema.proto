@@ -1,4 +1,9 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 syntax = "proto3";
+
 package protocol;
 
 message Request {
@@ -8,6 +13,7 @@ message Request {
   bytes options = 4;
 }
 
+// TODO(burdon): Rename. Move from protocol package.
 message PeerChatMessage {
   required string type = 1;
   bytes data = 2;
@@ -18,6 +24,7 @@ message Presence {
     required bytes peerId = 1;
     bool initiator = 2;
   }
+
   required bytes from = 1;
   repeated Connection connections = 2;
 }

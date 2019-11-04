@@ -32,4 +32,7 @@ const parsePartyPattern = (party) => {
   return metadata && metadata.filter ? metadata.filter : '*';
 };
 
-module.exports = { filterDescriptorByPattern, parsePartyPattern };
+module.exports = {
+  filterDescriptorByPattern,
+  parsePartyPattern
+};

@@ -11,15 +11,16 @@ import { EventEmitter } from 'events';
  * @returns {Promise<{ready, feeds: (function(): [Feed]), on}>}
  */
 export class MultifeedAdapter extends EventEmitter {
+
   constructor(megafeed, topic) {
     super();
     console.assert(megafeed);
     console.assert(topic);
 
+    // TODO(burdon): Why?
     this.setMaxListeners(256);
 
     this._megafeed = megafeed;
-
     this._topic = topic;
 
     this._megafeed.on('feed', (feed, stat) => {
@@ -29,23 +30,9 @@ export class MultifeedAdapter extends EventEmitter {
     });
 
     this._ready = false;
-
-    this._initialize();
   }
 
-  feeds() {
-    return this._megafeed.filterFeeds(({ stat }) => stat.metadata.topic === this._topic);
-  }
-
-  ready(cb) {
-    if (this._ready) {
-      return process.nextTick(() => cb());
-    }
-
-    this.once('ready', cb);
-  }
-
-  async _initialize() {
+  async initialize() {
     try {
       await this._megafeed.loadFeeds(({ stat }) => {
         return stat.metadata.topic === this._topic;
@@ -58,9 +45,23 @@ export class MultifeedAdapter extends EventEmitter {
     } catch (err) {
       process.nextTick(() => this.emit('error', err));
     }
+
+    return this;
   }
 
   async destroy() {
     return this._megafeed.destroy();
+  }
+
+  feeds() {
+    return this._megafeed.filterFeeds(({ stat }) => stat.metadata.topic === this._topic);
+  }
+
+  ready(cb) {
+    if (this._ready) {
+      return process.nextTick(() => cb());
+    }
+
+    this.once('ready', cb);
   }
 }

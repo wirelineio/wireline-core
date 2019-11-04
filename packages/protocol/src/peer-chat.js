@@ -12,6 +12,7 @@ import { Extension } from './extension';
 
 // eslint-disable-next-line
 import schema from './schema.json';
+
 /**
  * Peer chat.
  */
@@ -44,6 +45,7 @@ export class PeerChat extends EventEmitter {
         // do nothing
       }
     };
+
     this._broadcast = new Broadcast({
       id: this._peerId,
       lookup: () => {
@@ -72,6 +74,7 @@ export class PeerChat extends EventEmitter {
         };
       }
     });
+
     this._broadcast.run();
   }
 

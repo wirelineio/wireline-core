@@ -23,6 +23,7 @@ const packageJSON = require('../package.json');
 /**
  * App framework.
  */
+// TODO(burdon): Requires test.
 class Framework extends EventEmitter {
 
   /**
@@ -39,21 +40,20 @@ class Framework extends EventEmitter {
    * @param conf.maxPeers {Number} Maximum connections on swarm. Optional. Defaults: If isBot is true it is set to 64 otherwise 2.
    * @param conf.name {String} Name for the default profile.
    */
-  // TODO(burdon): Non-optional variables (e.g., storage) should be actual params.
   constructor(conf = {}) {
     super();
 
     this._conf = conf;
 
-    const { db, partyKey, keys = crypto.keyPair(), storage = ram, name } = this._conf;
+    // TODO(burdon): Non-optional variables (e.g., storage) should be actual params.
+    const { id, name, db, partyKey, keys = crypto.keyPair(), storage = ram } = this._conf;
+    console.assert(!id || (id && Buffer.isBuffer(id)));
+    console.assert(name);
     console.assert(Buffer.isBuffer(partyKey));
     console.assert(keys.publicKey);
     console.assert(keys.secretKey);
-    console.assert(name);
 
-    console.assert(!conf.id || (conf.id && Buffer.isBuffer(conf.id)));
-
-    this._id = conf.id || keys.publicKey;
+    this._id = id || keys.publicKey;
 
     //
     // Megafeed
@@ -61,32 +61,30 @@ class Framework extends EventEmitter {
 
     // Create megafeed.
     const { publicKey, secretKey } = keys;
-    this._mega = new Megafeed(storage, {
+    this._megafeed = new Megafeed(storage, {
       publicKey,
       secretKey,
       valueEncoding: 'json'
     });
 
     // Import/export
-    this._partySerializer = new PartySerializer(this._mega, partyKey);
+    this._partySerializer = new PartySerializer(this._megafeed, partyKey);
     this._partyManager = new PartyManager(partyKey);
 
     // In-memory cache for views.
     this._db = db || levelup(memdown());
 
-    // Create KappaManager.
-    this._kappaManager = new KappaManager(this._mega);
-
-    // Create a single Kappa instance
+    // Kappa stores.
+    this._kappaManager = new KappaManager(this._megafeed);
     this._kappa = this._kappaManager.getOrCreateKappa(keyToHex(partyKey));
 
-    // Create a ViewManager
+    // Manage views.
     this._viewManager = new ViewManager(this._kappa, this._db, this._id)
       .registerTypes(ViewTypes)
       .registerViews(Views);
 
     const megaExtensions = [
-      this._mega.createExtensions.bind(this._mega)
+      this._megafeed.createExtensions.bind(this._megafeed)
     ];
 
     // TODO(burdon): This should not happen in the constructor. It can fail.
@@ -96,9 +94,7 @@ class Framework extends EventEmitter {
       ice: conf.ice,
       maxPeers: conf.maxPeers,
       emit: this.emit.bind(this),
-      extensions: conf.extensions
-        ? [...conf.extensions, ...megaExtensions]
-        : megaExtensions,
+      extensions: conf.extensions ? [...conf.extensions, ...megaExtensions] : megaExtensions,
       discoveryToPublicKey: dk => this._partyManager.findPartyByDiscovery(dk)
     });
 
@@ -122,7 +118,7 @@ class Framework extends EventEmitter {
   }
 
   get key() {
-    return this._mega.key;
+    return this._megafeed.key;
   }
 
   get swarm() {
@@ -130,7 +126,7 @@ class Framework extends EventEmitter {
   }
 
   get mega() {
-    return this._mega;
+    return this._megafeed;
   }
 
   get kappa() {
@@ -162,14 +158,14 @@ class Framework extends EventEmitter {
     const { partyKey, name } = this._conf;
     const topic = keyToHex(partyKey);
 
-    await this._mega.initialize();
+    await this._megafeed.initialize();
 
     // We set the feed where we are going to write messages.
-    const feed = await this._mega.openFeed(`feed/${topic}/local`, { metadata: { topic } });
+    const feed = await this._megafeed.openFeed(`feed/${topic}/local`, { metadata: { topic } });
     this._viewManager.setWriterFeed(feed);
 
     // We need to load all the feeds with the related topic
-    await this._mega.loadFeeds(({ stat }) => stat.metadata.topic === topic);
+    await this._megafeed.loadFeeds(({ stat }) => stat.metadata.topic === topic);
 
     // Connect to the party.
     const party = this.connect(partyKey);
@@ -202,7 +198,6 @@ class Framework extends EventEmitter {
     this._swarm.leave(party.dk);
     return party;
   }
-
 }
 
 module.exports = Framework;

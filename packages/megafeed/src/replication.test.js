@@ -106,10 +106,15 @@ test('feed store replication', async (done) => {
       feedsByTopic.forEach(async ({ topic, keys }) => {
         await Promise.all(keys.map(async (key) => {
           const path = `feed/${topic}/${key}`;
-          const feed = await feedStore.openFeed(path, { key: Buffer.from(key, 'hex'), valueEncoding: 'json', metadata: { topic } });
+          const feed = await feedStore.openFeed(path, {
+            key: Buffer.from(key, 'hex'),
+            valueEncoding: 'json',
+            metadata: { topic }
+          });
 
           // Share and replicate feeds over protocol stream.
           protocol.stream.feed(key);
+
           feed.replicate({ live: true, stream: protocol.stream });
         }));
       });

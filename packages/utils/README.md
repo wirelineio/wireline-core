@@ -1,3 +1,3 @@
 # Wireline Utils
 
-RECONSIDER USE OF THIS PATTERN.
+TODO(burdon): Remove this repo; move into proto?
