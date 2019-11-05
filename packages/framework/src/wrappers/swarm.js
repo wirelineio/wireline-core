@@ -45,9 +45,9 @@ module.exports = function createSwarm(id, topic, options = {}) {
   const { extensions = [], emit = () => {}, discoveryToPublicKey } = options;
 
   // TODO(burdon): IMPORTANT: Env vars should only be used by the root app. Otherwise must set in the function config.
-  const signalhub = options.hub || process.env.SIGNALHUB || Config.SIGNALHUB;
-  const ice = JSON.parse(options.ice || process.env.ICE_SERVERS || Config.ICE_SERVERS);
-  const maxPeers = options.maxPeers || process.env.SWARM_MAX_PEERS;
+  const signalhub = options.hub || process.env.WIRE_SIGNAL_ENDPOINT || Config.WIRE_SIGNAL_ENDPOINT;
+  const ice = JSON.parse(options.ice || process.env.WIRE_ICE_ENDPOINTS || Config.WIRE_ICE_ENDPOINTS);
+  const maxPeers = options.maxPeers || process.env.WIRE_SWARM_MAX_PEERS;
 
   debug('Connecting:', JSON.stringify({ signalhub, ice }));
   debug('PeerId:', idHex);
