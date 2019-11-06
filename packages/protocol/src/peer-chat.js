@@ -46,30 +46,32 @@ export class PeerChat extends EventEmitter {
     };
     this._broadcast = new Broadcast({
       id: this._peerId,
-      lookup: () => {
-        return Array.from(this._peers.values()).map((peer) => {
-          const { peerId } = peer.getContext();
+      middleware: {
+        lookup: () => {
+          return Array.from(this._peers.values()).map((peer) => {
+            const { peerId } = peer.getContext();
 
-          return {
-            id: keyToBuffer(peerId),
-            protocol: peer
+            return {
+              id: keyToBuffer(peerId),
+              protocol: peer
+            };
+          });
+        },
+        send: (packet, peer) => {
+          this._sendPeerMessage(peer.protocol, packet);
+        },
+        subscribe: (onPacket) => {
+          this._peerMessageHandler = (protocol, context, chunk) => {
+            const { type, data: message } = this._codec.decode(chunk, false);
+
+            try {
+              const packet = onPacket(message);
+              if (packet) this._onMessage(protocol, context, { type, message: packet.data.toString() });
+            } catch (err) {
+              this._onMessage(protocol, context, { type, message: message.toString() });
+            }
           };
-        });
-      },
-      send: (packet, peer) => {
-        this._sendPeerMessage(peer.protocol, packet);
-      },
-      subscribe: (onPacket) => {
-        this._peerMessageHandler = (protocol, context, chunk) => {
-          const { type, data: message } = this._codec.decode(chunk, false);
-
-          try {
-            const packet = onPacket(message);
-            if (packet) this._onMessage(protocol, context, { type, message: packet.data.toString() });
-          } catch (err) {
-            this._onMessage(protocol, context, { type, message: message.toString() });
-          }
-        };
+        }
       }
     });
     this._broadcast.run();
