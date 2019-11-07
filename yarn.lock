@@ -1860,12 +1860,12 @@
   dependencies:
     protobufjs "https://github.com/wirelineio/protobuf.js#wireline-dist"
 
-"@wirelineio/discovery-swarm-memory@^0.2.16":
-  version "0.2.16"
-  resolved "https://registry.yarnpkg.com/@wirelineio/discovery-swarm-memory/-/discovery-swarm-memory-0.2.16.tgz#33d1fcc89f2a0923fbad7038fb3f651fc4c1370d"
-  integrity sha512-wCteKx7oFCb4hwRiew1IEjT1byZKM5pzeqdWr3/ASHQ+Q2rGqia2u2rvMaVH2c/A48qh08wCdi4ANNnsAOKw4w==
+"@wirelineio/discovery-swarm-memory@^0.2.17":
+  version "0.2.17"
+  resolved "https://registry.yarnpkg.com/@wirelineio/discovery-swarm-memory/-/discovery-swarm-memory-0.2.17.tgz#ee8fd21816560772464f852c95a3e435d1880f3f"
+  integrity sha512-82zShkKkJKR/1mDa/8Bm2HackfBpwwwcKapqZHJ0eC7sxc6s42k+5nRpdiwbcgWQbzbrc8nVGgHm3qZ7W6wq1A==
   dependencies:
-    "@wirelineio/hyperswarm-network-memory" "^0.2.16"
+    "@wirelineio/hyperswarm-network-memory" "^0.2.17"
     pump "^3.0.0"
 
 "@wirelineio/feed-store@^0.2.23":
@@ -1916,6 +1916,15 @@
   integrity sha512-IakODeHFf0itclcoMvT2XcjNtJ0wIQFLE52IlwTWCXo8wxfrqRQS9z/MqVFQSCDAMXt1IeZVcgTHZK+pCBhn+g==
   dependencies:
     end-of-stream "^1.4.1"
+
+"@wirelineio/hyperswarm-network-memory@^0.2.17":
+  version "0.2.17"
+  resolved "https://registry.yarnpkg.com/@wirelineio/hyperswarm-network-memory/-/hyperswarm-network-memory-0.2.17.tgz#e4606ea09680a9f7c1a159ba2940c9bd7a217f8e"
+  integrity sha512-lTfeMuA0NsPFkm2/1j4lIEi4oNSWzYQI3/I1+Z9WrWYfZLcpBh8oAzBI93XjpiacAK1/cP61jC34hKbDXIWc1w==
+  dependencies:
+    duplexify "^4.1.1"
+    end-of-stream "^1.4.1"
+    through2 "^3.0.1"
 
 "@wirelineio/megafeed@^0.2.13":
   version "0.2.23"
@@ -3546,6 +3555,16 @@ duplexify@^3.4.2, duplexify@^3.6.0:
     end-of-stream "^1.0.0"
     inherits "^2.0.1"
     readable-stream "^2.0.0"
+    stream-shift "^1.0.0"
+
+duplexify@^4.1.1:
+  version "4.1.1"
+  resolved "https://registry.yarnpkg.com/duplexify/-/duplexify-4.1.1.tgz#7027dc374f157b122a8ae08c2d3ea4d2d953aa61"
+  integrity sha512-DY3xVEmVHTv1wSzKNbwoU6nVjzI369Y6sPoqfYr0/xlx3IdX2n94xIszTcjPO8W8ZIv0Wb0PXNcjuZyT4wiICA==
+  dependencies:
+    end-of-stream "^1.4.1"
+    inherits "^2.0.3"
+    readable-stream "^3.1.1"
     stream-shift "^1.0.0"
 
 ecc-jsbn@~0.1.1:
@@ -7789,7 +7808,7 @@ read@1, read@~1.0.1:
     string_decoder "~1.1.1"
     util-deprecate "~1.0.1"
 
-"readable-stream@2 || 3", readable-stream@^3.0.2, readable-stream@^3.4.0:
+"readable-stream@2 || 3", readable-stream@^3.0.2, readable-stream@^3.1.1, readable-stream@^3.4.0:
   version "3.4.0"
   resolved "https://registry.yarnpkg.com/readable-stream/-/readable-stream-3.4.0.tgz#a51c26754658e0a3c21dbf59163bd45ba6f447fc"
   integrity sha512-jItXPLmrSR8jmTRmRWJXCnGJsfy85mB3Wd/uINMXA65yrnFo0cPClFIUWzo2najVNSl+mx7/4W8ttlLWJe99pQ==
@@ -8915,7 +8934,7 @@ through2@^2.0.0, through2@^2.0.2:
     readable-stream "~2.3.6"
     xtend "~4.0.1"
 
-through2@^3.0.0:
+through2@^3.0.0, through2@^3.0.1:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/through2/-/through2-3.0.1.tgz#39276e713c3302edf9e388dd9c812dd3b825bd5a"
   integrity sha512-M96dvTalPT3YbYLaKaCuwu+j06D/8Jfib0o/PxbVt6Amhv3dUAtW6rTV1jPgJSBG83I/e04Y6xkVdVhSRhi0ww==
