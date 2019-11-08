@@ -177,10 +177,6 @@ export class Replicator extends EventEmitter {
    * @private
    */
   _replicate(protocol, feed) {
-    if (!feed) {
-      return false;
-    }
-
     const { stream } = protocol;
 
     if (stream.destroyed) {

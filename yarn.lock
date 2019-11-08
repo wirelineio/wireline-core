@@ -6703,6 +6703,11 @@ ngraph.path@^1.2.0:
   resolved "https://registry.yarnpkg.com/ngraph.path/-/ngraph.path-1.3.0.tgz#19d258371660c8aaca7b0e0a0f69b41ecd4ebd17"
   integrity sha512-sOxQWeDwz9x3c7KGr+Z3u5GGCIkaEdJmTkN0s/76L4BVygiy+QbLobhOUsGtV9geoz37peQroN2vYMjl/wcT5g==
 
+ngraph.path@^1.3.1:
+  version "1.3.1"
+  resolved "https://registry.yarnpkg.com/ngraph.path/-/ngraph.path-1.3.1.tgz#bc05b3ad7a9719eedf6679804ca0e2d913239978"
+  integrity sha512-A78BGNCDo/uMApMx9QRqtSOheV4wMrgxitOVR2+0ZdbTfgzd70IN2WjuSXUFbNh7T2o0fPebPB2AFx39IvP8Gw==
+
 nice-try@^1.0.4:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/nice-try/-/nice-try-1.0.5.tgz#a3378a7696ce7d223e88fc9b764bd7ef1089e366"

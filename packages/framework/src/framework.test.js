@@ -1,17 +1,14 @@
-/**
- * @jest-environment node
- */
-
 const ram = require('random-access-memory');
 const crypto = require('hypercore-crypto');
 const waitForExpect = require('wait-for-expect');
+const ngPath = require('ngraph.path');
 
 const swarm = require('@wirelineio/discovery-swarm-memory');
 const { Presence } = require('@wirelineio/protocol');
 
 const Framework = require('./framework');
 
-async function createPeer(name, partyKey) {
+async function createPeer(partyKey, name) {
   const keys = crypto.keyPair();
   const presence = new Presence(keys.publicKey);
   const peers = new Set();
@@ -38,53 +35,91 @@ async function createPeer(name, partyKey) {
   return { framework, presence, peers };
 }
 
-describe('testing 2 peers using the chat view', () => {
+async function getMessages(changes) {
+  return (await changes)
+    .map(c => c.data.changes)
+    .map(messages => messages[0]);
+}
+
+describe('testing 2 peers using the log view', () => {
   const partyKey = crypto.randomBytes(32);
-  let alice;
-  let bob;
+  let peer1;
+  let peer2;
 
   test('create peers', async () => {
-    alice = await createPeer('alice', partyKey);
-    bob = await createPeer('bob', partyKey);
+    peer1 = await createPeer(partyKey, 'peer1');
+    peer2 = await createPeer(partyKey, 'peer2');
 
-    expect(alice.framework).toBeInstanceOf(Framework);
-    expect(bob.framework).toBeInstanceOf(Framework);
+    expect(peer1.framework).toBeInstanceOf(Framework);
+    expect(peer2.framework).toBeInstanceOf(Framework);
   });
 
   test('register chat view', async () => {
-    alice.framework.viewManager.registerView({ name: 'chat', view: 'ChatLogsView' });
-    bob.framework.viewManager.registerView({ name: 'chat', view: 'ChatLogsView' });
+    peer1.framework.viewManager.registerView({ name: 'log', view: 'LogsView' });
+    peer2.framework.viewManager.registerView({ name: 'log', view: 'LogsView' });
 
-    expect(alice.framework.kappa.api['chat']).toBeDefined();
-    expect(bob.framework.kappa.api['chat']).toBeDefined();
+    expect(peer1.framework.kappa.api['log']).toBeDefined();
+    expect(peer2.framework.kappa.api['log']).toBeDefined();
   });
 
+  test('replication data', async () => {
+    const peerLog1 = peer1.framework.kappa.api['log'];
+    const peerLog2 = peer2.framework.kappa.api['log'];
 
-  // TODO: missing check chat working.
+    const title = 'messages';
+    const { itemId } = await peerLog1.create({ type: 'log', title });
 
-  test('protocol connectivity', async () => {
-    await waitForExpect(() => {
-      expect(alice.peers.size).toBe(1);
-      expect(bob.peers.size).toBe(1);
+    await waitForExpect(async () => {
+      return Promise.all([
+        expect(peerLog1.getById(itemId)).resolves.toHaveProperty('title', title),
+        expect(peerLog2.getById(itemId)).resolves.toHaveProperty('title', title)
+      ]);
+    });
+
+    await peerLog1.appendChange(itemId, ['msg1']);
+    await peerLog2.appendChange(itemId, ['msg2']);
+
+    await waitForExpect(async () => {
+      return Promise.all([
+        expect(getMessages(peerLog1.getChanges(itemId))).resolves.toEqual(['msg1', 'msg2']),
+        expect(getMessages(peerLog1.getChanges(itemId))).resolves.toEqual(['msg1', 'msg2'])
+      ]);
     });
   });
 
-  // TODO: missing check presence connectivity.
+  test('protocol connectivity', async () => {
+    await waitForExpect(() => {
+      expect(peer1.peers.size).toBe(1);
+      expect(peer2.peers.size).toBe(1);
+    });
+  });
 
-  test('disconnection', async () => {
-    alice.framework.disconnect(partyKey);
-    bob.framework.disconnect(partyKey);
+  test('presence connectivity', async () => {
+    const pathFinder1 = ngPath.aStar(peer1.presence.network);
+    const pathFinder2 = ngPath.aStar(peer2.presence.network);
+    const id1 = peer1.framework.id.toString('hex');
+    const id2 = peer2.framework.id.toString('hex');
 
     await waitForExpect(() => {
-      expect(alice.peers.size).toBe(0);
-      expect(bob.peers.size).toBe(0);
+      expect(pathFinder1.find(id1, id2).length).toBeGreaterThan(0);
+      expect(pathFinder2.find(id2, id1).length).toBeGreaterThan(0);
+    });
+  });
+
+  test('disconnection', async () => {
+    peer1.framework.disconnect(partyKey);
+    peer2.framework.disconnect(partyKey);
+
+    await waitForExpect(() => {
+      expect(peer1.peers.size).toBe(0);
+      expect(peer2.peers.size).toBe(0);
     });
   });
 
   afterAll(async () => {
     await Promise.all([
-      alice.presence.stop(),
-      bob.presence.stop()
+      peer1.presence.stop(),
+      peer2.presence.stop()
     ]);
   });
 });
