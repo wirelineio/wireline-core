@@ -71,29 +71,35 @@ module.exports = function createSwarm(id, topic, options = {}) {
     }
   };
 
-  const swarm = options.swarm || discoverySwarmWebrtc;
-
-  const sw = swarm({
+  const defaultOptions = {
     id,
-
-    bootstrap: Array.isArray(signalhub) ? signalhub : [signalhub],
-
-    maxPeers,
-
-    // TODO(burdon): Get's the main hypercore stream (not actually the feed replication stream).
     stream: ({ channel }) => new Protocol(protocolOptions)
       .setUserData({ peerId: idHex })
       .setExtensions(createExtensions(extensions))
       .init(keyToBuffer(channel))
       .stream,
+  };
 
-    simplePeer: {
-      wrtc: !isBrowser ? require('wrtc') : null, // eslint-disable-line global-require
-      config: {
-        iceServers: ice
+  const swarm = options.swarm || discoverySwarmWebrtc;
+
+  let sw;
+  // It's swarm webrc
+  if (swarm === discoverySwarmWebrtc) {
+    sw = swarm(Object.assign({}, defaultOptions, {
+      bootstrap: Array.isArray(signalhub) ? signalhub : [signalhub],
+
+      maxPeers,
+
+      simplePeer: {
+        wrtc: !isBrowser ? require('wrtc') : null, // eslint-disable-line global-require
+        config: {
+          iceServers: ice
+        }
       }
-    }
-  });
+    }));
+  } else {
+    sw = swarm(defaultOptions);
+  }
 
   const getPeersCount = (channel) => {
     try {
