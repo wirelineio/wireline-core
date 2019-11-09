@@ -8,15 +8,10 @@ const debug = require('debug')('dsuite:swarm');
 const { Protocol } = require('@wirelineio/protocol');
 const { keyToHex, getDiscoveryKey, keyToBuffer } = require('@wirelineio/utils');
 
+const Config = require('../config');
+
 const isBrowser = typeof window !== 'undefined';
 
-// TODO(burdon): Remove defaults.
-const Defaults = {
-  SIGNALHUB: 'https://signal.wireline.ninja',
-  ICE_SERVERS: '[ { "urls": "stun:stun.wireline.ninja:3478" } ]'
-};
-
-// TODO(burdon): Why is this here?
 function createExtensions(extensions) {
   return extensions.reduce((result, next) => {
     let extension = next;
@@ -50,9 +45,9 @@ module.exports = function createSwarm(id, topic, options = {}) {
   const { extensions = [], emit = () => {}, discoveryToPublicKey } = options;
 
   // TODO(burdon): IMPORTANT: Env vars should only be used by the root app. Otherwise must set in the function config.
-  const signalhub = options.hub || process.env.SIGNALHUB || Defaults.SIGNALHUB;
-  const ice = JSON.parse(options.ice || process.env.ICE_SERVERS || Defaults.ICE_SERVERS);
-  const maxPeers = options.maxPeers || process.env.SWARM_MAX_PEERS;
+  const signalhub = options.hub || process.env.WIRE_SIGNAL_ENDPOINT || Config.WIRE_SIGNAL_ENDPOINT;
+  const ice = JSON.parse(options.ice || process.env.WIRE_ICE_ENDPOINTS || Config.WIRE_ICE_ENDPOINTS);
+  const maxPeers = options.maxPeers || process.env.WIRE_SWARM_MAX_PEERS;
 
   debug('Connecting:', JSON.stringify({ signalhub, ice }));
   debug('PeerId:', idHex);
@@ -76,29 +71,35 @@ module.exports = function createSwarm(id, topic, options = {}) {
     }
   };
 
-  const swarm = options.swarm || discoverySwarmWebrtc;
-
-  const sw = swarm({
+  const defaultOptions = {
     id,
-
-    bootstrap: Array.isArray(signalhub) ? signalhub : [signalhub],
-
-    maxPeers,
-
-    // TODO(burdon): Get's the main hypercore stream (not actually the feed replication stream).
     stream: ({ channel }) => new Protocol(protocolOptions)
       .setUserData({ peerId: idHex })
       .setExtensions(createExtensions(extensions))
       .init(keyToBuffer(channel))
       .stream,
+  };
 
-    simplePeer: {
-      wrtc: !isBrowser ? require('wrtc') : null, // eslint-disable-line global-require
-      config: {
-        iceServers: ice
+  const swarm = options.swarm || discoverySwarmWebrtc;
+
+  let sw;
+  // It's swarm webrc
+  if (swarm === discoverySwarmWebrtc) {
+    sw = swarm(Object.assign({}, defaultOptions, {
+      bootstrap: Array.isArray(signalhub) ? signalhub : [signalhub],
+
+      maxPeers,
+
+      simplePeer: {
+        wrtc: !isBrowser ? require('wrtc') : null, // eslint-disable-line global-require
+        config: {
+          iceServers: ice
+        }
       }
-    }
-  });
+    }));
+  } else {
+    sw = swarm(defaultOptions);
+  }
 
   const getPeersCount = (channel) => {
     try {
