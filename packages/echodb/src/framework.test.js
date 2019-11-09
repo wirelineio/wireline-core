@@ -41,38 +41,36 @@ const waitForUpdate = async (model, count = 1) => {
 test('mutations', async () => {
   const partyKey = crypto.randomBytes(32);
   const partitionId = 'partition-1';
-  const viewType = 'test';
-  const type = 'card';
+  const objectType = 'card';
 
   const f1 = await createFramework(partyKey, 'peer-1');
   const f2 = await createFramework(partyKey, 'peer-2');
 
-  // TODO(burdon): viewType should be removed (e.g., user data is partitioned).
-  const view1 = await LogViewAdapter.createView(f1, viewType, partitionId);
-  const view2 = await LogViewAdapter.createView(f2, viewType, partitionId);
+  const view1 = await LogViewAdapter.createView(f1, partitionId);
+  const view2 = await LogViewAdapter.createView(f2, partitionId);
 
   const model1 = new ObjectModel().connect(view1);
   const model2 = new ObjectModel().connect(view2);
 
-  expect(model1.getObjects(type)).toHaveLength(0);
-  expect(model2.getObjects(type)).toHaveLength(0);
+  expect(model1.getObjects(objectType)).toHaveLength(0);
+  expect(model2.getObjects(objectType)).toHaveLength(0);
 
   const objects = [
     {
-      id: ObjectModel.createId(type),
+      id: ObjectModel.createId(objectType),
       properties: {
         title: 'Card 1'
       }
     },
     {
-      id: ObjectModel.createId(type),
+      id: ObjectModel.createId(objectType),
       properties: {
         title: 'Card 2',
         priority: 2
       }
     },
     {
-      id: ObjectModel.createId(type),
+      id: ObjectModel.createId(objectType),
       properties: {
         title: 'Card 3',
         priority: 1
@@ -86,7 +84,7 @@ test('mutations', async () => {
     await model1.commitMutations(mutations);
 
     await waitForUpdate(model2);
-    expect(model2.getObjects(type)).toHaveLength(objects.length);
+    expect(model2.getObjects(objectType)).toHaveLength(objects.length);
     for (const object of objects) {
       expect(model2.objects.get(object.id)).toEqual(object);
     }

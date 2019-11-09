@@ -4,10 +4,15 @@
 
 import { EventEmitter } from 'events';
 
-// TODO(burdon): Adapter to provide API similar to apollo-kappa-link withLogView HOC.
+/**
+ * Wraps kappa view, provising synchronous access to logs.
+ */
 export class LogViewAdapter extends EventEmitter {
 
-  static async createView(framework, viewName, itemId) {
+  static async createView(framework, itemId) {
+
+    // User data is not differentiated by "type" (just partition).
+    const viewName = 'data';
 
     // Creates a LogsView instance.
     framework.viewManager.registerView({ name: viewName });
