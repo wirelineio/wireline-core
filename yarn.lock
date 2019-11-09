@@ -1844,6 +1844,14 @@
   dependencies:
     "@types/yargs-parser" "*"
 
+"@wirelineio/discovery-swarm-memory@^0.2.16":
+  version "0.2.16"
+  resolved "https://registry.yarnpkg.com/@wirelineio/discovery-swarm-memory/-/discovery-swarm-memory-0.2.16.tgz#33d1fcc89f2a0923fbad7038fb3f651fc4c1370d"
+  integrity sha512-wCteKx7oFCb4hwRiew1IEjT1byZKM5pzeqdWr3/ASHQ+Q2rGqia2u2rvMaVH2c/A48qh08wCdi4ANNnsAOKw4w==
+  dependencies:
+    "@wirelineio/hyperswarm-network-memory" "^0.2.16"
+    pump "^3.0.0"
+
 "@wirelineio/gravity@^0.2.15":
   version "0.2.16"
   resolved "https://registry.yarnpkg.com/@wirelineio/gravity/-/gravity-0.2.16.tgz#b5299ef74c9a633f9001a22ba6bcbfd455d83832"
@@ -2295,7 +2303,7 @@ babel-plugin-inline-import@^3.0.0:
   dependencies:
     require-resolve "0.0.2"
 
-babel-plugin-istanbul@^5.1.0:
+babel-plugin-istanbul@^5.1.0, babel-plugin-istanbul@^5.2.0:
   version "5.2.0"
   resolved "https://registry.yarnpkg.com/babel-plugin-istanbul/-/babel-plugin-istanbul-5.2.0.tgz#df4ade83d897a92df069c4d9a25cf2671293c854"
   integrity sha512-5LphC0USA8t4i1zCtjbbNb6jJj/9+X6P37Qfirc/70EQ34xKlMW+a1RHGwxGI+SwWpNwZ27HqvzAobeqaXwiZw==

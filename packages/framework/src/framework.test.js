@@ -3,6 +3,10 @@
 //
 
 const crypto = require('hypercore-crypto');
+const randomAccessMemory = require('random-access-memory');
+
+// TODO(burdon): Why?
+const swarm = require('@wirelineio/discovery-swarm-memory').default;
 
 const Framework = require('./framework');
 
@@ -22,18 +26,27 @@ const Framework = require('./framework');
 test('basic test', async () => {
   const { publicKey: partyKey } = crypto.keyPair();
 
-  // TODO(burdon): Move createSwarm.
+  // TODO(burdon): List all modules that depend on Framework.
+
   const framework = new Framework({
+
+    storage: randomAccessMemory,
+
+    swarm,
 
     // TODO(burdon): Username does not depend here.
     name: 'peer1',
 
-    // TODO(burdon): Support multiple parties.
+    // TODO(burdon): Remove and call connect instead.
     partyKey
   });
 
-  // framework.connect(partyKey);
+  expect(framework.id).not.toBeNull();
+
+  // TODO(burdon): ERROR: Cannot read property '_cookieJar' of null
+  await framework.initialize();
 
   // TODO(burdon): Test views.
-  expect(framework.id).not.toBeNull();
+
+  // framework.connect(partyKey);
 });

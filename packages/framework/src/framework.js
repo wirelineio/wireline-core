@@ -77,6 +77,7 @@ class Framework extends EventEmitter {
     this._db = db || levelup(memdown());
 
     // Kappa stores.
+    // TODO(burdon): Move async to initialize.
     this._kappaManager = new KappaManager(this._megafeed);
     this._kappa = this._kappaManager.getOrCreateKappa(keyToHex(partyKey));
 
@@ -89,7 +90,6 @@ class Framework extends EventEmitter {
       this._megafeed.createExtensions.bind(this._megafeed)
     ];
 
-    // TODO(burdon): This should not happen in the constructor. Move to initialize.
     this._swarm = createSwarm(this._id, partyKey, {
       swarm: conf.swarm,
       hub: conf.hub,

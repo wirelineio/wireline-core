@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@geut/discovery-swarm-webrtc": "^2.2.3",
+    "@wirelineio/discovery-swarm-memory": "^0.2.16",
     "@wirelineio/megafeed": "^0.2.23",
     "@wirelineio/protocol": "^0.2.23",
     "@wirelineio/utils": "^0.2.23",

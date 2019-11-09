@@ -30,6 +30,9 @@ export class MultifeedAdapter extends EventEmitter {
     });
 
     this._ready = false;
+
+    // TODO(burdon): Move to external call.
+    this.initialize();
   }
 
   async initialize() {
