@@ -34,6 +34,7 @@
     "no-console": "off",
     "no-continue": "off",
     "no-else-return": "off",
+    "no-lone-blocks": "off",
     "no-multi-spaces": "off",
     "no-nested-ternary": "off",
     "no-param-reassign": "off",

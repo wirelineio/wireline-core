@@ -2,6 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+import { EventEmitter } from 'events';
 import uuid from 'uuid/v4';
 
 import { KeyValueProtoUtil, MutationProtoUtil } from './mutation';
@@ -10,7 +11,7 @@ import { sortByProperty } from './util';
 /**
  * Simple Object Datastore composed from log mutations.
  */
-export class ObjectModel {
+export class ObjectModel extends EventEmitter {
 
   // TODO(burdon): Move to wireline-core (replace kappa).
   // TODO(burdon): Determine if model is before or after withLogView.
@@ -129,6 +130,23 @@ export class ObjectModel {
   // Items indexed by ID.
   _objectById = new Map();
 
+  /**
+   * @param {LogViewAdapter} view
+   * @return {ObjectModel}
+   */
+  // TODO(burdon): Add disconnect.
+  connect(view) {
+    console.assert(view);
+    this._view = view;
+
+    view.on('update', (log) => {
+      this.applyMutations(log);
+      this.emit('update', this);
+    });
+
+    return this;
+  }
+
   // TODO(burdon): Remove.
   get objects() {
     return this._objectById;
@@ -152,11 +170,16 @@ export class ObjectModel {
     return this;
   }
 
+  async commitMutations(mutations = []) {
+    console.assert(this._view);
+    return this._view.appendMutations(mutations);
+  }
+
   // TODO(burdon): Compute delta (from last apply)?
-  applyLog(messages = []) {
+  applyMutations(mutations = []) {
     this.reset();
 
-    messages.forEach((message) => {
+    mutations.forEach((message) => {
       const { objectId, deleted } = message;
 
       if (objectId) {

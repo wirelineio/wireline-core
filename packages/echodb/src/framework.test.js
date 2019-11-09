@@ -2,21 +2,16 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import { EventEmitter } from 'events';
 import crypto from 'hypercore-crypto';
 import ram from 'random-access-memory';
-import waitForExpect from 'wait-for-expect';
 
 import swarm from '@wirelineio/discovery-swarm-memory';
 import { Framework } from '@wirelineio/framework';
 
-import { ObjectModel } from '.';
+import { ObjectModel } from './object';
+import { LogViewAdapter } from './view';
+import { MutationProtoUtil, KeyValueProtoUtil } from './mutation';
 
-// TODO(burdon): Functions should take parameters not objects (e.g., viewManager.registerView).
-// TODO(burdon): Well-formed objects in constructor (no async).
-// TODO(burdon): Review log protocol (e.g., rename "changes" to messages).
-
-// TODO(burdon): Peer object?
 const createFramework = async (partyKey, name) => {
   const framework = new Framework({
     partyKey,
@@ -29,74 +24,40 @@ const createFramework = async (partyKey, name) => {
   return framework.initialize();
 };
 
-// TODO(burdon): Adapter to provide API similar to apollo-kappa-link withLogView HOC.
-class LogViewAdapter extends EventEmitter {
+// TODO(burdon): Is there something standard that does this?
+const waitForUpdate = async (model, count = 1) => {
+  return new Promise((resolve) => {
+    const listener = () => {
+      if (--count <= 0) {
+        model.removeListener('update', listener);
+        resolve();
+      }
+    };
 
-  /**
-   * @param view - LogsView
-   * @param itemId
-   */
-  constructor(view, itemId) {
-    super();
-    console.assert(view);
-    console.assert(itemId);
-
-    this._view = view;
-    this._itemId = itemId;
-
-    this._log = [];
-    this._view.onChange(itemId, (log) => {
-      const { changes } = log;
-      this._log = changes;
-
-      this.emit('update', this._log);
-    });
-  }
-
-  get log() {
-    return this._log;
-  }
-
-  async getLog() {
-    return this._view.getLogs(this._itemId);
-  }
-
-  async appendMutations(mutations) {
-    for (const mutation of mutations) {
-      await this._view.appendChange(this._itemId, mutation);
-    }
-  }
-}
-
-const createView = async (framework, viewName, itemId) => {
-
-  // Creates a LogsView instance.
-  framework.viewManager.registerView({ name: viewName });
-
-  return new LogViewAdapter(framework.kappa.api[viewName], itemId);
+    model.on('update', listener);
+  });
 };
 
-test('basic views', async () => {
+test('mutations', async () => {
   const partyKey = crypto.randomBytes(32);
-
+  const partitionId = 'partition-1';
   const viewType = 'test';
-  const itemId = 'item-1';
+  const type = 'card';
 
   const f1 = await createFramework(partyKey, 'peer-1');
   const f2 = await createFramework(partyKey, 'peer-2');
 
-  const view1 = await createView(f1, viewType, itemId);
-  const view2 = await createView(f2, viewType, itemId);
+  // TODO(burdon): viewType should be removed (e.g., user data is partitioned).
+  const view1 = await LogViewAdapter.createView(f1, viewType, partitionId);
+  const view2 = await LogViewAdapter.createView(f2, viewType, partitionId);
 
-  const model1 = new ObjectModel();
-  const model2 = new ObjectModel();
+  const model1 = new ObjectModel().connect(view1);
+  const model2 = new ObjectModel().connect(view2);
 
-  view1.on('update', log => model1.applyLog(log));
-  view2.on('update', log => model2.applyLog(log));
+  expect(model1.getObjects(type)).toHaveLength(0);
+  expect(model2.getObjects(type)).toHaveLength(0);
 
-  const type = 'card';
-
-  const items = [
+  const objects = [
     {
       id: ObjectModel.createId(type),
       properties: {
@@ -119,22 +80,30 @@ test('basic views', async () => {
     }
   ];
 
-  const mutations = ObjectModel.fromObjects(items);
-
-  await view1.appendMutations(mutations);
-
-  // TODO(burdon): Wait for something else (e.g., replication to complete)? Waits for 7s.
-  await waitForExpect(async () => {
-    return Promise.all([
-      expect(await view1.getLog()).toHaveLength(mutations.length),
-      expect(await view2.getLog()).toHaveLength(mutations.length),
-    ]);
-  });
-
+  // Create objects.
   {
-    const items = model2.getObjects(type);
-    expect(items).toHaveLength(items.length);
+    const mutations = ObjectModel.fromObjects(objects);
+    await model1.commitMutations(mutations);
 
-    expect(model2.objects.get(items[0].id)).toEqual(items[0]);
+    await waitForUpdate(model2);
+    expect(model2.getObjects(type)).toHaveLength(objects.length);
+    for (const object of objects) {
+      expect(model2.objects.get(object.id)).toEqual(object);
+    }
   }
+
+  // Update object.
+  {
+    expect(model1.objects.get(objects[1].id).properties.priority).toEqual(2);
+
+    const mutations = [
+      MutationProtoUtil.createMessage(objects[1].id, KeyValueProtoUtil.createMessage('priority', 3))
+    ];
+    await model2.commitMutations(mutations);
+
+    await waitForUpdate(model1);
+    expect(model1.objects.get(objects[1].id).properties.priority).toEqual(3);
+  }
+
+  // TODO(burdon): Test delete.
 });

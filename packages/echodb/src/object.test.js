@@ -33,7 +33,7 @@ test('Mutations', () => {
     ]
   };
 
-  const model = new ObjectModel().applyLog(feed.messages);
+  const model = new ObjectModel().applyMutations(feed.messages);
 
   expect(model.getObjects('test')).toHaveLength(1);
   expect(model.getTypes()).toEqual(['test']);
@@ -50,7 +50,7 @@ test('Mutations', () => {
 
   {
     const messages = ObjectModel.fromObject(object);
-    const model = new ObjectModel().applyLog(messages);
+    const model = new ObjectModel().applyMutations(messages);
     const clone = model.objects.get(object.id);
     expect(object).toEqual(clone);
   }
@@ -96,7 +96,7 @@ test('Merge feeds', () => {
   const test = (messages) => {
     expect(messages).toHaveLength(feed1.messages.length + feed2.messages.length + feed3.messages.length);
 
-    const model = new ObjectModel().applyLog(messages);
+    const model = new ObjectModel().applyMutations(messages);
 
     {
       const object = model.objects.get(obj.x);
