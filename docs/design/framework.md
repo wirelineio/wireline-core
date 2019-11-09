@@ -37,3 +37,4 @@ The Framework can many many concurrent Parties, each of which may have many Part
 The Framework also manages Access Control (Authorization) for the Participants (Bots and Users).
 It maintains a set of Credentials for each Participant, which are written to the Participant's Feed.
 The Framework's Party Manager controls the Policies by which the Database implements Replication.
+
