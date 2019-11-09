@@ -70,6 +70,7 @@ class Framework extends EventEmitter {
     });
 
     // Import/export
+    // TODO(burdon): Don't set initial party (use connect below).
     this._partySerializer = new PartySerializer(this._megafeed, partyKey);
     this._partyManager = new PartyManager(partyKey);
 

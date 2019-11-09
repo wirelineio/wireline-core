@@ -12,29 +12,15 @@ const { Presence } = require('@wirelineio/protocol');
 
 const Framework = require('./framework');
 
-// Clean-up
-// TODO(burdon): Move to 20th Century import syntax.
-// TODO(burdon): Remove dependencies on ENV.
-// TODO(burdon): Break Framework into separate pieces? (DxOS)
-// TODO(burdon): How to coordinate changes (list other dependent repos).
-// TODO(burdon): Test end-to-end replication.
-// TODO(burdon): Username does not depend here.
-// TODO(burdon): List all modules that depend on Framework.
-
-// Design
-// TODO(burdon): Layers.
-// TODO(burdon): Multi-device support.
-// TODO(burdon): Test CRDT plugin-framework (e.g., YJS, Kanban ObjectModel).
-// TODO(burdon): Credentials.
-
 async function createPeer(partyKey, name) {
   const keys = crypto.keyPair();
   const presence = new Presence(keys.publicKey);
   const peers = new Set();
 
   const framework = new Framework({
-    // TODO(burdon): Remove name.
+    // TODO(burdon): Remove initial party (call connect after initialize).
     partyKey,
+    // TODO(burdon): Remove username.
     name,
     keys,
     swarm,
@@ -55,14 +41,16 @@ async function createPeer(partyKey, name) {
   return { framework, presence, peers };
 }
 
-async function getMessages(changes) {
-  return (await changes)
-    .map(c => c.data.changes)
+// TODO(burdon): Explain data structure. Rename "changes".
+async function getMessages(messages) {
+  return (await messages)
+    .map(message => message.data.changes)
     .map(messages => messages[0]);
 }
 
 describe('testing 2 peers using the log view', () => {
   const partyKey = crypto.randomBytes(32);
+
   let peer1;
   let peer2;
 
