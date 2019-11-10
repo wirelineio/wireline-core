@@ -3,7 +3,6 @@
 //
 
 import crypto from 'hypercore-crypto';
-import ram from 'random-access-memory';
 
 import swarm from '@wirelineio/discovery-swarm-memory';
 import { Framework } from '@wirelineio/framework';
@@ -13,15 +12,14 @@ import { LogViewAdapter } from './view';
 import { MutationProtoUtil, KeyValueProtoUtil } from './mutation';
 
 const createFramework = async (partyKey, name) => {
-  const framework = new Framework({
-    partyKey,
-    name,
+  return new Framework({
     keys: crypto.keyPair(),
     swarm,
-    storage: ram
-  });
 
-  return framework.initialize();
+    // TODO(burdon): Remove.
+    partyKey,
+    name,
+  }).initialize();
 };
 
 // TODO(burdon): Is there something standard that does this?
@@ -43,9 +41,14 @@ test('mutations', async () => {
   const partitionId = 'partition-1';
   const objectType = 'card';
 
+  // TODO(burdon): Support multiple parties (remove from constructor).
   const f1 = await createFramework(partyKey, 'peer-1');
   const f2 = await createFramework(partyKey, 'peer-2');
 
+  // f1.connect(partyKey);
+  // f2.connect(partyKey);
+
+  // TODO(burdon): Move into framework API (remove access to kappa).
   const view1 = await LogViewAdapter.createView(f1, partitionId);
   const view2 = await LogViewAdapter.createView(f2, partitionId);
 
@@ -78,6 +81,8 @@ test('mutations', async () => {
     }
   ];
 
+  // TODO(burdon): Integrate Text CRDT API? i.e., composite models.
+
   // Create objects.
   {
     const mutations = ObjectModel.fromObjects(objects);
@@ -103,5 +108,16 @@ test('mutations', async () => {
     expect(model1.objects.get(objects[1].id).properties.priority).toEqual(3);
   }
 
-  // TODO(burdon): Test delete.
+  // Delete object.
+  {
+    const mutations = [
+      MutationProtoUtil.createMessage(objects[1].id, null, { deleted: true })
+    ];
+    await model2.commitMutations(mutations);
+
+    await waitForUpdate(model1);
+    expect(model2.getObjects(objectType)).toHaveLength(objects.length - 1);
+  }
+
+  // TODO(burdon): Conflicts (e.g., update after deletion).
 });

@@ -57,10 +57,6 @@ class Framework extends EventEmitter {
 
     this._id = id || keys.publicKey;
 
-    //
-    // Megafeed
-    //
-
     // Create megafeed.
     const { publicKey, secretKey } = keys;
     this._megafeed = new Megafeed(storage, {
@@ -87,18 +83,20 @@ class Framework extends EventEmitter {
       .registerTypes(ViewTypes)
       .registerViews(Views);
 
-    const megaExtensions = [
+    // Swarm.
+    const standardExtensions = [
       this._megafeed.createExtensions.bind(this._megafeed)
     ];
 
+    const { swarm, hub, ice, maxPeers, extensions = [] } = this._conf;
     this._swarm = createSwarm(this._id, partyKey, {
-      swarm: conf.swarm,
-      hub: conf.hub,
-      ice: conf.ice,
-      maxPeers: conf.maxPeers,
-      emit: this.emit.bind(this),
-      extensions: conf.extensions ? [...conf.extensions, ...megaExtensions] : megaExtensions,
-      discoveryToPublicKey: dk => this._partyManager.findPartyByDiscovery(dk)
+      swarm,
+      hub,
+      ice,
+      maxPeers,
+      extensions: [...extensions, ...standardExtensions],
+      discoveryToPublicKey: dk => this._partyManager.findPartyByDiscovery(dk),
+      emit: this.emit.bind(this)
     });
 
     this._initialized = false;
@@ -110,13 +108,9 @@ class Framework extends EventEmitter {
   //
 
   /**
-   * `id` representing the identity of the user in the network and the author of the changes in the feed.
-   *
-   * This is not a final solution. It's a hack to identify the user.
-   *
-   * @prop {Buffer}
-   *
+   * Hack to identity peer on the network.
    */
+  // TODO(burdon): Rename.
   get id() {
     return this._id;
   }
@@ -134,6 +128,7 @@ class Framework extends EventEmitter {
     return this._megafeed;
   }
 
+  // TODO(burdon): Remove access?
   get kappa() {
     return this._kappa;
   }
@@ -160,10 +155,16 @@ class Framework extends EventEmitter {
 
   async initialize() {
     console.assert(!this._initialized);
-    const { partyKey, name } = this._conf;
-    const topic = keyToHex(partyKey);
+
+    //
+    // Megafeed
+    //
 
     await this._megafeed.initialize();
+
+    // TODO(burdon): Don't assume party; call this externally.
+    const { partyKey } = this._conf;
+    const topic = keyToHex(partyKey);
 
     // Set the feed where we are going to write messages.
     const feed = await this._megafeed.openFeed(`feed/${topic}/local`, { metadata: { topic } });
@@ -173,20 +174,25 @@ class Framework extends EventEmitter {
     await this._megafeed.loadFeeds(({ stat }) => stat.metadata.topic === topic);
 
     // Connect to the party.
-    // TODO(burdon): Don't assume party; call this externally.
     const party = this.connect(partyKey);
     this.emit('metric.swarm.party', { key: keyToHex(party.key), dk: keyToHex(party.dk) });
 
-    // TODO(burdon): ???
+    //
+    // Kappa
+    //
+
+    // Wait for kappa to initialize.
     await pify(this._kappa.ready.bind(this._kappa))();
 
     // Set Profile if name is provided.
-    // TODO(burdon): User name should not be provided to Framework.
+    // TODO(burdon): User name should not be required by Framework.
     const profile = await this._kappa.api['contacts'].getProfile();
     if (!profile) {
+      const { name } = this._conf;
       await this._kappa.api['contacts'].setProfile({ data: { username: name } });
     }
 
+    // TODO(burdon): Remove dependency.
     this._kappa.api['contacts'].events.on('profile-updated', (msg) => {
       this.emit('profile-updated', msg);
     });
