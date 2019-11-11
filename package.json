@@ -26,7 +26,7 @@
   "scripts": {
     "clean": "lerna run clean",
     "build": "lerna run build",
-    "test": "lerna run test --ignore \"@wirelineio/gravity\"",
+    "test": "lerna run test",
     "lint": "lerna run lint",
     "lint:fix": "lerna run lint -- --fix",
     "lint:staged": "lint-staged"
