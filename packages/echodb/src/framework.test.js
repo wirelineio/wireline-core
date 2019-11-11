@@ -38,7 +38,7 @@ const waitForUpdate = async (model, count = 1) => {
 
 test('mutations', async () => {
   const partyKey = crypto.randomBytes(32);
-  const partitionId = 'partition-1';
+  const bucketId = 'bucket-1';
   const objectType = 'card';
 
   // TODO(burdon): Support multiple parties (remove from constructor).
@@ -49,8 +49,8 @@ test('mutations', async () => {
   // f2.connect(partyKey);
 
   // TODO(burdon): Move into framework API (remove access to kappa).
-  const view1 = await LogViewAdapter.createView(f1, partitionId);
-  const view2 = await LogViewAdapter.createView(f2, partitionId);
+  const view1 = await LogViewAdapter.createView(f1, bucketId);
+  const view2 = await LogViewAdapter.createView(f2, bucketId);
 
   const model1 = new ObjectModel().connect(view1);
   const model2 = new ObjectModel().connect(view2);

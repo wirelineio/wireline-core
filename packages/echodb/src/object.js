@@ -127,7 +127,7 @@ export class ObjectModel extends EventEmitter {
     return merged;
   }
 
-  // Items indexed by ID.
+  // Objects indexed by ID.
   _objectById = new Map();
 
   /**

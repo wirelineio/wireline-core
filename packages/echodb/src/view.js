@@ -9,31 +9,31 @@ import { EventEmitter } from 'events';
  */
 export class LogViewAdapter extends EventEmitter {
 
-  static async createView(framework, itemId) {
+  static async createView(framework, bucketId) {
 
-    // User data is not differentiated by "type" (just partition).
+    // User data is not differentiated by "type" (just bucket).
     const viewName = 'data';
 
     // Creates a LogsView instance.
     framework.viewManager.registerView({ name: viewName });
 
-    return new LogViewAdapter(framework.kappa.api[viewName], itemId);
+    return new LogViewAdapter(framework.kappa.api[viewName], bucketId);
   }
 
   /**
    * @param {LogsView} view - View wraps kappa view.
-   * @param itemId - Data partition.
+   * @param bucketId - Data bucket.
    */
-  constructor(view, itemId) {
+  constructor(view, bucketId) {
     super();
     console.assert(view);
-    console.assert(itemId);
+    console.assert(bucketId);
 
     this._view = view;
-    this._itemId = itemId;
+    this._bucketId = bucketId;
 
     this._log = [];
-    this._view.onChange(itemId, (log) => {
+    this._view.onChange(bucketId, (log) => {
       const { changes } = log;
       this._log = changes;
 
@@ -46,12 +46,12 @@ export class LogViewAdapter extends EventEmitter {
   }
 
   async getLog() {
-    return this._view.getLogs(this._itemId);
+    return this._view.getLogs(this._bucketId);
   }
 
   async appendMutations(mutations) {
     for (const mutation of mutations) {
-      await this._view.appendChange(this._itemId, mutation);
+      await this._view.appendChange(this._bucketId, mutation);
     }
   }
 }

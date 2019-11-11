@@ -4,6 +4,7 @@
 
 import merge from 'lodash.merge';
 
+// TODO(burdon): Bucket.
 export class ItemModel {
 
   constructor(view) {
