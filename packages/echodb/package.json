@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/echodb",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "ECHO database.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/echodb#readme",
   "bugs": {
@@ -53,6 +53,5 @@
   },
   "publishConfig": {
     "access": "public"
-  },
-  "gitHead": "0364698ca71eaf38d892bfc0c6f9b9c7d0f3cb00"
+  }
 }
