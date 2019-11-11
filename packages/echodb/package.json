@@ -11,8 +11,7 @@
     "url": "git+https://github.com/wirelineio/wireline-core.git"
   },
   "license": "GPL-3.0",
-  "main": "index.js",
-  "browser": "dist/index.js",
+  "main": "dist/index.js",
   "scripts": {
     "build": "npm run clean && npm run build:babel",
     "build:babel": "babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps --copy-files",
