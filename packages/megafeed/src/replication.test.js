@@ -9,7 +9,7 @@ import waitForExpect from 'wait-for-expect';
 import { Extension, Protocol } from '@wirelineio/protocol';
 import { keyToHex } from '@wirelineio/utils';
 
-import { createFeedStore, createKeys } from '@wirelineio/gravity';
+import { createFeedStore, createKeys } from '@wirelineio/gravity/dist/es/util/generator';
 
 debug.enable('test,protocol');
 
