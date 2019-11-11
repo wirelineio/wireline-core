@@ -30,6 +30,7 @@ export class Codec {
     options = Buffer.from(JSON.stringify(options));
     error = error && Buffer.from(JSON.stringify(error));
 
+    // TODO(burdon): Move type to const.
     return this._codec.encode({ type: 'protocol.Request', message: { id, data, error, options } });
   }
 

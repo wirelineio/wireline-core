@@ -171,13 +171,12 @@ export class Protocol extends EventEmitter {
     return this;
   }
 
-
   /**
    * Initializes the protocol stream, creating a feed.
    *
    * https://github.com/mafintosh/hypercore-protocol
    *
-   * @param {Buffer} [initialKey]
+   * @param {Buffer} [discoveryKey]
    * @returns {Protocol}
    */
   init(discoveryKey) {

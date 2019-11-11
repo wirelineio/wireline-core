@@ -8,7 +8,6 @@
 - router must address party and view (item)
 
 
-
 ## 06/20/19
 
 Related PRs:

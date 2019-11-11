@@ -11,6 +11,7 @@ const { streamToList } = require('../utils/stream');
 
 const serializeChanges = change => (typeof change === 'string' ? change : JSON.stringify(change));
 
+// TODO(burdon): Rename 'changes' to 'messages' (there are no implied semantics).
 // TODO(burdon): Rename LogView.
 module.exports = function LogsView(viewId, db, core, { append, isLocal }) {
   const events = new EventEmitter();
@@ -62,10 +63,7 @@ module.exports = function LogsView(viewId, db, core, { append, isLocal }) {
       async getById(core, itemId) {
         const changes = (await core.api[viewId].getChanges(itemId)).map(({ data: { changes } }) => changes);
         const content = changes.map(serializeChanges).join('');
-
-        const {
-          data: { title, type }
-        } = await core.api['items'].getInfo(itemId);
+        const { data: { title, type } } = await core.api['items'].getInfo(itemId);
 
         return {
           itemId,
@@ -76,7 +74,7 @@ module.exports = function LogsView(viewId, db, core, { append, isLocal }) {
         };
       },
 
-      // TODO(elmasse) Quick fix, this needs review. It might be better to use getChages and return the proper value from there.
+      // TODO(elmasse) Quick fix, this needs review. It might be better to use getChanges and return the proper value from there.
       async getLogs(core, itemId) {
         const changes = (await core.api[viewId].getChanges(itemId));
         return changes.map(({ data: { changes } }) => changes);
@@ -102,7 +100,11 @@ module.exports = function LogsView(viewId, db, core, { append, isLocal }) {
         return streamToList(reader);
       },
 
+      // TODO(burdon): core not required.
+      // TODO(burdon): Rename changes.
       async appendChange(core, itemId, changes) {
+
+        // TODO(burdon): Review protocol (e.g., "change").
         return append({
           type: `item.${viewId}.change`,
           data: { itemId, changes }

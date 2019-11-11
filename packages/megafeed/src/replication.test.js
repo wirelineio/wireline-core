@@ -9,7 +9,7 @@ import waitForExpect from 'wait-for-expect';
 import { Extension, Protocol } from '@wirelineio/protocol';
 import { keyToHex } from '@wirelineio/utils';
 
-import { createFeedStore, createKeys } from '@wirelineio/gravity';
+import { createFeedStore, createKeys } from '@wirelineio/gravity/dist/es/util/generator';
 
 debug.enable('test,protocol');
 
@@ -106,10 +106,15 @@ test('feed store replication', async (done) => {
       feedsByTopic.forEach(async ({ topic, keys }) => {
         await Promise.all(keys.map(async (key) => {
           const path = `feed/${topic}/${key}`;
-          const feed = await feedStore.openFeed(path, { key: Buffer.from(key, 'hex'), valueEncoding: 'json', metadata: { topic } });
+          const feed = await feedStore.openFeed(path, {
+            key: Buffer.from(key, 'hex'),
+            valueEncoding: 'json',
+            metadata: { topic }
+          });
 
           // Share and replicate feeds over protocol stream.
           protocol.stream.feed(key);
+
           feed.replicate({ live: true, stream: protocol.stream });
         }));
       });

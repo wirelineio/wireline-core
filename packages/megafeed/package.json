@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/megafeed",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Feed management and replication over the Dat Protocol.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/megafeed#readme",
   "bugs": {
@@ -25,9 +25,9 @@
     "> 5%"
   ],
   "dependencies": {
-    "@wirelineio/feed-store": "^0.3.0",
-    "@wirelineio/protocol": "^0.3.0",
-    "@wirelineio/utils": "^0.3.0",
+    "@wirelineio/feed-store": "^0.3.1",
+    "@wirelineio/protocol": "^0.3.1",
+    "@wirelineio/utils": "^0.3.1",
     "debug": "^4.1.1",
     "end-of-stream": "^1.4.1",
     "hypercore-crypto": "^1.0.0",

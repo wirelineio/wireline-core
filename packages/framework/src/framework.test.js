@@ -1,3 +1,7 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 const ram = require('random-access-memory');
 const crypto = require('hypercore-crypto');
 const waitForExpect = require('wait-for-expect');
@@ -14,8 +18,10 @@ async function createPeer(partyKey, name) {
   const peers = new Set();
 
   const framework = new Framework({
-    name,
+    // TODO(burdon): Remove initial party (call connect after initialize).
     partyKey,
+    // TODO(burdon): Remove username.
+    name,
     keys,
     swarm,
     storage: ram,
@@ -35,14 +41,16 @@ async function createPeer(partyKey, name) {
   return { framework, presence, peers };
 }
 
-async function getMessages(changes) {
-  return (await changes)
-    .map(c => c.data.changes)
+// TODO(burdon): Explain data structure. Rename "changes".
+async function getMessages(messages) {
+  return (await messages)
+    .map(message => message.data.changes)
     .map(messages => messages[0]);
 }
 
 describe('testing 2 peers using the log view', () => {
   const partyKey = crypto.randomBytes(32);
+
   let peer1;
   let peer2;
 

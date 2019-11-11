@@ -28,10 +28,11 @@ function getDiscoveryKey(key) {
 }
 
 function parseToKeys(key) {
-  const bKey = keyToBuffer(key);
+  const buffer = keyToBuffer(key);
+
   return {
-    publicKey: bKey,
-    discoveryKey: crypto.discoveryKey(bKey)
+    publicKey: buffer,
+    discoveryKey: crypto.discoveryKey(buffer)
   };
 }
 
@@ -52,10 +53,10 @@ const keyMeta = (key) => {
 };
 
 module.exports = {
+  getDiscoveryKey,
+  keyMeta,
   keyToBuffer,
   keyToHex,
-  getDiscoveryKey,
-  parseToKeys,
   keyToHuman,
-  keyMeta
+  parseToKeys,
 };

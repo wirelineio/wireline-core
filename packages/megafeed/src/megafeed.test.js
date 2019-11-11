@@ -18,24 +18,24 @@ debug.enable('test,megafeed,replicator,feedmap,protocol,view,extension');
 const createMegafeed = async (name, topic) => {
   const mega = await Megafeed.create(ram, { valueEncoding: 'utf8' });
   const feed = await mega.openFeed(`feed/${topic}/local`, { metadata: { topic } });
+
   feed.append(`hi from ${name}`);
+
   return { feed, mega };
 };
 
 const createConnect = topic => (mega1, mega2) => {
-  const protocol1 = new Protocol({
+  const options = {
     streamOptions: {
       live: true
     }
-  })
+  };
+
+  const protocol1 = new Protocol(options)
     .setExtensions(mega1.createExtensions())
     .init(keyToBuffer(topic));
 
-  const protocol2 = new Protocol({
-    streamOptions: {
-      live: true
-    }
-  })
+  const protocol2 = new Protocol(options)
     .setExtensions(mega2.createExtensions())
     .init(keyToBuffer(topic));
 
@@ -43,14 +43,12 @@ const createConnect = topic => (mega1, mega2) => {
 };
 
 test('megafeed replicator', async () => {
-
   const topic = keyToHex(crypto.randomBytes(32));
-  const connect = createConnect(topic);
 
-  const { mega: mega1 } = await createMegafeed('peerOne', topic);
-  const { mega: mega2 } = await createMegafeed('peerOne', topic);
+  const { mega: mega1 } = await createMegafeed('peer1', topic);
+  const { mega: mega2 } = await createMegafeed('peer2', topic);
 
-  connect(mega1, mega2, mega1);
+  createConnect(topic)(mega1, mega2);
 
   await waitForExpect(() => {
     expect(mega1.getFeeds().length).toBe(2);
