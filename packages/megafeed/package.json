@@ -1,7 +1,7 @@
 {
   "name": "@wirelineio/megafeed",
-  "version": "0.1.33",
-  "description": "Manage multiple hypercore feeds.",
+  "version": "0.3.0",
+  "description": "Feed management and replication over the Dat Protocol.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/megafeed#readme",
   "bugs": {
     "url": "https://github.com/wirelineio/wireline-core/issues"
@@ -12,35 +12,50 @@
   },
   "license": "GPL-3.0",
   "main": "index.js",
+  "browser": "dist/index.js",
   "scripts": {
-    "lint": "eslint **/*.js --ignore-path ../../.eslintignore",
-    "protobuf": "protocol-buffers src/schema.proto -o src/schema.js",
-    "test": "jest --verbose"
+    "build": "npm run clean && babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps",
+    "clean": "del-cli dist",
+    "lint": "eslint ./src --ignore-path ../../.eslintignore",
+    "test": "jest --verbose",
+    "posttest": "npm run lint",
+    "prepublishOnly": "npm run test && npm run build"
   },
+  "browserslist": [
+    "> 5%"
+  ],
   "dependencies": {
-    "@wirelineio/codec-protobuf": "^0.1.33",
-    "@wirelineio/party": "^0.1.33",
-    "@wirelineio/utils": "^0.1.33",
+    "@wirelineio/feed-store": "^0.3.0",
+    "@wirelineio/protocol": "^0.3.0",
+    "@wirelineio/utils": "^0.3.0",
     "debug": "^4.1.1",
     "end-of-stream": "^1.4.1",
-    "hypercore": "^6.24.0",
     "hypercore-crypto": "^1.0.0",
-    "hypertrie": "^3.6.1",
-    "multi-read-stream": "^2.0.0",
+    "hypertrie": "^3.7.1",
+    "kappa-core": "^4.0.0",
     "pify": "^4.0.1",
-    "protocol-buffers-encodings": "^1.1.0",
     "pump": "^3.0.0",
-    "random-access-file": "^2.1.0",
-    "through2": "^3.0.1"
+    "random-access-memory": "^3.1.1",
+    "source-map-support": "^0.5.12"
   },
   "devDependencies": {
-    "jest": "^24.5.0",
-    "protocol-buffers": "^4.1.0",
-    "random-access-memory": "^3.1.1",
-    "stream-to-promise": "^2.2.0",
-    "tempy": "^0.2.1"
+    "@babel/cli": "7.4.4",
+    "@babel/core": "^7.4.5",
+    "@babel/plugin-proposal-class-properties": "^7.5.5",
+    "@babel/plugin-proposal-export-default-from": "^7.5.2",
+    "@babel/preset-env": "^7.4.5",
+    "@wirelineio/gravity": "^0.2.15",
+    "@wirelineio/hyperswarm-network-memory": "^0.2.12",
+    "babel-jest": "^24.8.0",
+    "babel-plugin-add-module-exports": "^1.0.2",
+    "babel-plugin-inline-import": "^3.0.0",
+    "del-cli": "^2.0.0",
+    "eslint": "^5.16.0",
+    "jest": "^24.8.0",
+    "wait-for-expect": "^3.0.0"
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "gitHead": "0364698ca71eaf38d892bfc0c6f9b9c7d0f3cb00"
 }

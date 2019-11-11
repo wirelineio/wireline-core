@@ -3,6 +3,9 @@
 //
 
 const crypto = require('hypercore-crypto');
+const HumanHasher = require('humanhash');
+
+const hasher = new HumanHasher();
 
 function keyToBuffer(key) {
   if (!key) {
@@ -12,22 +15,47 @@ function keyToBuffer(key) {
   return Buffer.isBuffer(key) ? key : Buffer.from(key, 'hex');
 }
 
-exports.keyToHex = (key) => {
+function keyToHex(key) {
   if (Buffer.isBuffer(key)) {
     return key.toString('hex');
   }
 
   return key;
-};
+}
 
-exports.getDiscoveryKey = key => crypto.discoveryKey(keyToBuffer(key));
+function getDiscoveryKey(key) {
+  return crypto.discoveryKey(keyToBuffer(key));
+}
 
-exports.parseToKeys = (key) => {
+function parseToKeys(key) {
   const bKey = keyToBuffer(key);
   return {
     publicKey: bKey,
     discoveryKey: crypto.discoveryKey(bKey)
   };
+}
+
+function keyToHuman(key, prefix) {
+  const name = hasher.humanize(keyToHex(key));
+  if (prefix) {
+    return `${prefix}(${name})`;
+  }
+
+  return name;
+}
+
+const keyMeta = (key) => {
+  return {
+    key: keyToHex(key),
+    name: keyToHuman(key)
+  };
 };
 
-exports.keyToBuffer = keyToBuffer;
+module.exports = {
+  keyToBuffer,
+  keyToHex,
+  getDiscoveryKey,
+  parseToKeys,
+  keyToHuman,
+  keyMeta
+};

@@ -26,12 +26,13 @@
   "scripts": {
     "clean": "lerna run clean",
     "build": "lerna run build",
-    "test": "lerna run test",
+    "test": "lerna run test --ignore \"@wirelineio/gravity\"",
     "lint": "lerna run lint",
     "lint:fix": "lerna run lint -- --fix",
     "lint:staged": "lint-staged"
   },
   "devDependencies": {
+    "babel-eslint": "^10.0.2",
     "eslint": "^5.16.0",
     "eslint-config-airbnb": "^17.1.0",
     "eslint-plugin-import": "^2.17.2",

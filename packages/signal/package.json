@@ -1,11 +1,19 @@
 {
   "name": "@wirelineio/signal",
-  "version": "0.1.33",
+  "version": "0.3.0",
   "description": "Wireline discovery-swarm-webrtc signal.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/signal#readme",
   "bugs": {
     "url": "https://github.com/wirelineio/wireline-core/issues"
   },
+  "bin": {
+    "signal": "bin/signal.js"
+  },
+  "files": [
+    "bin/",
+    "index.js",
+    "server.js"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wirelineio/wireline-core.git"
@@ -17,10 +25,11 @@
     "start": "PORT=4000 node index.js"
   },
   "dependencies": {
-    "@geut/discovery-swarm-webrtc": "^2.0.0-alpha.18",
+    "@geut/discovery-swarm-webrtc": "^2.2.3",
     "socket.io": "^2.2.0"
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "gitHead": "0364698ca71eaf38d892bfc0c6f9b9c7d0f3cb00"
 }

@@ -2,49 +2,93 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const { AnyType } = require('./schema.js');
+const protobuf = require('protobufjs/light');
 
-/**
- * encode / decode protobuffers
- *
- * mapping {
- *   'Message1': 1,
- *   'Message2': 2
- * }
- */
-function codecProtobuf(root) {
-  return {
-    encode: function encodeProtobuf(obj) {
-      if (typeof obj !== 'object') {
-        throw new Error('CodecProtobuf: The encode message needs to be an object { type, message }.');
-      }
+protobuf.util.Buffer = Buffer;
+protobuf.configure();
 
-      const { type, message } = obj;
+const { Root } = protobuf;
 
-      const Message = root[type];
+const AnyType = Root.fromJSON(require('./schema.json')).lookupType('codecprotobuf.AnyType');
 
-      const value = Message.encode(message);
+class Codec {
+  constructor(options = {}) {
+    const { verify = false } = options;
 
-      return AnyType.encode({ type, value });
-    },
+    this._verify = verify;
 
-    decode: function decodeProtobuf(buffer, onlyMessage = true) {
-      const { type, value } = AnyType.decode(buffer);
+    this._root = new Root();
+  }
 
-      const Message = root[type];
+  load(root) {
+    this._root.addJSON(root.nested);
+  }
 
-      const message = Message.decode(value);
+  loadFromJSON(schema) {
+    const root = Root.fromJSON(schema);
 
-      if (onlyMessage) {
-        return message;
-      }
+    this.load(root);
+  }
 
-      return {
-        type,
-        message
-      };
+  getType(typeName) {
+    const type = this._root.lookupType(typeName);
+
+    if (!type) {
+      throw new Error(`CodecProtobuf: Message type ${typeName} not found.`);
     }
-  };
+
+    return type;
+  }
+
+  encode(obj) {
+    if (typeof obj !== 'object' || obj.type === undefined || obj.message === undefined) {
+      throw new Error('CodecProtobuf: The encode message needs to be an object { type, message }.');
+    }
+
+    const { type: typeName, message } = obj;
+
+    const type = this.getType(typeName);
+
+    if (this._verify) {
+      const err = type.verify(message);
+
+      if (err) {
+        throw new Error(`CodecProtobuf: Verify error by ${err}`);
+      }
+    }
+
+    const value = type.encode(message).finish();
+    return AnyType.encode({ type: typeName, value }).finish();
+  }
+
+  decode(buffer, withType = true) {
+    const obj = this.decodeWithType(buffer);
+    if (withType) {
+      return obj;
+    }
+
+    return obj.message;
+  }
+
+  decodeWithType(buffer) {
+    const { type: typeName, value } = AnyType.toObject(AnyType.decode(buffer));
+
+    try {
+      const type = this._root.lookupType(typeName);
+      const message = type.toObject(type.decode(value));
+
+      return { type: typeName, message };
+    } catch (err) {
+      // TODO(ashwin): Is there is better way to check if a type is supported?
+      if (err.message && err.message.startsWith('no such type:')) {
+        // Type not known, return raw buffer.
+        return { type: typeName, buffer };
+      }
+
+      // Some other error, rethrow.
+      throw err;
+    }
+  }
 }
 
-module.exports = codecProtobuf;
+module.exports = Codec;

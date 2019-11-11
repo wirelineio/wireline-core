@@ -1,6 +1,8 @@
 {
+  "parser": "babel-eslint",
   "env": {
     "browser": true,
+    "commonjs": true,
     "es6": true,
     "node": true,
     "jest": true
@@ -34,6 +36,10 @@
     "no-underscore-dangle": "off",
     "object-curly-newline": "off",
     "padded-blocks": "off",
-    "react/prop-types": "off"
+    "react/prop-types": "off",
+    "class-methods-use-this": "off",
+    "no-plusplus": "off",
+    "no-restricted-syntax": "off",
+    "no-await-in-loop": "off"
   }
 }
