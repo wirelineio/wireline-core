@@ -23,6 +23,7 @@ const packageJSON = require('../package.json');
 /**
  * App framework.
  */
+// TODO(burdon): Requires test.
 class Framework extends EventEmitter {
 
   /**
@@ -39,67 +40,63 @@ class Framework extends EventEmitter {
    * @param conf.maxPeers {Number} Maximum connections on swarm. Optional. Defaults: If isBot is true it is set to 64 otherwise 2.
    * @param conf.name {String} Name for the default profile.
    */
-  // TODO(burdon): Non-optional variables (e.g., storage) should be actual params.
   constructor(conf = {}) {
     super();
 
     this._conf = conf;
 
-    const { db, partyKey, keys = crypto.keyPair(), storage = ram, name } = this._conf;
+    // TODO(burdon): Non-optional variables (e.g., storage) should be actual params.
+    const { id, name, partyKey, db, keys = crypto.keyPair(), storage = ram } = this._conf;
+    console.assert(!id || (id && Buffer.isBuffer(id)));
     console.assert(Buffer.isBuffer(partyKey));
     console.assert(keys.publicKey);
     console.assert(keys.secretKey);
+
+    // TODO(burdon): Remove.
     console.assert(name);
 
-    console.assert(!conf.id || (conf.id && Buffer.isBuffer(conf.id)));
-
-    this._id = conf.id || keys.publicKey;
-
-    //
-    // Megafeed
-    //
+    this._id = id || keys.publicKey;
 
     // Create megafeed.
     const { publicKey, secretKey } = keys;
-    this._mega = new Megafeed(storage, {
+    this._megafeed = new Megafeed(storage, {
       publicKey,
       secretKey,
       valueEncoding: 'json'
     });
 
     // Import/export
-    this._partySerializer = new PartySerializer(this._mega, partyKey);
+    // TODO(burdon): Don't set initial party (use connect below).
+    this._partySerializer = new PartySerializer(this._megafeed, partyKey);
     this._partyManager = new PartyManager(partyKey);
 
     // In-memory cache for views.
     this._db = db || levelup(memdown());
 
-    // Create KappaManager.
-    this._kappaManager = new KappaManager(this._mega);
-
-    // Create a single Kappa instance
+    // Kappa stores.
+    // TODO(burdon): Move async to initialize.
+    this._kappaManager = new KappaManager(this._megafeed);
     this._kappa = this._kappaManager.getOrCreateKappa(keyToHex(partyKey));
 
-    // Create a ViewManager
+    // Manage views.
     this._viewManager = new ViewManager(this._kappa, this._db, this._id)
       .registerTypes(ViewTypes)
       .registerViews(Views);
 
-    const megaExtensions = [
-      this._mega.createExtensions.bind(this._mega)
+    // Swarm.
+    const standardExtensions = [
+      this._megafeed.createExtensions.bind(this._megafeed)
     ];
 
-    // TODO(burdon): This should not happen in the constructor. It can fail.
+    const { swarm, hub, ice, maxPeers, extensions = [] } = this._conf;
     this._swarm = createSwarm(this._id, partyKey, {
-      swarm: conf.swarm,
-      hub: conf.hub,
-      ice: conf.ice,
-      maxPeers: conf.maxPeers,
-      emit: this.emit.bind(this),
-      extensions: conf.extensions
-        ? [...conf.extensions, ...megaExtensions]
-        : megaExtensions,
-      discoveryToPublicKey: dk => this._partyManager.findPartyByDiscovery(dk)
+      swarm,
+      hub,
+      ice,
+      maxPeers,
+      extensions: [...extensions, ...standardExtensions],
+      discoveryToPublicKey: dk => this._partyManager.findPartyByDiscovery(dk),
+      emit: this.emit.bind(this)
     });
 
     this._initialized = false;
@@ -107,32 +104,31 @@ class Framework extends EventEmitter {
 
   //
   // Accessors
+  // TODO(burdon): Restrict accessors.
   //
 
   /**
-   * `id` representing the identity of the user in the network and the author of the changes in the feed.
-   *
-   * This is not a final solution. It's a hack to identify the user.
-   *
-   * @prop {Buffer}
-   *
+   * Hack to identity peer on the network.
    */
+  // TODO(burdon): Rename.
   get id() {
     return this._id;
   }
 
   get key() {
-    return this._mega.key;
+    return this._megafeed.key;
   }
 
   get swarm() {
     return this._swarm;
   }
 
+  // TODO(burdon): Rename megafeed.
   get mega() {
-    return this._mega;
+    return this._megafeed;
   }
 
+  // TODO(burdon): Remove access?
   get kappa() {
     return this._kappa;
   }
@@ -159,29 +155,44 @@ class Framework extends EventEmitter {
 
   async initialize() {
     console.assert(!this._initialized);
-    const { partyKey, name } = this._conf;
+
+    //
+    // Megafeed
+    //
+
+    await this._megafeed.initialize();
+
+    // TODO(burdon): Don't assume party; call this externally.
+    const { partyKey } = this._conf;
     const topic = keyToHex(partyKey);
 
-    await this._mega.initialize();
-
-    // We set the feed where we are going to write messages.
-    const feed = await this._mega.openFeed(`feed/${topic}/local`, { metadata: { topic } });
+    // Set the feed where we are going to write messages.
+    const feed = await this._megafeed.openFeed(`feed/${topic}/local`, { metadata: { topic } });
     this._viewManager.setWriterFeed(feed);
 
-    // We need to load all the feeds with the related topic
-    await this._mega.loadFeeds(({ stat }) => stat.metadata.topic === topic);
+    // Load all feeds with the related topic.
+    await this._megafeed.loadFeeds(({ stat }) => stat.metadata.topic === topic);
 
     // Connect to the party.
     const party = this.connect(partyKey);
     this.emit('metric.swarm.party', { key: keyToHex(party.key), dk: keyToHex(party.dk) });
 
+    //
+    // Kappa
+    //
+
+    // Wait for kappa to initialize.
     await pify(this._kappa.ready.bind(this._kappa))();
 
     // Set Profile if name is provided.
+    // TODO(burdon): User name should not be required by Framework.
     const profile = await this._kappa.api['contacts'].getProfile();
     if (!profile) {
+      const { name } = this._conf;
       await this._kappa.api['contacts'].setProfile({ data: { username: name } });
     }
+
+    // TODO(burdon): Remove dependency.
     this._kappa.api['contacts'].events.on('profile-updated', (msg) => {
       this.emit('profile-updated', msg);
     });
@@ -202,7 +213,6 @@ class Framework extends EventEmitter {
     this._swarm.leave(party.dk);
     return party;
   }
-
 }
 
 module.exports = Framework;

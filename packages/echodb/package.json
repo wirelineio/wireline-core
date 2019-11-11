@@ -1,8 +1,8 @@
 {
-  "name": "@wirelineio/protocol",
+  "name": "@wirelineio/echodb",
   "version": "0.3.2",
-  "description": "Protocol wrapper of hypercore-protocol.",
-  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/protocol#readme",
+  "description": "ECHO database.",
+  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/echodb#readme",
   "bugs": {
     "url": "https://github.com/wirelineio/wireline-core/issues"
   },
@@ -11,13 +11,12 @@
     "url": "git+https://github.com/wirelineio/wireline-core.git"
   },
   "license": "GPL-3.0",
-  "main": "index.js",
-  "browser": "dist/index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "build": "npm run clean && npm run build:protobuf && npm run build:babel",
+    "build": "npm run clean && npm run build:babel",
     "build:babel": "babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps --copy-files",
-    "build:protobuf": "pbjs -t json src/schema.proto -o src/schema.json",
     "clean": "del-cli dist",
+    "coverage": "jest --coverage --verbose src",
     "lint": "eslint ./src --ignore-path ../../.eslintignore",
     "test": "jest --verbose src",
     "posttest": "npm run lint",
@@ -28,18 +27,15 @@
     "> 5%"
   ],
   "dependencies": {
-    "@wirelineio/broadcast": "^0.3.2",
-    "@wirelineio/codec-protobuf": "^0.3.2",
-    "@wirelineio/utils": "^0.3.2",
+    "@wirelineio/discovery-swarm-memory": "^0.2.17",
+    "@wirelineio/framework": "^0.3.2",
     "debug": "^4.1.1",
-    "end-of-stream": "^1.4.1",
     "hypercore-crypto": "^1.0.0",
-    "hypercore-protocol": "^6.11.1",
-    "ngraph.graph": "^18.0.1",
-    "pump": "^3.0.0",
-    "queue-microtask": "^1.1.2",
+    "lodash.merge": "^4.6.1",
+    "protocol-buffers": "^4.1.0",
+    "random-access-memory": "^3.1.1",
     "source-map-support": "^0.5.12",
-    "uuid": "^3.3.2"
+    "uuid": "^3.3.3"
   },
   "devDependencies": {
     "@babel/cli": "7.4.4",
@@ -50,14 +46,11 @@
     "babel-jest": "^24.8.0",
     "babel-plugin-add-module-exports": "^1.0.2",
     "babel-plugin-inline-import": "^3.0.0",
-    "del-cli": "^2.0.0",
     "eslint": "^5.16.0",
     "jest": "^24.8.0",
-    "ngraph.path": "^1.2.0",
     "wait-for-expect": "^3.0.0"
   },
   "publishConfig": {
     "access": "public"
-  },
-  "gitHead": "0364698ca71eaf38d892bfc0c6f9b9c7d0f3cb00"
+  }
 }

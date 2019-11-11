@@ -22,6 +22,7 @@
     "consistent-return": "off",
     "dot-notation": "off",
     "import/prefer-default-export": "off",
+    "lines-between-class-members": "off",
     "max-len": [2, 120, 2, {
       "ignoreComments": true,
       "ignoreStrings": true,
@@ -29,8 +30,13 @@
       "ignoreUrls": true
       }
     ],
+    "no-cond-assign": "off",
     "no-console": "off",
+    "no-continue": "off",
+    "no-else-return": "off",
+    "no-lone-blocks": "off",
     "no-multi-spaces": "off",
+    "no-nested-ternary": "off",
     "no-param-reassign": "off",
     "no-shadow": "off",
     "no-underscore-dangle": "off",

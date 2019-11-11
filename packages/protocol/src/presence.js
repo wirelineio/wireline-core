@@ -28,7 +28,7 @@ export class Presence extends EventEmitter {
   /**
    * @constructor
    * @param {string} peerId
-   * @param {Function} peerMessageHandler
+   * @param {Object} options
    */
   constructor(peerId, options = {}) {
     super();
@@ -56,6 +56,7 @@ export class Presence extends EventEmitter {
     this.network.forEachNode((node) => {
       list.push(keyToBuffer(node.id));
     });
+
     return list;
   }
 
@@ -120,6 +121,7 @@ export class Presence extends EventEmitter {
   }
 
   _buildNetwork() {
+    // TODO(burdon): Private variable (_network) with accessor.
     this.network = createGraph();
     this.network.addNode(keyToHex(this._peerId));
     this.network.on('changed', (changes) => {

@@ -57,6 +57,7 @@ class ViewManager {
 
   // TODO(burdon): Const for LogsView.
   // TODO(burdon): Disallow polymorphic viewType. Why pass in non-string?
+  // TODO(burdon): Pass in arguments not objects.
   registerView({ name, view: viewType = 'LogsView' }) {
     // TODO(tinchoz49): Remove the try catch after merged mf2
     try {

@@ -5,6 +5,8 @@
 const EventEmitter = require('events');
 const view = require('kappa-view-level');
 const sub = require('subleveldown');
+
+// TODO(burdon): Move out of framework.
 const Y = require('yjs');
 
 const { keyToHex } = require('@wirelineio/utils');
