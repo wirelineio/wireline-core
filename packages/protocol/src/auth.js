@@ -8,7 +8,7 @@ import { EventEmitter } from 'events';
 import { keyToHex, keyToBuffer } from '@wirelineio/utils';
 
 import { Extension } from './extension';
-import {Cardcase} from "@wirelineio/cardcase";
+import {Cardcase} from '@wirelineio/cardcase';
 
 const log = debug('protocol:auth');
 
