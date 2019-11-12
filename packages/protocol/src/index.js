@@ -2,6 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+export * from './auth';
 export * from './codec';
 export * from './extension';
 export * from './protocol';

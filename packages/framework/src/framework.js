@@ -99,7 +99,8 @@ class Framework extends EventEmitter {
       extensions: conf.extensions
         ? [...conf.extensions, ...megaExtensions]
         : megaExtensions,
-      discoveryToPublicKey: dk => this._partyManager.findPartyByDiscovery(dk)
+      discoveryToPublicKey: dk => this._partyManager.findPartyByDiscovery(dk),
+      userData: conf.userData,
     });
 
     this._initialized = false;

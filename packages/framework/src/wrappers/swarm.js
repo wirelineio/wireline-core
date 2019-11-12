@@ -72,6 +72,8 @@ module.exports = function createSwarm(id, topic, options = {}) {
   };
 
   const swarm = options.swarm || discoverySwarmWebrtc;
+  
+  let userData = options.userData || { peerId: idHex };
 
   const sw = swarm({
     id,
@@ -82,7 +84,7 @@ module.exports = function createSwarm(id, topic, options = {}) {
 
     // TODO(burdon): Get's the main hypercore stream (not actually the feed replication stream).
     stream: ({ channel }) => new Protocol(protocolOptions)
-      .setUserData({ peerId: idHex })
+      .setUserData(userData)
       .setExtensions(createExtensions(extensions))
       .init(keyToBuffer(channel))
       .stream,

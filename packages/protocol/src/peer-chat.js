@@ -148,7 +148,7 @@ export class PeerChat extends EventEmitter {
   _addPeer(protocol) {
     // TODO(ashwin): Is there a natural base class for peer management?
     console.assert(protocol);
-    const { peerId } = protocol.getContext();
+    const { peerId } = protocol ? protocol.getContext() : {};
 
     if (this._peers.has(keyToHex(peerId))) {
       this.emit('peer:already-connected', peerId);
@@ -166,8 +166,11 @@ export class PeerChat extends EventEmitter {
    */
   _removePeer(protocol) {
     console.assert(protocol);
-    const { peerId } = protocol.getContext();
-    this._peers.delete(keyToHex(peerId));
-    this.emit('peer:left', peerId);
+    const context = protocol ? protocol.getContext() : {};
+    const { peerId } = context || {};
+    if (peerId) {
+      this._peers.delete(keyToHex(peerId));
+      this.emit('peer:left', peerId);
+    }
   }
 }
