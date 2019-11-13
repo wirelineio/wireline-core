@@ -2,7 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import CodecProtobuf from '@wirelineio/codec-protobuf';
+import CodecProtobuf from '@dxos/codec-protobuf';
 
 // eslint-disable-next-line
 import schema from './schema.json';

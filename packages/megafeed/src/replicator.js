@@ -89,9 +89,9 @@ export class Replicator extends EventEmitter {
         this._replicate(protocol, feed);
       });
 
-      const onFeed = (feed, stat) => {
-        if (topics.includes(stat.metadata.topic)) {
-          const feedKeysByTopic = [{ topic: stat.metadata.topic, keys: [keyToHex(feed.key)] }];
+      const onFeed = (feed, descriptor) => {
+        if (topics.includes(descriptor.metadata.topic)) {
+          const feedKeysByTopic = [{ topic: descriptor.metadata.topic, keys: [keyToHex(feed.key)] }];
           this._peers.forEach(async (_, peer) => {
             try {
               await extension.send({ type: 'sync-keys', feedKeysByTopic  }, { oneway: true });
@@ -136,10 +136,10 @@ export class Replicator extends EventEmitter {
       case 'get-topics': {
         const topics = Array.from(new Set(this._feedStore
           .getDescriptors()
-          .filter(descriptor => !!descriptor.stat.metadata.topic)
+          .filter(descriptor => !!descriptor.metadata.topic)
           // This is the only way right now to prevent share topics that you don't want to.
           .filter(descriptor => descriptor.opened)
-          .map(descriptor => descriptor.stat.metadata.topic)));
+          .map(descriptor => descriptor.metadata.topic)));
 
         return {
           topics
@@ -200,7 +200,7 @@ export class Replicator extends EventEmitter {
     const list = [];
     const feedKeysByTopic = await Promise.all(topics.map(async (topic) => {
       const feeds = await this._feedStore.loadFeeds((descriptor) => {
-        return descriptor.stat.metadata.topic === topic;
+        return descriptor.metadata.topic === topic;
       });
 
       const keys = feeds.map((feed) => {
@@ -239,7 +239,7 @@ export class Replicator extends EventEmitter {
     const { topics = [] } = this._peers.get(protocol) || {};
 
     const feed = this._feedStore.findFeed((descriptor) => {
-      const topic = descriptor.stat.metadata && descriptor.stat.metadata.topic;
+      const topic = descriptor.metadata && descriptor.metadata.topic;
       return descriptor.discoveryKey.equals(discoveryKey) && topics.includes(topic);
     });
 
