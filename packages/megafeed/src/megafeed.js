@@ -6,7 +6,7 @@ import { EventEmitter } from 'events';
 import hypertrie from 'hypertrie';
 import pify from 'pify';
 
-import { FeedStore } from '@wirelineio/feed-store';
+import { FeedStore } from '@dxos/feed-store';
 
 import { Replicator } from './replicator';
 
