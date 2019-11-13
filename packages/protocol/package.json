@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/protocol",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Protocol wrapper of hypercore-protocol.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/protocol#readme",
   "bugs": {
@@ -28,8 +28,8 @@
     "> 5%"
   ],
   "dependencies": {
-    "@wirelineio/broadcast": "^0.3.2",
     "@dxos/codec-protobuf": "^1.0.0",
+    "@wirelineio/broadcast": "^0.3.3",
     "@wirelineio/utils": "^0.3.2",
     "debug": "^4.1.1",
     "end-of-stream": "^1.4.1",
