@@ -43,11 +43,11 @@ export class Megafeed extends EventEmitter {
         valueEncoding: options.valueEncoding
       }
     })
-      .on('feed', (feed, stat) => {
-        this.emit('feed', feed, stat);
+      .on('feed', (feed, descriptor) => {
+        this.emit('feed', feed, descriptor);
 
         feed.on('sync', () => {
-          this.emit('update', feed, stat);
+          this.emit('update', feed, descriptor);
         });
       });
 
@@ -94,8 +94,8 @@ export class Megafeed extends EventEmitter {
     return this._feedStore.filterFeeds(cb);
   }
 
-  async openFeed(path, stat) {
-    return this._feedStore.openFeed(path, stat);
+  async openFeed(path, options) {
+    return this._feedStore.openFeed(path, options);
   }
 
   async loadFeeds(cb) {

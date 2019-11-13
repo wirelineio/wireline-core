@@ -30,7 +30,7 @@ class PartySerializer {
   async serializeParty() {
     const topic = keyToHex(this._partyKey);
 
-    const partyFeeds = await this._megafeed.filterFeeds(({ stat }) => stat.metadata.topic === topic);
+    const partyFeeds = await this._megafeed.filterFeeds(descriptor => descriptor.metadata.topic === topic);
 
     // Read the messages from all party feeds.
     const reader = multi.obj(partyFeeds.map(feed => feed.createReadStream()));
