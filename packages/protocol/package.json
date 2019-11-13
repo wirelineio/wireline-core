@@ -29,6 +29,7 @@
   ],
   "dependencies": {
     "@wirelineio/broadcast": "^0.3.0",
+    "@wirelineio/cardcase": "^0.3.0",
     "@wirelineio/codec-protobuf": "^0.3.0",
     "@wirelineio/utils": "^0.3.0",
     "debug": "^4.1.1",

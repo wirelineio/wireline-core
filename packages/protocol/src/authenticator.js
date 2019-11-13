@@ -3,76 +3,10 @@
 //
 
 import debug from 'debug';
-import { EventEmitter } from 'events';
-
-import { keyToHex, keyToBuffer } from '@wirelineio/utils';
 
 import { Cardcase } from '@wirelineio/cardcase';
-import { Extension } from './extension';
 
-const log = debug('protocol:auth');
-
-/**
- * Peer chat.
- */
-export class Auth extends EventEmitter {
-
-  static EXTENSION_NAME = 'auth';
-
-  /**
-   * @constructor
-   * @param {string} peerId
-   */
-  constructor(peerId, authHints)  {
-    super();
-
-    console.assert(Buffer.isBuffer(peerId));
-
-    this._peerId = peerId;
-
-    this._framework = null;
-    this._authHints = authHints;
-  }
-
-  setFramework(framework) {
-    this._framework = framework;
-  }
-
-  /**
-   * Create protocol extension.
-   * @return {Extension}
-   */
-  createExtension() {
-    return new Extension(Auth.EXTENSION_NAME, { binary: true })
-      .setFeedHandler(this._onFeed.bind(this))
-      .setHandshakeHandler(this._onHandshake.bind(this))
-      .setMessageHandler(this._onMessage.bind(this))
-      .setCloseHandler(this._onClose.bind(this));
-  }
-
-  _onFeed(protocol, context, discoveryKey) {
-    // log('onFeed', protocol, context, discoveryKey);
-  }
-
-  async _onHandshake(protocol, context) {
-    const authenticator = new Authenticator(this._authHints);
-    await authenticator.build(this._framework);
-    const ok = await authenticator.authenticate(context.auth);
-    if (ok) {
-      log('Authenticated!');
-    } else {
-      throw new Error('Unauthorized access rejected!');
-    }
-  }
-
-  _onMessage() {
-    // log('onMessage', arguments);
-  }
-
-  _onClose(error, protocol, context) {
-    // log('onClose', arguments);
-  }
-}
+const log = debug('protocol:auth:authenticator');
 
 export class Authenticator {
   constructor(authHints) {
@@ -129,7 +63,6 @@ export class Authenticator {
     return true;
   }
 
-
   async build(framework) {
     // TODO(telackey): This is a ridiculously inefficient way to do this.
     // In reality, we'd need to take the Genesis message from the feed we control
@@ -177,9 +110,12 @@ export class Authenticator {
               }
               break;
             }
+            default: // pass
           }
         }
       }
     }
+
+    return this;
   }
 }
