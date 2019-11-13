@@ -5,36 +5,38 @@
 import debug from 'debug';
 import { EventEmitter } from 'events';
 
-import { Authenticator } from './authenticator';
 import { Extension } from './extension';
 
 const log = debug('protocol:auth:extension');
 
 /**
- * Authentication
+ * An extension to requires nodes to be authenticated
+ * during handshake before being allowed to replicate.
  */
-export class Auth extends EventEmitter {
+export class AuthExtension extends EventEmitter {
 
   static EXTENSION_NAME = 'auth';
 
   /**
    * @constructor
    * @param {string} peerId
-   * @param authHints
+   * @param authenticator
    */
-  constructor(peerId, authHints) {
+  constructor(peerId, authenticator = null) {
     super();
 
     console.assert(Buffer.isBuffer(peerId));
 
     this._peerId = peerId;
-
-    this._framework = null;
-    this._authHints = authHints;
+    this._authenticator = authenticator;
   }
 
-  setFramework(framework) {
-    this._framework = framework;
+  get authenticator() {
+    return this._authenticator;
+  }
+
+  set authenticator(value) {
+    this._authenticator = value;
   }
 
   /**
@@ -42,15 +44,19 @@ export class Auth extends EventEmitter {
    * @return {Extension}
    */
   createExtension() {
-    return new Extension(Auth.EXTENSION_NAME, { binary: true })
+    return new Extension(AuthExtension.EXTENSION_NAME, { binary: true })
       .setHandshakeHandler(this._onHandshake.bind(this));
   }
 
   async _onHandshake(protocol, context) {
-    const authenticator = new Authenticator(this._authHints);
-    await authenticator.build(this._framework);
+    if (!this.authenticator) {
+      log('Not authenticator configured!');
+      return;
+    }
 
-    if (await authenticator.authenticate(context.auth)) {
+    await this._authenticator.update();
+
+    if (await this._authenticator.authenticate(context.auth)) {
       log('Authenticated!');
     } else {
       throw new Error('Unauthorized access rejected!');

@@ -6,13 +6,21 @@ import debug from 'debug';
 
 import { Cardcase } from '@wirelineio/cardcase';
 
+const ONE_HOUR = 60 * 60 * 1000;
 const log = debug('protocol:auth:authenticator');
 
+/**
+ * Authenticate and verify messages.
+ * Used by AuthExtension for authenticating nodes during
+ * handshake.
+ */
 export class Authenticator {
-  constructor(authHints) {
+  constructor(framework, authHints) {
+    this._framework = framework;
     this._allowedKeys = new Set();
     this._allowedFeeds = new Set();
     this._cardcase = new Cardcase();
+
     if (authHints) {
       if (authHints.keys) {
         for (const key of authHints.keys) {
@@ -31,7 +39,12 @@ export class Authenticator {
 
   async authenticate(auth) {
     if (await this.verify(auth)) {
-      if (Math.abs(Date.now() - auth.signed_at) > 24 * 60 * 60 * 1000) {
+      // TODO(telackey): This is not how it should be done.  We
+      // would rather use the remote nonce for anti-replay, but we
+      // will need to add hooks for retrieving it and signing it
+      // between connect() and handshake() to do that.  In the meantime,
+      // not allowing infinite replay is at least something.
+      if (Math.abs(Date.now() - auth.signed_at) > 24 * ONE_HOUR) {
         log('Signature OK, but message is too old:', auth.signed_at);
         return false;
       }
@@ -63,12 +76,12 @@ export class Authenticator {
     return true;
   }
 
-  async build(framework) {
+  async update() {
     // TODO(telackey): This is a ridiculously inefficient way to do this.
     // In reality, we'd need to take the Genesis message from the feed we control
     // and use that as the starting point.  We also need causal ordering.
     // But for now, we trust anything already written and verifiable to be valid.
-    const results = await Promise.all(framework.mega.getFeeds().map((f) => {
+    const results = await Promise.all(this._framework.mega.getFeeds().map((f) => {
       const stream = f.createReadStream();
       const collect = [];
       return new Promise((resolve, reject) => {
