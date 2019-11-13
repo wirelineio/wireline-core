@@ -4,7 +4,7 @@
 
 import { EventEmitter } from 'events';
 import crypto from 'crypto';
-import Codec from '@wirelineio/codec-protobuf';
+import Codec from '@dxos/codec-protobuf';
 import createDebug from 'debug';
 
 // eslint-disable-next-line
