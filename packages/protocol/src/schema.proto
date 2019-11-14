@@ -13,6 +13,11 @@ message PeerChatMessage {
   bytes data = 2;
 }
 
+message GreeterMessage {
+  required string type = 1;
+  bytes data = 2;
+}
+
 message Presence {
   message Connection {
     required bytes peerId = 1;

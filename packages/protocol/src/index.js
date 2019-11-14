@@ -2,10 +2,10 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-export * from './authenticator';
-export * from './authext';
+export * from './auth';
 export * from './codec';
 export * from './extension';
+export * from './greeter';
 export * from './protocol';
 export * from './peer-chat';
 export * from './presence';

@@ -4,10 +4,10 @@
 
 import debug from 'debug';
 
-import { Cardcase } from '@wirelineio/cardcase';
+import { Keyring } from './crypto';
 
 const ONE_HOUR = 60 * 60 * 1000;
-const log = debug('protocol:auth:authenticator');
+const log = debug('creds:authenticator');
 
 /**
  * Authenticate and verify messages.
@@ -19,7 +19,7 @@ export class Authenticator {
     this._framework = framework;
     this._allowedKeys = new Set();
     this._allowedFeeds = new Set();
-    this._cardcase = new Cardcase();
+    this._keyring = new Keyring();
 
     if (authHints) {
       if (authHints.keys) {
@@ -39,23 +39,25 @@ export class Authenticator {
 
   async authenticate(auth) {
     if (await this.verify(auth)) {
+      const now = Date.now();
       // TODO(telackey): This is not how it should be done.  We
       // would rather use the remote nonce for anti-replay, but we
       // will need to add hooks for retrieving it and signing it
       // between connect() and handshake() to do that.  In the meantime,
       // not allowing infinite replay is at least something.
-      if (Math.abs(Date.now() - auth.signed_at) > 24 * ONE_HOUR) {
-        log('Signature OK, but message is too old:', auth.signed_at);
+      if (Math.abs(now - auth.signed_at) > 24 * ONE_HOUR) {
+        log('Signature OK, but time skew is too great: Now:', now, ', Signature:', auth.signed_at);
         return false;
       }
       for (const sig of auth.signatures) {
         if (this._allowedKeys.has(sig.key)) {
-          log('Signed by known key: ', sig.key);
+          log('Signed by known key:', sig.key);
           return true;
         }
         log('Signed by unknown key:', sig.key);
-
       }
+    } else {
+      log('Unable to verify auth message:', auth);
     }
     return false;
   }
@@ -67,7 +69,7 @@ export class Authenticator {
     }
 
     for await (const sig of message.signatures) {
-      const result = await this._cardcase.verify(message.data, sig.signature, sig.key);
+      const result = await this._keyring.verify(message.data, sig.signature, sig.key);
       if (!result) {
         log('Signature could not be verified for', sig.signature, sig.key, 'on message', message);
         return false;

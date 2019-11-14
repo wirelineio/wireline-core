@@ -7,13 +7,13 @@ import { EventEmitter } from 'events';
 
 import { Extension } from './extension';
 
-const log = debug('protocol:auth:extension');
+const log = debug('protocol:auth');
 
 /**
- * An extension to requires nodes to be authenticated
+ * An extension to require nodes to be authenticated
  * during handshake before being allowed to replicate.
  */
-export class AuthExtension extends EventEmitter {
+export class Auth extends EventEmitter {
 
   static EXTENSION_NAME = 'auth';
 
@@ -44,7 +44,7 @@ export class AuthExtension extends EventEmitter {
    * @return {Extension}
    */
   createExtension() {
-    return new Extension(AuthExtension.EXTENSION_NAME, { binary: true })
+    return new Extension(Auth.EXTENSION_NAME, { binary: true })
       .setHandshakeHandler(this._onHandshake.bind(this));
   }
 
