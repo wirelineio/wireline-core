@@ -725,10 +725,10 @@
     protobufjs "https://github.com/wirelineio/protobuf.js#wireline-dist"
     source-map-support "^0.5.12"
 
-"@dxos/feed-store@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@dxos/feed-store/-/feed-store-1.0.2.tgz#76425ba2ffcfdcd15a27d922704748a08a1a5480"
-  integrity sha512-HL5bVVnA/rS+ZUN2UwtMq7TLRVSmrIWFaL6lQdt8RnKssI5Vd6t8CbAtpSVYIi635feg+eiyDFnIEiz4pyySCw==
+"@dxos/feed-store@^1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@dxos/feed-store/-/feed-store-1.0.3.tgz#5273b0d19daea104d689f5cf3e8d8072094eb785"
+  integrity sha512-lhKYJoXOjyUurt4/vhoVGI9OqyRp2L/wQR8EKMgbqcj8WhS0y0N74qLGZtazGbKQOjy7jvo4yZefV87MO/YRBQ==
   dependencies:
     "@dxos/codec-protobuf" "^1.0.0"
     buffer-json-encoding "^1.0.2"
