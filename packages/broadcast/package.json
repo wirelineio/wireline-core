@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/broadcast",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Broadcast messages.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/broadcast#readme",
   "bugs": {
