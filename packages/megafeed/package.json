@@ -25,7 +25,7 @@
     "> 5%"
   ],
   "dependencies": {
-    "@dxos/feed-store": "^1.0.0",
+    "@dxos/feed-store": "^1.0.2",
     "@wirelineio/protocol": "^0.3.3",
     "@wirelineio/utils": "^0.3.2",
     "debug": "^4.1.1",

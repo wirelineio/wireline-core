@@ -725,12 +725,12 @@
     protobufjs "https://github.com/wirelineio/protobuf.js#wireline-dist"
     source-map-support "^0.5.12"
 
-"@dxos/feed-store@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@dxos/feed-store/-/feed-store-1.0.0.tgz#14b5d3f10cb79cfe074f79d2c7c5d1c9d27e461c"
-  integrity sha512-tdH9+vwItBYyntce7vKu4cS7bpDXPvbP1exIBbA9b0k0BFXJ4Bob/tCYvsxclDJ0Ojib1dK2uvew8HU3tQbliw==
+"@dxos/feed-store@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@dxos/feed-store/-/feed-store-1.0.2.tgz#76425ba2ffcfdcd15a27d922704748a08a1a5480"
+  integrity sha512-HL5bVVnA/rS+ZUN2UwtMq7TLRVSmrIWFaL6lQdt8RnKssI5Vd6t8CbAtpSVYIi635feg+eiyDFnIEiz4pyySCw==
   dependencies:
-    "@wirelineio/codec-protobuf" "^0.2.23"
+    "@dxos/codec-protobuf" "^1.0.0"
     buffer-json-encoding "^1.0.2"
     debug "^4.1.1"
     hypercore "^6.24.0"
@@ -1882,13 +1882,6 @@
   integrity sha512-K8/LfZq2duW33XW/tFwEAfnZlqIfVsoyRB3kfXdPXYhl0nfM8mmh7GS0jg7WrX2Dgq/0Ha/pR1PaR+BvmWwjiQ==
   dependencies:
     "@types/yargs-parser" "*"
-
-"@wirelineio/codec-protobuf@^0.2.23":
-  version "0.2.23"
-  resolved "https://registry.yarnpkg.com/@wirelineio/codec-protobuf/-/codec-protobuf-0.2.23.tgz#ee0dd6f76f151aeeee7f8d47b7db55d18df037db"
-  integrity sha512-UkJt7abSU0oNLm0XhrtEQOwWrzAaxeKhV8fUpaoo0f9iwCKbpgE5SQs7fBlRM7VCuGb3q4KOPvGtLOXrWzGIYA==
-  dependencies:
-    protobufjs "https://github.com/wirelineio/protobuf.js#wireline-dist"
 
 "@wirelineio/discovery-swarm-memory@^0.2.17":
   version "0.2.17"
@@ -7452,25 +7445,6 @@ proto-list@~1.2.1:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/proto-list/-/proto-list-1.2.4.tgz#212d5bfe1318306a420f6402b8e26ff39647a849"
   integrity sha1-IS1b/hMYMGpCD2QCuOJv85ZHqEk=
-
-"protobufjs@git+https://github.com/wirelineio/protobuf.js.git#wireline-dist":
-  version "6.8.8"
-  uid ad757d3ffe2565f4deea8a4e1b4c2383ede574c4
-  resolved "git+https://github.com/wirelineio/protobuf.js.git#ad757d3ffe2565f4deea8a4e1b4c2383ede574c4"
-  dependencies:
-    "@protobufjs/aspromise" "^1.1.2"
-    "@protobufjs/base64" "^1.1.2"
-    "@protobufjs/codegen" "^2.0.4"
-    "@protobufjs/eventemitter" "^1.1.0"
-    "@protobufjs/fetch" "^1.1.0"
-    "@protobufjs/float" "^1.0.2"
-    "@protobufjs/inquire" "^1.1.0"
-    "@protobufjs/path" "^1.1.2"
-    "@protobufjs/pool" "^1.1.0"
-    "@protobufjs/utf8" "^1.1.0"
-    "@types/long" "^4.0.0"
-    "@types/node" "^10.1.0"
-    long "^4.0.0"
 
 "protobufjs@https://github.com/wirelineio/protobuf.js#wireline-dist":
   version "6.8.8"
