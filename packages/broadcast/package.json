@@ -48,6 +48,7 @@
     "del-cli": "^3.0.0",
     "eslint": "^5.16.0",
     "jest": "^24.8.0",
+    "protobufjs": "^6.8.8",
     "wait-for-expect": "^1.2.0"
   },
   "publishConfig": {
