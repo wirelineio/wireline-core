@@ -17,6 +17,7 @@ const log = debug('creds:authentication');
 export class Authentication {
   constructor(view, authHints) {
     this._view = view;
+    this._queue = [];
     this._allowedKeys = new Set();
     this._allowedFeeds = new Set();
     this._keyring = new Keyring();
@@ -36,35 +37,11 @@ export class Authentication {
       }
     }
 
-    this._view.events.on('party.genesis', this._onAdmit.bind(this));
-    this._view.events.on('party.admit.key', this._onAdmit.bind(this));
-    this._view.events.on('party.admit.feed', this._onFeed.bind(this));
-  }
+    this._view.events.once('party.genesis', this._enqueue.bind(this));
+    this._view.events.on('party.admit.key', this._enqueue.bind(this));
+    this._view.events.on('party.admit.feed', this._enqueue.bind(this));
 
-  async _onAdmit(msg) {
-    if (await this._verifySignatures(msg)) {
-      if (msg.data && msg.data.message && Array.isArray(msg.data.message.admit)) {
-        msg.data.message.admit.forEach((k) => {
-          this.admitKey(k);
-        });
-      } else {
-        log('Badly formed admit message:', msg);
-      }
-    } else {
-      log('Unable to verify admit message:', msg);
-    }
-  }
-
-  async _onFeed(msg) {
-    if (await this._verifySignatures(msg)) {
-      if (msg.data && msg.data.message && Array.isArray(msg.data.message.feed)) {
-        this.authorizeFeed(msg.data.message.feed);
-      } else {
-        log('Badly formed feed authorization message:', msg);
-      }
-    } else {
-      log('Unable to verify feed authorization message:', msg);
-    }
+    this._draining = false;
   }
 
   admitKey(key) {
@@ -95,10 +72,10 @@ export class Authentication {
       }
       for (const sig of authHandshake.signatures) {
         if (this._allowedKeys.has(sig.key)) {
-          log('Signed by known key:', sig.key);
+          log('Auth signed by known key:', sig.key);
           return true;
         }
-        log('Signed by unknown key:', sig.key);
+        log('Auth signed by unknown key:', sig.key);
       }
     } else {
       log('Unable to verify auth message:', authHandshake);
@@ -106,11 +83,13 @@ export class Authentication {
     return false;
   }
 
-  async _verifySignatures(message) {
+  async _verifySignatures(message, requireKnownSigKey = false) {
     if (!message || !message.signatures) {
       log(message, 'not signed!');
       return false;
     }
+
+    let foundKnownKey = false;
 
     for await (const sig of message.signatures) {
       const result = await this._keyring.verify(message.data, sig.signature, sig.key);
@@ -118,7 +97,77 @@ export class Authentication {
         log('Signature could not be verified for', sig.signature, sig.key, 'on message', message);
         return false;
       }
+      if (this._allowedKeys.has(sig.key)) {
+        log('Message signed with known key:', sig.key);
+        foundKnownKey = true;
+      }
     }
+
+    if (requireKnownSigKey && !foundKnownKey) {
+      log('All signatures checked out, but no known key used', message);
+      return false;
+    }
+
     return true;
+  }
+
+  async _onAdmit(msg) {
+    const requireKnownSigKey = msg.type !== 'party.genesis';
+    if (await this._verifySignatures(msg, requireKnownSigKey)) {
+      if (msg.data && msg.data.message && Array.isArray(msg.data.message.admit)) {
+        msg.data.message.admit.forEach((k) => {
+          this.admitKey(k);
+        });
+      } else {
+        log('Badly formed admit message:', msg);
+      }
+    } else {
+      log('Unable to verify admit message:', msg);
+    }
+  }
+
+  async _onFeed(msg) {
+    if (await this._verifySignatures(msg, true)) {
+      if (msg.data && msg.data.message && msg.data.message.feed) {
+        this.authorizeFeed(msg.data.message.feed);
+      } else {
+        log('Badly formed feed authorization message:', msg);
+      }
+    } else {
+      log('Unable to verify feed authorization message:', msg);
+    }
+  }
+
+  _enqueue(msg) {
+    this._queue.push(msg);
+    setImmediate(this._drain.bind(this));
+  }
+
+  async _drain() {
+    if (this._draining) {
+      return;
+    }
+
+    this._draining = true;
+    while (this._queue.length) {
+      try {
+        const msg = this._queue.shift();
+        log('Processing', msg.type);
+        switch (msg.type) {
+          case 'party.genesis':
+          case 'party.admit.key':
+            await this._onAdmit(msg);
+            break;
+          case 'party.admit.feed':
+            await this._onFeed(msg);
+            break;
+          default:
+            log('Unknown message type:', msg.type);
+        }
+      } catch (err) {
+        log(err);
+      }
+    }
+    this._draining = false;
   }
 }
