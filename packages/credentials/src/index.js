@@ -2,5 +2,5 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-export * from './authenticator';
+export * from './authentication';
 export * from './crypto';

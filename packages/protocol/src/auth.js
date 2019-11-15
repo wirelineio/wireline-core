@@ -20,23 +20,23 @@ export class Auth extends EventEmitter {
   /**
    * @constructor
    * @param {string} peerId
-   * @param authenticator
+   * @param authentication
    */
-  constructor(peerId, authenticator = null) {
+  constructor(peerId, authentication = null) {
     super();
 
     console.assert(Buffer.isBuffer(peerId));
 
     this._peerId = peerId;
-    this._authenticator = authenticator;
+    this._authentication = authentication;
   }
 
-  get authenticator() {
-    return this._authenticator;
+  get authentication() {
+    return this._authentication;
   }
 
-  set authenticator(value) {
-    this._authenticator = value;
+  set authentication(value) {
+    this._authentication = value;
   }
 
   /**
@@ -49,12 +49,12 @@ export class Auth extends EventEmitter {
   }
 
   async _onHandshake(protocol, context) {
-    if (!this.authenticator) {
-      log('Not authenticator configured!');
+    if (!this.authentication) {
+      log('authentication not configured!');
       return;
     }
 
-    if (await this._authenticator.authenticate(context.auth)) {
+    if (await this._authentication.authenticate(context.auth)) {
       log('Authenticated!');
     } else {
       throw new Error('Unauthorized access rejected!');

@@ -7,14 +7,14 @@ import debug from 'debug';
 import { Keyring } from './crypto';
 
 const ONE_HOUR = 60 * 60 * 1000;
-const log = debug('creds:authenticator');
+const log = debug('creds:authentication');
 
 /**
  * Authenticate and verify messages.
  * Used by AuthExtension for authenticating nodes during
  * handshake.
  */
-export class Authenticator {
+export class Authentication {
   constructor(view, authHints) {
     this._view = view;
     this._allowedKeys = new Set();
@@ -42,7 +42,7 @@ export class Authenticator {
   }
 
   async _onAdmit(msg) {
-    if (await this.verify(msg)) {
+    if (await this._verifySignatures(msg)) {
       if (msg.data && msg.data.message && Array.isArray(msg.data.message.admit)) {
         msg.data.message.admit.forEach((k) => {
           this.admitKey(k);
@@ -56,7 +56,7 @@ export class Authenticator {
   }
 
   async _onFeed(msg) {
-    if (await this.verify(msg)) {
+    if (await this._verifySignatures(msg)) {
       if (msg.data && msg.data.message && Array.isArray(msg.data.message.feed)) {
         this.authorizeFeed(msg.data.message.feed);
       } else {
@@ -81,19 +81,19 @@ export class Authenticator {
     }
   }
 
-  async authenticate(auth) {
-    if (await this.verify(auth)) {
+  async authenticate(authHandshake) {
+    if (await this._verifySignatures(authHandshake)) {
       const now = Date.now();
       // TODO(telackey): This is not how it should be done.  We
       // would rather use the remote nonce for anti-replay, but we
       // will need to add hooks for retrieving it and signing it
       // between connect() and handshake() to do that.  In the meantime,
       // not allowing infinite replay is at least something.
-      if (Math.abs(now - auth.signed_at) > 24 * ONE_HOUR) {
-        log('Signature OK, but time skew is too great: Now:', now, ', Signature:', auth.signed_at);
+      if (Math.abs(now - authHandshake.signed_at) > 24 * ONE_HOUR) {
+        log('Signature OK, but time skew is too great: Now:', now, ', Signature:', authHandshake.signed_at);
         return false;
       }
-      for (const sig of auth.signatures) {
+      for (const sig of authHandshake.signatures) {
         if (this._allowedKeys.has(sig.key)) {
           log('Signed by known key:', sig.key);
           return true;
@@ -101,12 +101,12 @@ export class Authenticator {
         log('Signed by unknown key:', sig.key);
       }
     } else {
-      log('Unable to verify auth message:', auth);
+      log('Unable to verify auth message:', authHandshake);
     }
     return false;
   }
 
-  async verify(message) {
+  async _verifySignatures(message) {
     if (!message || !message.signatures) {
       log(message, 'not signed!');
       return false;
