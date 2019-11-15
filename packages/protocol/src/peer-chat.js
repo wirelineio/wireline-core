@@ -4,8 +4,10 @@
 
 import { EventEmitter } from 'events';
 
-import Broadcast from '@wirelineio/broadcast';
 import CodecProtobuf from '@dxos/codec-protobuf';
+
+// TODO(burdon): Protobuf is a core module -- it must not depend on any other frameowrk modules.
+import Broadcast from '@wirelineio/broadcast';
 import { keyToHex, keyToBuffer } from '@wirelineio/utils';
 
 import { Extension } from './extension';

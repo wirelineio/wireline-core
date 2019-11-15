@@ -5,7 +5,6 @@
         "Request": {
           "fields": {
             "id": {
-              "rule": "required",
               "type": "bytes",
               "id": 1
             },
@@ -26,7 +25,6 @@
         "PeerChatMessage": {
           "fields": {
             "type": {
-              "rule": "required",
               "type": "string",
               "id": 1
             },
@@ -39,7 +37,6 @@
         "Presence": {
           "fields": {
             "from": {
-              "rule": "required",
               "type": "bytes",
               "id": 1
             },
@@ -53,12 +50,47 @@
             "Connection": {
               "fields": {
                 "peerId": {
-                  "rule": "required",
                   "type": "bytes",
                   "id": 1
                 },
                 "initiator": {
                   "type": "bool",
+                  "id": 2
+                }
+              }
+            }
+          }
+        },
+        "Message": {
+          "fields": {
+            "typeId": {
+              "type": "int32",
+              "id": 1
+            },
+            "bucketId": {
+              "type": "int32",
+              "id": 2
+            },
+            "payload": {
+              "type": "google.protobuf.Any",
+              "id": 10
+            }
+          }
+        }
+      }
+    },
+    "google": {
+      "nested": {
+        "protobuf": {
+          "nested": {
+            "Any": {
+              "fields": {
+                "type_url": {
+                  "type": "string",
+                  "id": 1
+                },
+                "value": {
+                  "type": "bytes",
                   "id": 2
                 }
               }

@@ -23,7 +23,7 @@
     "build:protobuf": "pbjs -t json src/schema.proto -o src/schema.json && cpy src/schema.json dist",
     "clean": "del-cli dist",
     "lint": "eslint ./src --ignore-path ../../.eslintignore",
-    "test": "jest --verbose --passWithNoTests src",
+    "test": "jest --rootDir ./src --verbose",
     "posttest": "npm run lint",
     "prepublishOnly": "npm run test && npm run build"
   },

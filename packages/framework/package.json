@@ -14,7 +14,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint **/*.js --ignore-path ../../.eslintignore",
-    "test": "jest --verbose --passWithNoTests src",
+    "test": "jest --rootDir ./src --verbose",
     "signal": "discovery-signal-webrtc -p 4000"
   },
   "dependencies": {

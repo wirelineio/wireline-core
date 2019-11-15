@@ -14,7 +14,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint **/*.js --ignore-path ../../.eslintignore",
-    "test": "jest --verbose --passWithNoTests"
+    "test": "jest --rootDir ./src --verbose"
   },
   "dependencies": {
     "chance": "^1.0.18",

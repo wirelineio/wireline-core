@@ -3,11 +3,13 @@
 //
 
 syntax = "proto3";
+import "google/protobuf/any.proto";
 
+// TODO(burdon): Rename dxos.protocol.
 package protocol;
 
 message Request {
-  required bytes id = 1;
+  bytes id = 1;
   bytes error = 2;
   bytes data = 3;
   bytes options = 4;
@@ -15,16 +17,26 @@ message Request {
 
 // TODO(burdon): Rename. Move from protocol package.
 message PeerChatMessage {
-  required string type = 1;
+  string type = 1;
   bytes data = 2;
 }
 
 message Presence {
   message Connection {
-    required bytes peerId = 1;
+    bytes peerId = 1;
     bool initiator = 2;
   }
 
-  required bytes from = 1;
+  bytes from = 1;
   repeated Connection connections = 2;
+}
+
+//
+// Base message type for all feed data.
+//
+message Message {
+  int32 type_id = 1;
+  int32 bucket_id = 2;
+
+  google.protobuf.Any payload = 10;
 }
