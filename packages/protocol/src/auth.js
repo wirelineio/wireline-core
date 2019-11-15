@@ -54,8 +54,6 @@ export class Auth extends EventEmitter {
       return;
     }
 
-    await this._authenticator.update();
-
     if (await this._authenticator.authenticate(context.auth)) {
       log('Authenticated!');
     } else {

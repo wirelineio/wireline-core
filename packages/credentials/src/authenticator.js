@@ -15,8 +15,8 @@ const log = debug('creds:authenticator');
  * handshake.
  */
 export class Authenticator {
-  constructor(framework, authHints) {
-    this._framework = framework;
+  constructor(view, authHints) {
+    this._view = view;
     this._allowedKeys = new Set();
     this._allowedFeeds = new Set();
     this._keyring = new Keyring();
@@ -34,6 +34,50 @@ export class Authenticator {
           log('Allowing hinted feed:', feed);
         }
       }
+    }
+
+    this._view.events.on('party.genesis', this._onAdmit.bind(this));
+    this._view.events.on('party.admit.key', this._onAdmit.bind(this));
+    this._view.events.on('party.admit.feed', this._onFeed.bind(this));
+  }
+
+  async _onAdmit(msg) {
+    if (await this.verify(msg)) {
+      if (msg.data && msg.data.message && Array.isArray(msg.data.message.admit)) {
+        msg.data.message.admit.forEach((k) => {
+          this.admitKey(k);
+        });
+      } else {
+        log('Badly formed admit message:', msg);
+      }
+    } else {
+      log('Unable to verify admit message:', msg);
+    }
+  }
+
+  async _onFeed(msg) {
+    if (await this.verify(msg)) {
+      if (msg.data && msg.data.message && Array.isArray(msg.data.message.feed)) {
+        this.authorizeFeed(msg.data.message.feed);
+      } else {
+        log('Badly formed feed authorization message:', msg);
+      }
+    } else {
+      log('Unable to verify feed authorization message:', msg);
+    }
+  }
+
+  admitKey(key) {
+    if (key && !this._allowedKeys.has(key)) {
+      log('Admitting key:', key);
+      this._allowedKeys.add(key);
+    }
+  }
+
+  authorizeFeed(feed) {
+    if (feed && !this._allowedFeeds.has(feed)) {
+      log('Authorizing feed:', feed);
+      this._allowedFeeds.add(feed);
     }
   }
 
@@ -76,61 +120,5 @@ export class Authenticator {
       }
     }
     return true;
-  }
-
-  async update() {
-    // TODO(telackey): This is a ridiculously inefficient way to do this.
-    // In reality, we'd need to take the Genesis message from the feed we control
-    // and use that as the starting point.  We also need causal ordering.
-    // But for now, we trust anything already written and verifiable to be valid.
-    const results = await Promise.all(this._framework.mega.getFeeds().map((f) => {
-      const stream = f.createReadStream();
-      const collect = [];
-      return new Promise((resolve, reject) => {
-        stream.on('end', () => {
-          resolve(collect);
-        });
-        stream.on('error', (e) => {
-          reject(e);
-        });
-        stream.on('data', (data) => {
-          collect.push(data);
-        });
-      });
-    }));
-
-
-    for await (const group of results) {
-      for await (const msg of group) {
-        if (msg.type) {
-          switch (msg.type) {
-            case 'party.genesis':
-            case 'party.admit.key': {
-              if (await this.verify(msg)) {
-                msg.data.message.admit.forEach((k) => {
-                  if (!this._allowedKeys.has(k)) {
-                    log('Admitting key: ', k);
-                    this._allowedKeys.add(k);
-                  }
-                });
-              }
-              break;
-            }
-            case 'party.admit.feed': {
-              if (await this.verify(msg)) {
-                if (!this._allowedFeeds.has(msg.data.message.feed)) {
-                  log('Authorizing feed: ', msg.data.message.feed);
-                  this._allowedFeeds.add(msg.data.message.feed);
-                }
-              }
-              break;
-            }
-            default: // pass
-          }
-        }
-      }
-    }
-
-    return this;
   }
 }
