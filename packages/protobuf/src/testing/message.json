@@ -4,18 +4,14 @@
       "nested": {
         "Message": {
           "fields": {
-            "typeId": {
-              "type": "string",
-              "id": 1
-            },
             "bucketId": {
               "type": "string",
-              "id": 2
+              "id": 1
             },
             "payload": {
               "rule": "repeated",
               "type": "google.protobuf.Any",
-              "id": 10
+              "id": 2
             }
           }
         }

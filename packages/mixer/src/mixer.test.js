@@ -2,25 +2,24 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+import { EventEmitter } from 'events';
 import ram from 'random-access-memory';
 import crypto from 'hypercore-crypto';
 import hypertrie from 'hypertrie';
 import pify from 'pify';
 
 import { FeedStore } from '@dxos/feed-store';
-import { TypeFactory } from '@wirelineio/protobuf';
+import { Codec } from '@wirelineio/protobuf';
 
 import { MultifeedAdapter, Mixer } from './mixer';
 
-const typeFactory = new TypeFactory().parse(require('./schema.json'));
+const codec = new Codec().addJson(require('./schema.json'));
 
 test('basic multiplexing', async (done) => {
 
-  // TODO(burdon): Error handling.
-
-  // TODO(burdon): Larger test with protocol and swarm (no framework/megafeed).
-
   // TODO(burdon): What are the codecs for? Is this a hypercore concept? Currently serializing JSON -- WHY"
+  // TODO(burdon): Larger test with protocol and swarm (no framework/megafeed).
+  // TODO(burdon): Error handling.
 
   const { publicKey, secretKey } = crypto.keyPair();
   const index = hypertrie(ram, publicKey, { secretKey });
@@ -32,13 +31,15 @@ test('basic multiplexing', async (done) => {
 
   const multifeed = new MultifeedAdapter(feedStore);
 
-  const mixer = new Mixer(multifeed, typeFactory);
+  const mixer = new Mixer(multifeed, codec);
+
+  const events = new EventEmitter();
 
   // TODO(burdon): Stream, batch.
   const subscription = mixer.subscribe({ bucketId: 'bucket-1' }, () => {
-    if (mixer.messages.length === 2) {
+    if (mixer.messages.length === 3) {
       subscription.close();
-      done();
+      events.emit('close');
     }
   });
 
@@ -46,15 +47,21 @@ test('basic multiplexing', async (done) => {
   await feedStore.initialize();
 
   // TODO(burdon): What does the path represent?
-  const feed = await feedStore.openFeed('/test');
-  await pify(feed.ready.bind(feed))();
+  const feed1 = await feedStore.openFeed('/test/1');
+  const feed2 = await feedStore.openFeed('/test/2');
+  await pify(feed1.ready.bind(feed1))();
+  await pify(feed2.ready.bind(feed2))();
 
-  feed.append({ bucketId: 'bucket-1' });
-  feed.append({ bucketId: 'bucket-1' });
-  feed.append({ bucketId: 'bucket-2' });
+  expect(feedStore.getFeeds()).toHaveLength(2);
 
-  // TODO(burdon): Why does the test task 8s?
+  feed1.append({ bucketId: 'bucket-1' });
+  feed1.append({ bucketId: 'bucket-2' });
+  feed2.append({ bucketId: 'bucket-1' });
+  feed1.append({ bucketId: 'bucket-1' });
 
-  // TODO(burdon): Close everything. Feedstore?
-  // await pify(feed.close.bind(feed))();
+  // TODO(burdon): Why does the test take 7s?
+  events.once('close', async () => {
+    await feedStore.close();
+    done();
+  });
 });

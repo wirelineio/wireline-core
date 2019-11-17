@@ -19,7 +19,7 @@ export class MultifeedAdapter extends EventEmitter {
     console.assert(feedStore);
     this._feedStore = feedStore;
     this._feedStore.on('feed', (feed) => {
-      // console.log('New:', feed);
+      // console.log('New:', feed.key);
 
       // For kappa.
       this.emit('feed', feed);
@@ -44,11 +44,12 @@ export class Mixer {
 
   _subscriptions = new Set();
 
-  constructor(multifeed, typeDictionary) {
+  constructor(multifeed, codec) {
     console.assert(multifeed);
-    console.assert(typeDictionary);
+    console.assert(codec);
 
-    this._typeDictionary = typeDictionary;
+    // TODO(burdon): Not used.
+    this._codec = codec;
 
     // https://github.com/kappa-db/kappa-core
     this._kappa = kappa(null, { multifeed });
