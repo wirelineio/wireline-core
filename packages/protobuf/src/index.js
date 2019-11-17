@@ -2,4 +2,4 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-export * from './protobuf';
+export * from './codec';

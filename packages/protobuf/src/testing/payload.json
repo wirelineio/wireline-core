@@ -1,0 +1,24 @@
+{
+  "nested": {
+    "testing": {
+      "nested": {
+        "Meta": {
+          "fields": {
+            "version": {
+              "type": "string",
+              "id": 1
+            }
+          }
+        },
+        "Data": {
+          "fields": {
+            "value": {
+              "type": "int32",
+              "id": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

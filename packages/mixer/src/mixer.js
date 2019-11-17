@@ -19,7 +19,7 @@ export class MultifeedAdapter extends EventEmitter {
     console.assert(feedStore);
     this._feedStore = feedStore;
     this._feedStore.on('feed', (feed) => {
-      console.log('New:', feed);
+      // console.log('New:', feed);
 
       // For kappa.
       this.emit('feed', feed);
@@ -42,6 +42,8 @@ export class MultifeedAdapter extends EventEmitter {
  */
 export class Mixer {
 
+  _subscriptions = new Set();
+
   constructor(multifeed, typeDictionary) {
     console.assert(multifeed);
     console.assert(typeDictionary);
@@ -56,14 +58,27 @@ export class Mixer {
 
     const messages = [];
     this._kappa.use('test', 1, view(store, {
-      map(entries) {
-        messages.push(entries);
-        // console.log(entries);
+      map: (message) => {
+        messages.push(message);
+
+        // TODO(burdon): Matcher.
+        // TODO(burdon): Test encoding (JSON or protobuf?)
+        const match = (query, message) => {
+          return message.bucketId === query.bucketId;
+        };
+
+        const { value } = message;
+        this._subscriptions.forEach(({ query, callback }) => {
+          if (match(query, value)) {
+            callback(value);
+          }
+        });
       },
 
-      indexed(entries) {
-        // console.log(entries);
-      },
+      // TODO(burdon): Why?
+      // indexed: (messages) => {
+      //   console.log('indexed', messages);
+      // },
 
       api: {
         messages: () => {
@@ -77,9 +92,15 @@ export class Mixer {
     return this._kappa.api['test'].messages();
   }
 
-  // TODO(burdon): Stream?
-  subscribe(bucketId) {
-    console.log(bucketId);
-    return this;
+  // TODO(burdon): Stream or callback?
+  subscribe(query, callback) {
+    const subscription = { query, callback };
+    this._subscriptions.add(subscription);
+
+    return {
+      close: () => {
+        this._subscriptions.delete(subscription);
+      }
+    };
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "@wirelineio/protobuf",
   "version": "0.3.4",
-  "description": "Protobuf utils.",
+  "description": "Protobuf codec.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/protobuf#readme",
   "bugs": {
     "url": "https://github.com/wirelineio/wireline-core/issues"
@@ -16,7 +16,7 @@
   "scripts": {
     "build": "npm run clean && npm run build:protobuf && npm run build:babel",
     "build:babel": "babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps --copy-files",
-    "build:protobuf": "pbjs -t json src/testing/test.proto -o src/testing/test.json",
+    "build:protobuf": "./scripts/build_proto.sh src/testing/message.proto src/testing/payload.proto",
     "clean": "del-cli dist",
     "lint": "eslint ./src --ignore-path ../../.eslintignore",
     "test": "jest --rootDir ./src --verbose",

@@ -6,7 +6,6 @@ import ram from 'random-access-memory';
 import crypto from 'hypercore-crypto';
 import hypertrie from 'hypertrie';
 import pify from 'pify';
-import waitForExpect from 'wait-for-expect';
 
 import { FeedStore } from '@dxos/feed-store';
 import { TypeFactory } from '@wirelineio/protobuf';
@@ -35,25 +34,27 @@ test('basic multiplexing', async (done) => {
 
   const mixer = new Mixer(multifeed, typeFactory);
 
+  // TODO(burdon): Stream, batch.
+  const subscription = mixer.subscribe({ bucketId: 'bucket-1' }, () => {
+    if (mixer.messages.length === 2) {
+      subscription.close();
+      done();
+    }
+  });
+
   // TODO(burdon): Order is important (after mixer created).
   await feedStore.initialize();
 
   // TODO(burdon): What does the path represent?
   const feed = await feedStore.openFeed('/test');
-
-  // TODO(burdon): Add core to feedstore and write message. Wrap and valiate protobuf.
   await pify(feed.ready.bind(feed))();
-  await pify(feed.append.bind(feed))({ value: 100 });
-  expect(feed.length).toBe(1);
 
-  setTimeout(async () => {
-    // TODO(burdon): Wait for view/subscription update.
-    expect(mixer.messages).toHaveLength(1);
-    console.log(mixer.messages);
+  feed.append({ bucketId: 'bucket-1' });
+  feed.append({ bucketId: 'bucket-1' });
+  feed.append({ bucketId: 'bucket-2' });
 
-    // TODO(burdon): Async close.
-    await pify(feed.close.bind(feed))();
+  // TODO(burdon): Why does the test task 8s?
 
-    done();
-  }, 500);
+  // TODO(burdon): Close everything. Feedstore?
+  // await pify(feed.close.bind(feed))();
 });
