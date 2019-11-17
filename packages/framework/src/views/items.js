@@ -27,7 +27,6 @@ module.exports = function ItemsView(viewId, db, core, { append }) {
         return [];
       }
 
-
       const { itemId } = value.data;
 
       const type = value.type.replace('item.', '');

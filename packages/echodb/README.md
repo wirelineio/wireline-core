@@ -1,6 +1,6 @@
 # ECHO DB
 
-Eventuall Consistent Hierarchical Objects Database.
+Eventually Consistent Hierarchical Objects Database.
 
 TODO(burdon): Merge/reconsile with specs.
 
@@ -21,5 +21,3 @@ Therefore, at any moment each peer may have different sets of data from each oth
 In order to maintain consistency, applications implement state machines that generate a consistent data model.
 These state machines may be different for each application.
 Some application may be made up from a composite of multiple state machines.
-
-\

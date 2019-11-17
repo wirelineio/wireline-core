@@ -4,8 +4,9 @@
 
 import { EventEmitter } from 'events';
 import crypto from 'crypto';
-import Codec from '@dxos/codec-protobuf';
 import createDebug from 'debug';
+
+import CodecProtobuf from '@dxos/codec-protobuf';
 
 // eslint-disable-next-line
 import schema from './schema.json';
@@ -40,7 +41,7 @@ class Broadcast extends EventEmitter {
     this._running = false;
     this._seenSeqs = new TimeLRUSet({ maxAge, maxSize });
     this._peers = [];
-    this._codec = new Codec({ verify: true });
+    this._codec = new CodecProtobuf({ verify: true });
     this._codec.loadFromJSON(schema);
 
     this.on('error', (err) => { debug(err); });
@@ -138,7 +139,9 @@ class Broadcast extends EventEmitter {
       this._seenSeqs.add(msgId(packet.seqno, packet.from));
 
       // Check if I already see this packet.
-      if (this._seenSeqs.has(msgId(packet.seqno, this._id))) return;
+      if (this._seenSeqs.has(msgId(packet.seqno, this._id))) {
+        return;
+      }
 
       const peer = this._peers.find(peer => peer.id.equals(packet.from));
 
