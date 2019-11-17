@@ -4608,7 +4608,7 @@ hypercore@^6.24.0, hypercore@^6.25.2:
   optionalDependencies:
     fd-lock "^1.0.2"
 
-hypercore@^7.0.0, hypercore@^7.4.0:
+hypercore@^7.0.0, hypercore@^7.4.0, hypercore@^7.7.1:
   version "7.7.1"
   resolved "https://registry.yarnpkg.com/hypercore/-/hypercore-7.7.1.tgz#2a6b3fd84496b562fde07e5d39bfbab096a37fbc"
   integrity sha512-boEiPCK848pNGACW1j111tJApu530e/UPpwbHytJZlrVf3YdgUIP1KL3aSi5xJFLUnuO8GLGl4lIsSeH8TaQQA==
