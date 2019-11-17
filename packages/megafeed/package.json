@@ -30,6 +30,7 @@
     "@wirelineio/utils": "^0.3.4",
     "debug": "^4.1.1",
     "end-of-stream": "^1.4.1",
+    "hypercore-crypto": "^1.0.0",
     "hypertrie": "^3.7.1",
     "kappa-core": "^4.0.0",
     "pify": "^4.0.1",

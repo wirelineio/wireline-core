@@ -76,6 +76,8 @@ export class Megafeed extends EventEmitter {
     return `Megafeed(${JSON.stringify(meta)})`;
   }
 
+  // TODO(burdon): WTF? Just expose feedStore. Really need to stop doing this.
+
   getFeedByPath(path) {
     return this._feedStore.findFeed(descriptor => descriptor.path === path);
   }

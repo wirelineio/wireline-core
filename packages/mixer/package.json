@@ -28,8 +28,20 @@
     "> 5%"
   ],
   "dependencies": {
+    "@dxos/feed-store": "^1.0.3",
     "@wirelineio/protobuf": "^0.3.4",
-    "source-map-support": "^0.5.12"
+    "hypercore": "^7.7.1",
+    "hypercore-crypto": "^1.0.0",
+    "hypertrie": "^3.7.1",
+    "kappa-core": "^4.0.0",
+    "kappa-view-level": "^1.1.0",
+    "levelup": "^4.0.1",
+    "memdown": "^4.0.0",
+    "pify": "^4.0.1",
+    "random-access-memory": "^3.1.1",
+    "source-map-support": "^0.5.12",
+    "subleveldown": "^3.0.1",
+    "wait-for-expect": "^3.0.1"
   },
   "devDependencies": {
     "@babel/cli": "7.4.4",
