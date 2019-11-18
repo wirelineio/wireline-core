@@ -11,11 +11,6 @@ const codec = new Codec()
 
 test('encoding/decoding', () => {
 
-  // TODO(burdon): Someone else must have done this -- submit PR.
-  // TODO(burdon): Error handling.
-  // TODO(burdon): Recurisve.
-  // TODO(burdon): Update in place.
-
   const sent = {
     __type_url: 'testing.Message',
     bucketId: 'bucket-1',
@@ -46,10 +41,12 @@ test('encoding/decoding', () => {
     ]
   };
 
+  // Encode the message.
   const buffer = codec.encode(sent);
   expect(buffer).toHaveLength(132);
 
   {
+    // Fully decode the message.
     const received = codec.decode(buffer, 'testing.Message');
     expect(received).toEqual(sent);
   }
