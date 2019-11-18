@@ -5,6 +5,7 @@
 import debug from 'debug';
 import crypto from 'hypercore-crypto';
 import hypertrie from 'hypertrie';
+import pify from 'pify';
 import ram from 'random-access-memory';
 import waitForExpect from 'wait-for-expect';
 
@@ -24,6 +25,53 @@ jest.setTimeout(10000);
 test('sanity', () => {
   expect(true).toBeTruthy();
 });
+
+/**
+ * Test CRDT.
+ */
+class TestModel {
+
+  constructor(codec, feed, bucket) {
+    this._codec = codec;
+    this._feed = feed;
+    this._bucket = bucket;
+
+    this._append = pify(this._feed.append.bind(this._feed));
+  }
+
+  /**
+   * Write messages to feed.
+   * @param mutations
+   * @return {Promise<void>}
+   */
+  async appendMessages(mutations) {
+    const messages = mutations.map(mutation => ({
+      bucketId: this._bucket,
+      payload: mutation
+    }));
+
+    for (const message of messages) {
+      // TODO(burdon): Append should handle encoding.
+      await this._append(this._codec.encode(message, 'dxos.mixer.Message'));
+    }
+  }
+
+  /**
+   *
+   * @param messages
+   * @return {Promise<void>}
+   */
+  async processMessages(messages) {
+    // TODO(burdon): Middleware?
+    // TODO(burdon): Outer should already have been unwrapped.
+    const mutations = messages.map(message => this._codec.decode(message, 'dxos.mixer.Message'));
+
+    // TODO(burdon): Build state.
+    console.log(mutations);
+  }
+}
+
+console.log(new TestModel());
 
 test('basic multiplexing', async (done) => {
 
@@ -47,8 +95,11 @@ test('basic multiplexing', async (done) => {
 
   const multifeed = new MultifeedAdapter(feedStore, { filter: 'party-1' });
 
+  // TODO(burdon): Configure CRDT.
   const mixer = new Mixer(multifeed, codec);
 
+  // TODO(burdon): Stream from last point.
+  // new ChessModel().attach(mixer.subscribe({ bucketId }));
   let count = 0;
   mixer.subscribe('bucket-1', async () => {
     const items = await mixer.api.getMessages('bucket-1');
@@ -70,7 +121,6 @@ test('basic multiplexing', async (done) => {
 
   expect(feedStore.getFeeds()).toHaveLength(3);
 
-  // TODO(burdon): System data.
   const items = {
     'party-1': [
       { bucketId: 'system',   value: 0 },
@@ -90,6 +140,7 @@ test('basic multiplexing', async (done) => {
   // Write data to feeds.
   Object.keys(items).forEach((party) => {
     items[party].forEach((item, i) => {
+      // TODO(burdon): Encode here (wrap with Writer that has appropriate codecs).
       feeds[party][i % feeds[party].length].append(item);
     });
   });

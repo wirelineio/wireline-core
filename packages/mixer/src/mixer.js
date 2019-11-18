@@ -19,6 +19,10 @@ const log = debug('mixer');
 // TODO(burdon): Move to kappa 5 (doesn't require multifeed).
 export class MultifeedAdapter extends EventEmitter {
 
+  /**
+   * @param {FeedStore} feedStore
+   * @param options
+   */
   constructor(feedStore, options = {}) {
     super();
 
@@ -48,26 +52,28 @@ export class MultifeedAdapter extends EventEmitter {
   }
 }
 
-const viewName = 'messages';
-
 // Ensures lexical sorting.
 // import charwise from 'charwise';
 // export const createKey = (...args) => args.filter(Boolean).map(charwise.encode).join('/');
 export const createKey = (...args) => args.join('/');
 
+const viewName = 'messages';
+
+// TODO(burdon): Factor out.
 const createMessageView = (db, id, subscriptions) => {
 
   let n = 0;
 
+  // TODO(burdon): Move data into CRDT.
   // https://github.com/Level/subleveldown
   const viewDB = sub(db, id, { valueEncoding: 'json' });
 
-  // TODO(burdon): All in memory; retrieve payload from disk?
   // https://github.com/noffle/kappa-view-level
   return createIndex(viewDB, {
 
     // TODO(burdon): Filter based on type.
     map: (message) => {
+      // TODO(burdon): Decode here.
       const { bucketId } = message.value;
       if (bucketId) {
         // TODO(burdon): Random order: plug-in CRDT.
@@ -99,8 +105,7 @@ const createMessageView = (db, id, subscriptions) => {
         return viewDB.get(key).catch(() => null);
       },
 
-      // TODO(burdon): Return stream each time? Cursor from last change?
-      // TODO(burdon): Get multiple buckets if desired. CRDT consumes this stream.
+      // TODO(burdon): This goes away -- each CRDT manages it's own data structure.
       getMessages: async (kappa, bucketId) => {
         const stream = viewDB.createValueStream({
           gte: createKey(bucketId, ''),
@@ -138,9 +143,9 @@ export class Mixer {
     console.assert(multifeed);
     console.assert(codec);
 
-    // TODO(burdon): Not used.
     this._codec = codec;
 
+    // TODO(burdon): Remove.
     // https://github.com/kappa-db/kappa-core
     this._kappa = kappa(null, {
       multifeed

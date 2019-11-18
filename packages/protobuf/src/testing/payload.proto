@@ -6,6 +6,13 @@ syntax = "proto3";
 
 package testing;
 
+import "google/protobuf/any.proto";
+
+message Container {
+  repeated string tags = 1;
+  repeated google.protobuf.Any data = 2;
+}
+
 message Meta {
   string version = 1;
 }

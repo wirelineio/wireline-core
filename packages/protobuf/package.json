@@ -28,6 +28,7 @@
     "> 5%"
   ],
   "dependencies": {
+    "lodash.defaultsdeep": "^4.6.1",
     "protobufjs": "^6.8.8",
     "source-map-support": "^0.5.12"
   },
