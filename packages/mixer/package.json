@@ -31,6 +31,7 @@
     "@dxos/feed-store": "^1.0.3",
     "@wirelineio/protobuf": "^0.3.4",
     "charwise": "^3.0.1",
+    "debug": "^4.1.1",
     "hypercore": "^7.7.1",
     "hypercore-crypto": "^1.0.0",
     "hypertrie": "^3.7.1",

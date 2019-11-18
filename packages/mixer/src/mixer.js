@@ -2,6 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+import debug from 'debug';
 import { EventEmitter } from 'events';
 import kappa from 'kappa-core';
 import createIndex from 'kappa-view-level';
@@ -12,29 +13,27 @@ import sub from 'subleveldown';
 
 import { arrayFromStream } from './util';
 
+const log = debug('mixer');
+
 // https://github.com/kappa-db/multifeed
 // TODO(burdon): Move to kappa 5 (doesn't require multifeed).
 export class MultifeedAdapter extends EventEmitter {
 
-  constructor(feedStore) {
+  constructor(feedStore, options = {}) {
     super();
 
     console.assert(feedStore);
     this._feedStore = feedStore;
     this._feedStore.on('feed', (feed) => {
-      // console.log('New:', feed.key);
-
       // Required by kappa.
       this.emit('feed', feed);
     });
+
+    this._filter = options.filter;
   }
 
   // NOTE: Deadlock unless called after feedStore is initialized.
   async ready(cb) {
-    // process.nextTick(() => {
-    //   cb();
-    // });
-
     await this._feedStore.ready();
     if (cb) {
       cb();
@@ -42,7 +41,10 @@ export class MultifeedAdapter extends EventEmitter {
   }
 
   feeds() {
-    return this._feedStore.getFeeds();
+    // TODO(burdon): Push more advanced filter into feedstore.
+    return this._feedStore.filterFeeds(({ path }) => {
+      return path.indexOf(this._filter) !== -1;
+    });
   }
 }
 
@@ -68,7 +70,7 @@ const createMessageView = (db, id, subscriptions) => {
     map: (message) => {
       const { bucketId } = message.value;
       if (bucketId) {
-        // TODO(burdon): Order by?
+        // TODO(burdon): Random order: plug-in CRDT.
         const key = createKey(bucketId, ++n);
         return [
           [key, message.value]
@@ -80,6 +82,8 @@ const createMessageView = (db, id, subscriptions) => {
 
     // TODO(burdon): Better way to trigger update?
     indexed: (messages) => {
+      log('indexed', messages.length);
+
       const buckets = new Set();
       messages.forEach(({ value: { bucketId } }) => buckets.add(bucketId));
 
@@ -91,14 +95,14 @@ const createMessageView = (db, id, subscriptions) => {
     },
 
     api: {
-      get: async (kappa, key) => {
+      getMessage: async (kappa, key) => {
         return viewDB.get(key).catch(() => null);
       },
 
       // TODO(burdon): Return stream each time? Cursor from last change?
       // TODO(burdon): Get multiple buckets if desired. CRDT consumes this stream.
       getMessages: async (kappa, bucketId) => {
-        const stream = viewDB.createKeyStream({
+        const stream = viewDB.createValueStream({
           gte: createKey(bucketId, ''),
           lte: createKey(bucketId, '~')
         });
@@ -130,8 +134,8 @@ export class Mixer {
 
   _subscriptions = new Set();
 
-  constructor(feedStore, codec) {
-    console.assert(feedStore);
+  constructor(multifeed, codec) {
+    console.assert(multifeed);
     console.assert(codec);
 
     // TODO(burdon): Not used.
@@ -139,7 +143,7 @@ export class Mixer {
 
     // https://github.com/kappa-db/kappa-core
     this._kappa = kappa(null, {
-      multifeed: new MultifeedAdapter(feedStore)
+      multifeed
     });
   }
 
