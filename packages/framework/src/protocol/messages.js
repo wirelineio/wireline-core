@@ -24,6 +24,7 @@ exports.append = async (feed, author, message) => {
     },
     message.extension || {}
   );
+
   await pify(feed.append.bind(feed))(msg);
 
   return msg;

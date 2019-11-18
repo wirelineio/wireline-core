@@ -8,12 +8,22 @@ import crypto from 'hypercore-crypto';
 import hypertrie from 'hypertrie';
 import pify from 'pify';
 
+// TODO(burdon): Taskes 5s to load
 import { FeedStore } from '@dxos/feed-store';
 import { Codec } from '@wirelineio/protobuf';
 
-import { MultifeedAdapter, Mixer } from './mixer';
+import { Mixer } from './mixer';
 
 const codec = new Codec().addJson(require('./schema.json'));
+
+// TODO(burdon): Debug logging.
+
+jest.setTimeout(10000);
+
+// TODO(burdon): Empty test takes 7s.
+test.skip('sanity', () => {
+  expect(true).toBeTruthy();
+});
 
 test('basic multiplexing', async (done) => {
 
@@ -29,39 +39,70 @@ test('basic multiplexing', async (done) => {
     }
   });
 
-  const multifeed = new MultifeedAdapter(feedStore);
+  await feedStore.initialize();
 
-  const mixer = new Mixer(multifeed, codec);
+  const mixer = new Mixer(feedStore, codec);
 
-  const events = new EventEmitter();
+  // const events = new EventEmitter();
 
-  // TODO(burdon): Stream, batch.
-  const subscription = mixer.subscribe({ bucketId: 'bucket-1' }, () => {
-    if (mixer.messages.length === 3) {
-      subscription.close();
-      events.emit('close');
-    }
+  // let done = false;
+
+  // TODO(burdon): key with 'state'?
+  mixer.setCallback(async () => {
+    const item = await mixer.api.get('bucket-1:1');
+    console.log('>>>>>>>>>>>>>>>', item);
+
+  //   // const messages = await mixer.getMessages('bucket-1');
+  //   // console.log('messages', messages);
+  //
+  //   // mixer.getMessages('bucket1')
+  //   //   .on('data', (data) => {
+  //   //     console.log(data.key, '=', data.value);
+  //   //   })
+  //   //   .on('error', (err) => {
+  //   //     console.error(err);
+  //   //   })
+  //   //   .on('close', () => {
+  //   //     console.log('closed');
+  //   //   })
+  //   //   .on('end', () => {
+  //   //     console.log('ended');
+  //   //   });
   });
 
-  // TODO(burdon): Order is important (after mixer created).
-  await feedStore.initialize();
+  await mixer.initialize();
 
   // TODO(burdon): What does the path represent?
   const feed1 = await feedStore.openFeed('/test/1');
   const feed2 = await feedStore.openFeed('/test/2');
-  await pify(feed1.ready.bind(feed1))();
-  await pify(feed2.ready.bind(feed2))();
 
   expect(feedStore.getFeeds()).toHaveLength(2);
 
-  feed1.append({ bucketId: 'bucket-1' });
-  feed1.append({ bucketId: 'bucket-2' });
-  feed2.append({ bucketId: 'bucket-1' });
-  feed1.append({ bucketId: 'bucket-1' });
+  // const items = [
+  //   { id: 'item:1', value: 100 },
+  //   { id: 'item:2', value: 101 },
+  //   { id: 'item:3', value: 102 },
+  //   { id: 'item:4', value: 103 },
+  //   { id: 'test:1', value: 104 },
+  // ];
 
-  // TODO(burdon): Why does the test take 7s?
-  events.once('close', async () => {
-    await feedStore.close();
+  // feed1.append({ bucketId: 'bucket-1', value: 1 });
+  // feed1.append({ bucketId: 'bucket-2', value: 2 });
+  // feed2.append({ bucketId: 'bucket-1', value: 3 });
+  // feed1.append({ bucketId: 'bucket-1', value: 4 });
+
+  await pify(feed1.append.bind(feed1))({ bucketId: 'bucket-1', value: 1 });
+
+  // events.once('close', async () => {
+  //   await feedStore.close();
+  //   done();
+  // });
+
+  setTimeout(async () => {
+    console.log('<><><><><><><');
+    const item = await mixer.api.get('bucket-1:1');
+    expect(item).not.toBeNull();
+
     done();
-  });
+  }, 2000);
 });

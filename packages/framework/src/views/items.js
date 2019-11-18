@@ -18,6 +18,7 @@ module.exports = function ItemsView(viewId, db, core, { append }) {
 
   const viewDB = sub(db, 'items', { valueEncoding: 'json' });
 
+  // TODO(burdon): Why?
   const timestampItems = new Map();
 
   return view(viewDB, {
@@ -27,10 +28,9 @@ module.exports = function ItemsView(viewId, db, core, { append }) {
         return [];
       }
 
-      const { itemId } = value.data;
-
       const type = value.type.replace('item.', '');
       if (type === 'metadata') {
+        const { itemId } = value.data;
         if (timestampItems.get(itemId) >= value.timestamp) {
           return [];
         }
