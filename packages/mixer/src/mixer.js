@@ -4,7 +4,7 @@
 
 import { EventEmitter } from 'events';
 import kappa from 'kappa-core';
-import view from 'kappa-view-level';
+import createIndex from 'kappa-view-level';
 import levelup from 'levelup';
 import memdown from 'memdown';
 import pify from 'pify';
@@ -48,23 +48,28 @@ export class MultifeedAdapter extends EventEmitter {
 
 const viewName = 'messages';
 
-// TODO(burdon): App data, separate from system messages, etc.
-const createMessageView = (db, id, callback) => {
+// Ensures lexical sorting.
+// import charwise from 'charwise';
+// export const createKey = (...args) => args.filter(Boolean).map(charwise.encode).join('/');
+export const createKey = (...args) => args.join('/');
+
+const createMessageView = (db, id, subscriptions) => {
 
   let n = 0;
 
   // https://github.com/Level/subleveldown
   const viewDB = sub(db, id, { valueEncoding: 'json' });
 
+  // TODO(burdon): All in memory; retrieve payload from disk?
   // https://github.com/noffle/kappa-view-level
-  return view(viewDB, {
-    map: async (message) => {
+  return createIndex(viewDB, {
 
-      // TODO(burdon): Filter based on type.
+    // TODO(burdon): Filter based on type.
+    map: (message) => {
       const { bucketId } = message.value;
       if (bucketId) {
-        const key = `${bucketId}:${++n}`;
-        console.log('map', key);
+        // TODO(burdon): Order by?
+        const key = createKey(bucketId, ++n);
         return [
           [key, message.value]
         ];
@@ -75,28 +80,44 @@ const createMessageView = (db, id, callback) => {
 
     // TODO(burdon): Better way to trigger update?
     indexed: (messages) => {
-      console.log('index', messages.length);
-      process.nextTick(() => {
-        callback();
+      const buckets = new Set();
+      messages.forEach(({ value: { bucketId } }) => buckets.add(bucketId));
+
+      subscriptions.forEach(({ bucketId, callback }) => {
+        if (buckets.has(bucketId)) {
+          callback();
+        }
       });
     },
 
     api: {
-      get: async (id) => {
-        return viewDB.get(id).catch(() => null);
+      get: async (kappa, key) => {
+        return viewDB.get(key).catch(() => null);
       },
 
       // TODO(burdon): Return stream each time? Cursor from last change?
       // TODO(burdon): Get multiple buckets if desired. CRDT consumes this stream.
       getMessages: async (kappa, bucketId) => {
         const stream = viewDB.createKeyStream({
-          gte: `${bucketId}:`,
-          lte: `${bucketId}:~`
+          gte: createKey(bucketId, ''),
+          lte: createKey(bucketId, '~')
         });
 
-        const messages = await arrayFromStream(stream);
-        console.log('GET', bucketId, messages.length);
-        return messages;
+        // stream
+        //   .on('data', (data) => {
+        //     console.log(data.key, '=', data.value);
+        //   })
+        //   .on('error', (err) => {
+        //     console.error(err);
+        //   })
+        //   .on('close', () => {
+        //     console.log('closed');
+        //   })
+        //   .on('end', () => {
+        //     console.log('ended');
+        //   });
+
+        return arrayFromStream(stream);
       }
     }
   });
@@ -106,6 +127,8 @@ const createMessageView = (db, id, callback) => {
  * De-multiplexes messages into buckets.
  */
 export class Mixer {
+
+  _subscriptions = new Set();
 
   constructor(feedStore, codec) {
     console.assert(feedStore);
@@ -120,16 +143,21 @@ export class Mixer {
     });
   }
 
-  setCallback(callback) {
-    this.callback = callback;
-    return this;
+  subscribe(bucketId, callback) {
+    const subscription = { bucketId, callback };
+    this._subscriptions.add(subscription);
+
+    return {
+      close: () => this._subscriptions.delete(subscription)
+    };
   }
 
   async initialize() {
     // https://github.com/Level/levelup#api
     const db = levelup(memdown());
 
-    this._kappa.use(viewName, createMessageView(db, viewName, this.callback));
+    // TODO(burdon): App data, separate from system messages, etc.
+    this._kappa.use(viewName, createMessageView(db, viewName, this._subscriptions));
 
     await pify(this._kappa.ready.bind(this._kappa))(viewName);
 

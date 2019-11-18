@@ -2,17 +2,16 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import { EventEmitter } from 'events';
 import ram from 'random-access-memory';
 import crypto from 'hypercore-crypto';
 import hypertrie from 'hypertrie';
-import pify from 'pify';
+import waitForExpect from 'wait-for-expect';
 
-// TODO(burdon): Taskes 5s to load
+// TODO(burdon): Takes 5s to load
 import { FeedStore } from '@dxos/feed-store';
 import { Codec } from '@wirelineio/protobuf';
 
-import { Mixer } from './mixer';
+import { Mixer, createKey } from './mixer';
 
 const codec = new Codec().addJson(require('./schema.json'));
 
@@ -21,7 +20,7 @@ const codec = new Codec().addJson(require('./schema.json'));
 jest.setTimeout(10000);
 
 // TODO(burdon): Empty test takes 7s.
-test.skip('sanity', () => {
+test('sanity', () => {
   expect(true).toBeTruthy();
 });
 
@@ -43,66 +42,46 @@ test('basic multiplexing', async (done) => {
 
   const mixer = new Mixer(feedStore, codec);
 
-  // const events = new EventEmitter();
-
-  // let done = false;
-
-  // TODO(burdon): key with 'state'?
-  mixer.setCallback(async () => {
-    const item = await mixer.api.get('bucket-1:1');
-    console.log('>>>>>>>>>>>>>>>', item);
-
-  //   // const messages = await mixer.getMessages('bucket-1');
-  //   // console.log('messages', messages);
-  //
-  //   // mixer.getMessages('bucket1')
-  //   //   .on('data', (data) => {
-  //   //     console.log(data.key, '=', data.value);
-  //   //   })
-  //   //   .on('error', (err) => {
-  //   //     console.error(err);
-  //   //   })
-  //   //   .on('close', () => {
-  //   //     console.log('closed');
-  //   //   })
-  //   //   .on('end', () => {
-  //   //     console.log('ended');
-  //   //   });
+  let count = 0;
+  mixer.subscribe('bucket-1', async () => {
+    const items = await mixer.api.getMessages('bucket-1');
+    // console.log('updated', items);
+    count = items.length;
   });
 
   await mixer.initialize();
 
   // TODO(burdon): What does the path represent?
-  const feed1 = await feedStore.openFeed('/test/1');
-  const feed2 = await feedStore.openFeed('/test/2');
+  const feeds = [
+    await feedStore.openFeed('/test/1'),
+    await feedStore.openFeed('/test/2')
+  ];
 
-  expect(feedStore.getFeeds()).toHaveLength(2);
+  expect(feedStore.getFeeds()).toHaveLength(feeds.length);
 
-  // const items = [
-  //   { id: 'item:1', value: 100 },
-  //   { id: 'item:2', value: 101 },
-  //   { id: 'item:3', value: 102 },
-  //   { id: 'item:4', value: 103 },
-  //   { id: 'test:1', value: 104 },
-  // ];
+  const items = [
+    { bucketId: 'bucket-1', value: 100 },
+    { bucketId: 'bucket-2', value: 101 },
+    { bucketId: 'bucket-1', value: 102 },
+    { bucketId: 'bucket-1', value: 103 },
+    { bucketId: 'bucket-2', value: 104 },
+  ];
 
-  // feed1.append({ bucketId: 'bucket-1', value: 1 });
-  // feed1.append({ bucketId: 'bucket-2', value: 2 });
-  // feed2.append({ bucketId: 'bucket-1', value: 3 });
-  // feed1.append({ bucketId: 'bucket-1', value: 4 });
+  items.forEach((item, i) => {
+    feeds[i % feeds.length].append(item);
+  });
 
-  await pify(feed1.append.bind(feed1))({ bucketId: 'bucket-1', value: 1 });
+  await waitForExpect(async () => {
+    expect(count).toEqual(3);
 
-  // events.once('close', async () => {
-  //   await feedStore.close();
-  //   done();
-  // });
-
-  setTimeout(async () => {
-    console.log('<><><><><><><');
-    const item = await mixer.api.get('bucket-1:1');
+    const item = await mixer.api.get(createKey('bucket-1', 1));
     expect(item).not.toBeNull();
 
+    const items = await mixer.api.getMessages('bucket-1');
+    expect(items).toHaveLength(3);
+
+    await feedStore.close();
+
     done();
-  }, 2000);
+  });
 });
