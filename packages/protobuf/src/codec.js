@@ -4,8 +4,8 @@
 
 // TODO(burdon): Move to dxos.codec package.
 
-import { Root, Type } from 'protobufjs/light';
 import defaultsDeep from 'lodash.defaultsdeep';
+import { Root, Type } from 'protobufjs/light';
 
 /**
  * Maintains a dictionary of types and supports encoding/decoding of ANY types.
@@ -115,7 +115,7 @@ export class Codec {
 
     const type = this.getType(type_url);
     if (!type) {
-      throw new Error(`Type not found: ${type_url}`);
+      throw new Error(`Unknown type: ${type_url}`);
     }
 
     // TODO(burdon): fromObject(value) fails if one of the properties is called "value"!
@@ -157,6 +157,7 @@ export class Codec {
    * @return {Object} JSON object.
    */
   decode(buffer, type_url, options = { recursive: true, strict: true }) {
+
     const type = this.getType(type_url);
     if (!type) {
       if (options.strict) {
@@ -185,7 +186,6 @@ export class Codec {
       throw new Error('Missing __type_url attribute');
     }
 
-    // TODO(burdon): Option to ignore silently if type not known.
     const type = this.getType(type_url);
     if (!type) {
       if (options.strict) {
@@ -201,12 +201,17 @@ export class Codec {
 
       if (fieldType === 'google.protobuf.Any' && options.recursive) {
         const decodeAny = (any) => {
+          // Test if already decoded.
+          const { __type_url } = any;
+          if (__type_url) {
+            return any;
+          }
+
           const { type_url, value: buffer } = any;
 
           // TODO(burdon): Refactor so that type check is done before calling decode.
           const value = this.decode(buffer, type_url, options);
           if (value === undefined) {
-            // console.log('!!!!!!!!!!!!!!!!!!!!!', any);
             return any;
           }
 

@@ -2,7 +2,7 @@
 
 Eventually Consistent Hierarchical Objects Database.
 
-TODO(burdon): Merge/reconsile with specs.
+TODO(burdon): Merge/reconcile with specs.
 
 
 ## Background

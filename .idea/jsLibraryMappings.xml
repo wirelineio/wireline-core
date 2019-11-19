@@ -3,6 +3,5 @@
   <component name="JavaScriptLibraryMappings">
     <file url="PROJECT" libraries="{@types/chance, @types/jest, @types/lodash, @types/puppeteer, @types/react}" />
     <includedPredefinedLibrary name="HTTP Response Handler" />
-    <includedPredefinedLibrary name="Node.js Core" />
   </component>
 </project>
