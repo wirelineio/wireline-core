@@ -23,8 +23,8 @@ export class MultifeedAdapter extends EventEmitter {
     this._megafeed = megafeed;
     this._topic = topic;
 
-    this._megafeed.on('feed', (feed, stat) => {
-      if (stat.metadata.topic === this._topic) {
+    this._megafeed.on('feed', (feed, descriptor) => {
+      if (descriptor.metadata.topic === this._topic) {
         this.emit('feed', feed);
       }
     });
@@ -37,8 +37,8 @@ export class MultifeedAdapter extends EventEmitter {
 
   async initialize() {
     try {
-      await this._megafeed.loadFeeds(({ stat }) => {
-        return stat.metadata.topic === this._topic;
+      await this._megafeed.loadFeeds((descriptor) => {
+        return descriptor.metadata.topic === this._topic;
       });
 
       process.nextTick(() => {
@@ -57,7 +57,7 @@ export class MultifeedAdapter extends EventEmitter {
   }
 
   feeds() {
-    return this._megafeed.filterFeeds(({ stat }) => stat.metadata.topic === this._topic);
+    return this._megafeed.filterFeeds(descriptor => descriptor.metadata.topic === this._topic);
   }
 
   ready(cb) {

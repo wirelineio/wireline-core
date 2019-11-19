@@ -6,7 +6,7 @@ import { EventEmitter } from 'events';
 import hypertrie from 'hypertrie';
 import pify from 'pify';
 
-import { FeedStore } from '@wirelineio/feed-store';
+import { FeedStore } from '@dxos/feed-store';
 
 import { Replicator } from './replicator';
 
@@ -43,11 +43,11 @@ export class Megafeed extends EventEmitter {
         valueEncoding: options.valueEncoding
       }
     })
-      .on('feed', (feed, stat) => {
-        this.emit('feed', feed, stat);
+      .on('feed', (feed, descriptor) => {
+        this.emit('feed', feed, descriptor);
 
         feed.on('sync', () => {
-          this.emit('update', feed, stat);
+          this.emit('update', feed, descriptor);
         });
       });
 
@@ -94,8 +94,8 @@ export class Megafeed extends EventEmitter {
     return this._feedStore.filterFeeds(cb);
   }
 
-  async openFeed(path, stat) {
-    return this._feedStore.openFeed(path, stat);
+  async openFeed(path, options) {
+    return this._feedStore.openFeed(path, options);
   }
 
   async loadFeeds(cb) {

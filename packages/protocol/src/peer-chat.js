@@ -5,7 +5,7 @@
 import { EventEmitter } from 'events';
 
 import Broadcast from '@wirelineio/broadcast';
-import CodecProtobuf from '@wirelineio/codec-protobuf';
+import CodecProtobuf from '@dxos/codec-protobuf';
 import { keyToHex, keyToBuffer } from '@wirelineio/utils';
 
 import { Extension } from './extension';

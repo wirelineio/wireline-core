@@ -171,7 +171,7 @@ class Framework extends EventEmitter {
     this._viewManager.setWriterFeed(feed);
 
     // Load all feeds with the related topic.
-    await this._megafeed.loadFeeds(({ stat }) => stat.metadata.topic === topic);
+    await this._megafeed.loadFeeds(descriptor => descriptor.metadata.topic === topic);
 
     // Connect to the party.
     const party = this.connect(partyKey);
