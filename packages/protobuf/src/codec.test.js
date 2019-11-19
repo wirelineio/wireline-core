@@ -96,7 +96,6 @@ const nested = [
 
 const messages = [...simple, ...nested];
 
-// TODO(burdon): Rename __type_url to "@type"
 /* eslint camelcase: "off" */
 
 test('types', () => {
