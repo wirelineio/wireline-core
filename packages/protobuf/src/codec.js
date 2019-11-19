@@ -17,6 +17,8 @@ import { Root, Type } from 'protobufjs/light';
  * In order to provide a natural JSON data structure (i.e., not embed `{ type_url, value  }`) in the JSON object,
  * the type value is set in the `__type_url` property of the underlying object.
  *
+ * NOTE: Internally, protobufjs uses a `@type` property on the non-JSON objects.
+ *
  * Example:
  * ```
  * package testing;
@@ -167,21 +169,20 @@ export class Codec {
     }
 
     // Decode returns an object (e.g., with @type info); convert to plain JSON object.
-    const object = Object.assign(type.toObject(type.decode(buffer)), {
-      __type_url: type_url
-    });
+    const object = type.toObject(type.decode(buffer));
 
-    return this.decodeObject(object, options);
+    return this.decodeObject(object, type_url, options);
   }
 
   /**
-   * Decode partially decoded object.
+   * Decode partially decoded object. Looks for
    *
-   * @param object - JSON object to decode.
+   * @param {Object} object - JSON object to decode.
+   * @param {string} type_url
    * @param {Object} [options]
    */
-  decodeObject(object, options = { recursive: true, strict: true }) {
-    const type_url = object['__type_url'];
+  decodeObject(object, type_url, options = { recursive: true, strict: true }) {
+    // const type_url = object['__type_url'];
     if (!type_url) {
       throw new Error('Missing __type_url attribute');
     }
@@ -201,8 +202,6 @@ export class Codec {
 
       if (fieldType === 'google.protobuf.Any' && options.recursive) {
         const decodeAny = (any) => {
-          const { type_url, value: buffer } = any;
-
           // Test if already decoded.
           const { __type_url } = any;
           if (__type_url) {
@@ -210,6 +209,7 @@ export class Codec {
           }
 
           // Check known type, otherwise leave decoded ANY object in place.
+          const { type_url, value: buffer } = any;
           const type = this.getType(type_url);
           if (!type) {
             if (options.strict) {
@@ -219,8 +219,10 @@ export class Codec {
             return any;
           }
 
-          // Recursive.
-          return this.decode(buffer, type_url, options);
+          // Recursively decode the object.
+          return Object.assign(this.decode(buffer, type_url, options), {
+            __type_url: type_url
+          });
         };
 
         if (object[field] !== undefined) {

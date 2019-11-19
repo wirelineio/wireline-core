@@ -16,7 +16,6 @@ test('encoding/decoding', () => {
 
   const messages = [
     {
-      __type_url: '.dxos.Message',
       bucketId: 'bucket-1',
       payload: {
         __type_url: '.testing.Credential',
@@ -25,7 +24,6 @@ test('encoding/decoding', () => {
     },
 
     {
-      __type_url: '.dxos.Message',
       bucketId: 'bucket-1',
       payload: {
         __type_url: '.testing.Mutation',
@@ -35,7 +33,7 @@ test('encoding/decoding', () => {
     }
   ];
 
-  const buffers = messages.map(message => codec.encode(message));
+  const buffers = messages.map(message => codec.encode(message, '.dxos.Message'));
   const received = buffers.map(buffer => codec.decode(buffer));
   expect(received).toEqual(messages);
 });
