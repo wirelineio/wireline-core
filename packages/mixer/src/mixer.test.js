@@ -14,14 +14,14 @@ import { Codec } from '@wirelineio/protobuf';
 
 import { Mixer, MultifeedAdapter } from './mixer';
 
-const codec = new Codec().addJson(require('./schema.json'));
+const codec = new Codec().addJson(require('./schema.json')).build();
 
 const log = debug('test');
 
 jest.setTimeout(10000);
 
 // TODO(burdon): Empty test takes 7s.
-test.skip('sanity', () => {
+test('sanity', () => {
   expect(true).toBeTruthy();
 });
 

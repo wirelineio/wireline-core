@@ -26,10 +26,10 @@ export class MessageCodec {
   }
 
   encode(message) {
-    return this._codec.encode(message, 'dxos.mixer.Message');
+    return this._codec.encode(message, '.dxos.Message');
   }
 
   decode(buffer) {
-    return this._codec.decode(buffer, 'dxos.mixer.Message');
+    return this._codec.decode(buffer, '.dxos.Message');
   }
 }

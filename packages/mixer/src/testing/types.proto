@@ -7,7 +7,7 @@ syntax = "proto3";
 package testing;
 
 message Credential {
-  string pubKey = 1;
+  string publicKey = 1;
 }
 
 message Mutation {

@@ -2,19 +2,15 @@
   "nested": {
     "dxos": {
       "nested": {
-        "mixer": {
-          "nested": {
-            "Message": {
-              "fields": {
-                "bucketId": {
-                  "type": "string",
-                  "id": 1
-                },
-                "payload": {
-                  "type": "google.protobuf.Any",
-                  "id": 10
-                }
-              }
+        "Message": {
+          "fields": {
+            "bucketId": {
+              "type": "string",
+              "id": 1
+            },
+            "payload": {
+              "type": "google.protobuf.Any",
+              "id": 10
             }
           }
         }

@@ -119,7 +119,7 @@ export class Codec {
       throw new Error(`Unknown type: ${type_url}`);
     }
 
-    const object = type.fromObject(value);
+    const object = Object.assign({}, value);
 
     for (const field in type.fields) {
       const { type: fieldType, repeated } = type.fields[field];
