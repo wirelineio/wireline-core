@@ -2,6 +2,8 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+import jsonpath from 'jsonpath';
+
 import { Codec } from './codec';
 
 const codec = new Codec()
@@ -156,6 +158,10 @@ test('encoding/decoding (non-recursive)', () => {
 
 test('encoding/decoding (missing type)', () => {
   const test = ((message) => {
+    if (!jsonpath.query(message, '$..__type_url').find(type => type === '.testing.Data')) {
+      return;
+    }
+
     const buffer = codec.encode(message);
 
     // Partially decode with missing type defs.
@@ -171,5 +177,5 @@ test('encoding/decoding (missing type)', () => {
     expect(received).toEqual(message);
   });
 
-  [nested[0]].forEach(message => test(message));
+  nested.forEach(message => test(message));
 });

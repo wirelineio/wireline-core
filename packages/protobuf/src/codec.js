@@ -119,8 +119,6 @@ export class Codec {
       throw new Error(`Unknown type: ${type_url}`);
     }
 
-    // TODO(burdon): fromObject(value) fails if one of the properties is called "value"!
-
     const object = type.fromObject(value);
 
     for (const field in type.fields) {
@@ -168,7 +166,6 @@ export class Codec {
       }
     }
 
-    // TODO(burdon): Pass object to next method?
     // Decode returns an object (e.g., with @type info); convert to plain JSON object.
     const object = Object.assign(type.toObject(type.decode(buffer)), {
       __type_url: type_url
