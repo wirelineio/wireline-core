@@ -52,7 +52,7 @@ export class Codec {
   /**
    * Parser.
    * https://github.com/protobufjs/protobuf.js/blob/master/src/root.js
-   * @type {Object}
+   * __type_url {Object}
    * @property lookup
    */
   _root = null;
@@ -70,7 +70,7 @@ export class Codec {
    * @return {Type} The type object or null if not found.
    */
   getType(type) {
-    console.assert(type);
+    console.assert(type, 'Missing type');
     if (!this._root) {
       return null;
     }
@@ -106,12 +106,13 @@ export class Codec {
    * @param {string} [type_url]
    * @return {Buffer}
    */
-  encode(value, type_url = value.__type_url) {
+  encode(value, type_url = undefined) {
     if (!type_url) {
-      throw new Error('Missing __type_url attribute');
+      type_url = value['__type_url'];
+      if (!type_url) {
+        throw new Error('Missing __type_url attribute');
+      }
     }
-
-    value.__type_url = type_url;
 
     const type = this.getType(type_url);
     if (!type) {
@@ -119,7 +120,8 @@ export class Codec {
     }
 
     // TODO(burdon): fromObject(value) fails if one of the properties is called "value"!
-    const object = Object.assign({}, value); // type.fromObject(value);
+
+    const object = type.fromObject(value);
 
     for (const field in type.fields) {
       const { type: fieldType, repeated } = type.fields[field];
@@ -157,7 +159,6 @@ export class Codec {
    * @return {Object} JSON object.
    */
   decode(buffer, type_url, options = { recursive: true, strict: true }) {
-
     const type = this.getType(type_url);
     if (!type) {
       if (options.strict) {
@@ -167,6 +168,8 @@ export class Codec {
       }
     }
 
+    // TODO(burdon): Pass object to next method?
+    // Decode returns an object (e.g., with @type info); convert to plain JSON object.
     const object = Object.assign(type.toObject(type.decode(buffer)), {
       __type_url: type_url
     });
@@ -181,7 +184,7 @@ export class Codec {
    * @param {Object} [options]
    */
   decodeObject(object, options = { recursive: true, strict: true }) {
-    const { __type_url: type_url } = object;
+    const type_url = object['__type_url'];
     if (!type_url) {
       throw new Error('Missing __type_url attribute');
     }
@@ -201,29 +204,34 @@ export class Codec {
 
       if (fieldType === 'google.protobuf.Any' && options.recursive) {
         const decodeAny = (any) => {
+          const { type_url, value: buffer } = any;
+
           // Test if already decoded.
           const { __type_url } = any;
           if (__type_url) {
             return any;
           }
 
-          const { type_url, value: buffer } = any;
+          // Check known type, otherwise leave decoded ANY object in place.
+          const type = this.getType(type_url);
+          if (!type) {
+            if (options.strict) {
+              throw new Error(`Unknown type: ${type_url}`);
+            }
 
-          // TODO(burdon): Refactor so that type check is done before calling decode.
-          const value = this.decode(buffer, type_url, options);
-          if (value === undefined) {
             return any;
           }
 
-          return Object.assign(value, {
-            __type_url: type_url
-          });
+          // Recursive.
+          return this.decode(buffer, type_url, options);
         };
 
-        if (repeated) {
-          object[field] = object[field].map(any => decodeAny(any));
-        } else {
-          object[field] = decodeAny(object[field]);
+        if (object[field] !== undefined) {
+          if (repeated) {
+            object[field] = object[field].map(any => decodeAny(any));
+          } else {
+            object[field] = decodeAny(object[field]);
+          }
         }
       }
     }
