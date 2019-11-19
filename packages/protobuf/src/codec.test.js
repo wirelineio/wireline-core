@@ -32,18 +32,16 @@ test('encoding/decoding', () => {
       },
       {
         __type_url: 'testing.Data',
-        value: 100
-      },
-      {
-        __type_url: 'testing.Data',
-        value: 200
+        value: {
+          boolValue: true
+        }
       }
     ]
   };
 
   // Encode the message.
   const buffer = codec.encode(message);
-  expect(buffer).toHaveLength(132);
+  expect(buffer).toHaveLength(113);
 
   {
     // Fully decode the message.
@@ -56,6 +54,23 @@ test('encoding/decoding', () => {
     const received = codec.decode(buffer, 'testing.Message', { recursive: false });
     expect(received.bucketId).toEqual('bucket-1');
     expect(received.payload[0].type_url).toEqual('testing.Container');
+
+    // Fully decode remaining.
+    codec.decodeObject(received);
+    expect(received).toEqual(message);
+  }
+
+  {
+    // Partially decode with missing type defs.
+    const { schema } = codec;
+    // TODO(burdon): Fails if only 1 missing.
+    delete schema.nested.testing.nested['Container'];
+    delete schema.nested.testing.nested['Data'];
+    delete schema.nested.testing.nested['Meta'];
+    const partialCodec = new Codec().addJson(schema).build();
+
+    const received = partialCodec.decode(buffer, 'testing.Message', { recursive: true, strict: false });
+    expect(received).not.toEqual(message);
 
     // Fully decode remaining.
     codec.decodeObject(received);

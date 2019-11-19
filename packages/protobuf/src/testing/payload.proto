@@ -17,6 +17,14 @@ message Meta {
   string version = 1;
 }
 
+message Value {
+  oneof type {
+    bool boolValue = 1;
+    int32 intValue = 2;
+    string stringValue = 3;
+  }
+}
+
 message Data {
-  int32 value = 1;
+  Value value = 1;
 }

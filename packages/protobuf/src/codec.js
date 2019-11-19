@@ -41,6 +41,8 @@ import defaultsDeep from 'lodash.defaultsdeep';
  */
 export class Codec {
 
+  // TODO(burdon): Map WRN to type_url.
+
   /* eslint camelcase: "off" */
   /* eslint guard-for-in: "off" */
 
@@ -56,6 +58,14 @@ export class Codec {
   _root = null;
 
   /**
+   * Returns a copy of the current JSON schema.
+   * @return {string}
+   */
+  get schema() {
+    return Object.assign({}, this._json);
+  }
+
+  /**
    * @param {string} type - Fully qualified type name.
    * @return {Type} The type object or null if not found.
    */
@@ -65,7 +75,6 @@ export class Codec {
       return null;
     }
 
-    // TODO(burdon): Map WRN to type_url.
     return this._root.lookup(type, [Type]);
   }
 
@@ -75,6 +84,8 @@ export class Codec {
    * @return {Codec}
    */
   addJson(json) {
+    // Merge the Schema.
+    // NOTE: Root.fromJSON(json, this._root) throws duplicate definition errors.
     defaultsDeep(this._json, json);
     return this;
   }
@@ -145,10 +156,14 @@ export class Codec {
    * @param {Object} [options]
    * @return {Object} JSON object.
    */
-  decode(buffer, type_url, options = { recursive: true }) {
+  decode(buffer, type_url, options = { recursive: true, strict: true }) {
     const type = this.getType(type_url);
     if (!type) {
-      throw new Error(`Type not found: ${type_url}`);
+      if (options.strict) {
+        throw new Error(`Unknown type: ${type_url}`);
+      } else {
+        return undefined;
+      }
     }
 
     const object = Object.assign(type.toObject(type.decode(buffer)), {
@@ -164,7 +179,7 @@ export class Codec {
    * @param object - JSON object to decode.
    * @param {Object} [options]
    */
-  decodeObject(object, options = { recursive: true }) {
+  decodeObject(object, options = { recursive: true, strict: true }) {
     const { __type_url: type_url } = object;
     if (!type_url) {
       throw new Error('Missing __type_url attribute');
@@ -173,7 +188,11 @@ export class Codec {
     // TODO(burdon): Option to ignore silently if type not known.
     const type = this.getType(type_url);
     if (!type) {
-      throw new Error(`Unknown type: ${type_url}`);
+      if (options.strict) {
+        throw new Error(`Unknown type: ${type_url}`);
+      } else {
+        return object;
+      }
     }
 
     /* eslint guard-for-in: "off" */
@@ -183,7 +202,15 @@ export class Codec {
       if (fieldType === 'google.protobuf.Any' && options.recursive) {
         const decodeAny = (any) => {
           const { type_url, value: buffer } = any;
-          return Object.assign(this.decode(buffer, type_url, options), {
+
+          // TODO(burdon): Refactor so that type check is done before calling decode.
+          const value = this.decode(buffer, type_url, options);
+          if (value === undefined) {
+            // console.log('!!!!!!!!!!!!!!!!!!!!!', any);
+            return any;
+          }
+
+          return Object.assign(value, {
             __type_url: type_url
           });
         };

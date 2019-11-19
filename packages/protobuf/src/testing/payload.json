@@ -24,10 +24,35 @@
             }
           }
         },
+        "Value": {
+          "oneofs": {
+            "type": {
+              "oneof": [
+                "boolValue",
+                "intValue",
+                "stringValue"
+              ]
+            }
+          },
+          "fields": {
+            "boolValue": {
+              "type": "bool",
+              "id": 1
+            },
+            "intValue": {
+              "type": "int32",
+              "id": 2
+            },
+            "stringValue": {
+              "type": "string",
+              "id": 3
+            }
+          }
+        },
         "Data": {
           "fields": {
             "value": {
-              "type": "int32",
+              "type": "Value",
               "id": 1
             }
           }
