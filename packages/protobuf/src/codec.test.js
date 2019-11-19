@@ -11,7 +11,7 @@ const codec = new Codec()
 
 test('encoding/decoding', () => {
 
-  const sent = {
+  const message = {
     __type_url: 'testing.Message',
     bucketId: 'bucket-1',
     payload: [
@@ -42,13 +42,13 @@ test('encoding/decoding', () => {
   };
 
   // Encode the message.
-  const buffer = codec.encode(sent);
+  const buffer = codec.encode(message);
   expect(buffer).toHaveLength(132);
 
   {
     // Fully decode the message.
     const received = codec.decode(buffer, 'testing.Message');
-    expect(received).toEqual(sent);
+    expect(received).toEqual(message);
   }
 
   {
@@ -59,6 +59,6 @@ test('encoding/decoding', () => {
 
     // Fully decode remaining.
     codec.decodeObject(received);
-    expect(received).toEqual(sent);
+    expect(received).toEqual(message);
   }
 });

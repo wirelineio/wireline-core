@@ -1,0 +1,28 @@
+{
+  "nested": {
+    "testing": {
+      "nested": {
+        "Credential": {
+          "fields": {
+            "pubKey": {
+              "type": "string",
+              "id": 1
+            }
+          }
+        },
+        "Mutation": {
+          "fields": {
+            "property": {
+              "type": "string",
+              "id": 1
+            },
+            "value": {
+              "type": "string",
+              "id": 2
+            }
+          }
+        }
+      }
+    }
+  }
+}

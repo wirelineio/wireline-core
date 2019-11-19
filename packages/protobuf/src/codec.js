@@ -60,6 +60,11 @@ export class Codec {
    * @return {Type} The type object or null if not found.
    */
   getType(type) {
+    console.assert(type);
+    if (!this._root) {
+      return null;
+    }
+
     // TODO(burdon): Map WRN to type_url.
     return this._root.lookup(type, [Type]);
   }
@@ -83,26 +88,27 @@ export class Codec {
     return this;
   }
 
-  // TODO(burdon): Encoding/decoding should be hierarchical (not just for ANY).
-
   /**
    * Encode buffer.
    *
    * @param {Object} value - JSON object.
+   * @param {string} [type_url]
    * @return {Buffer}
    */
-  encode(value) {
-    const { __type_url: type_url } = value;
+  encode(value, type_url = value.__type_url) {
     if (!type_url) {
       throw new Error('Missing __type_url attribute');
     }
+
+    value.__type_url = type_url;
 
     const type = this.getType(type_url);
     if (!type) {
       throw new Error(`Type not found: ${type_url}`);
     }
 
-    const object = type.fromObject(value);
+    // TODO(burdon): fromObject(value) fails if one of the properties is called "value"!
+    const object = Object.assign({}, value); // type.fromObject(value);
 
     for (const field in type.fields) {
       const { type: fieldType, repeated } = type.fields[field];
@@ -117,15 +123,17 @@ export class Codec {
           };
         };
 
-        if (repeated) {
-          object[field] = value[field].map(value => encodeAny(value));
-        } else {
-          object[field] = encodeAny(value[field]);
+        // NOTE: Each ANY is separately encoded so that it can be optionally decoded (e.g., if the type is not known).
+        if (value[field]) {
+          if (repeated) {
+            object[field] = value[field].map(value => encodeAny(value));
+          } else {
+            object[field] = encodeAny(value[field]);
+          }
         }
       }
     }
 
-    // TODO(burdon): Should each field be individually encoded?
     return type.encode(object).finish();
   }
 
@@ -134,7 +142,7 @@ export class Codec {
    *
    * @param {Buffer} buffer - encoded bytes.
    * @param {string} type_url - Type name.
-   * @param {Object} options
+   * @param {Object} [options]
    * @return {Object} JSON object.
    */
   decode(buffer, type_url, options = { recursive: true }) {
@@ -153,8 +161,8 @@ export class Codec {
   /**
    * Decode partially decoded object.
    *
-   * @param object
-   * @param {Object} options
+   * @param object - JSON object to decode.
+   * @param {Object} [options]
    */
   decodeObject(object, options = { recursive: true }) {
     const { __type_url: type_url } = object;
@@ -162,10 +170,10 @@ export class Codec {
       throw new Error('Missing __type_url attribute');
     }
 
-    // TODO(burdon): Warn if type not found.
-    const type = this.getType(object.__type_url);
+    // TODO(burdon): Option to ignore silently if type not known.
+    const type = this.getType(type_url);
     if (!type) {
-      return object;
+      throw new Error(`Unknown type: ${type_url}`);
     }
 
     /* eslint guard-for-in: "off" */

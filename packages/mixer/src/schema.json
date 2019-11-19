@@ -6,16 +6,11 @@
           "nested": {
             "Message": {
               "fields": {
-                "typeId": {
+                "bucketId": {
                   "type": "string",
                   "id": 1
                 },
-                "bucketId": {
-                  "type": "string",
-                  "id": 2
-                },
                 "payload": {
-                  "rule": "repeated",
                   "type": "google.protobuf.Any",
                   "id": 10
                 }

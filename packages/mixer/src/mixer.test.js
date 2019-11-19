@@ -5,7 +5,6 @@
 import debug from 'debug';
 import crypto from 'hypercore-crypto';
 import hypertrie from 'hypertrie';
-import pify from 'pify';
 import ram from 'random-access-memory';
 import waitForExpect from 'wait-for-expect';
 
@@ -22,56 +21,9 @@ const log = debug('test');
 jest.setTimeout(10000);
 
 // TODO(burdon): Empty test takes 7s.
-test('sanity', () => {
+test.skip('sanity', () => {
   expect(true).toBeTruthy();
 });
-
-/**
- * Test CRDT.
- */
-class TestModel {
-
-  constructor(codec, feed, bucket) {
-    this._codec = codec;
-    this._feed = feed;
-    this._bucket = bucket;
-
-    this._append = pify(this._feed.append.bind(this._feed));
-  }
-
-  /**
-   * Write messages to feed.
-   * @param mutations
-   * @return {Promise<void>}
-   */
-  async appendMessages(mutations) {
-    const messages = mutations.map(mutation => ({
-      bucketId: this._bucket,
-      payload: mutation
-    }));
-
-    for (const message of messages) {
-      // TODO(burdon): Append should handle encoding.
-      await this._append(this._codec.encode(message, 'dxos.mixer.Message'));
-    }
-  }
-
-  /**
-   *
-   * @param messages
-   * @return {Promise<void>}
-   */
-  async processMessages(messages) {
-    // TODO(burdon): Middleware?
-    // TODO(burdon): Outer should already have been unwrapped.
-    const mutations = messages.map(message => this._codec.decode(message, 'dxos.mixer.Message'));
-
-    // TODO(burdon): Build state.
-    console.log(mutations);
-  }
-}
-
-console.log(new TestModel());
 
 test('basic multiplexing', async (done) => {
 

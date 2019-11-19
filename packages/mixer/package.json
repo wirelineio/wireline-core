@@ -16,7 +16,7 @@
   "scripts": {
     "build": "npm run clean && npm run build:protobuf && npm run build:babel",
     "build:babel": "babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps --copy-files",
-    "build:protobuf": "./scripts/build_proto.sh ./src/schema.proto",
+    "build:protobuf": "./scripts/build_proto.sh ./src/schema.proto ./src/testing/types.proto",
     "clean": "del-cli dist",
     "lint": "eslint ./src --ignore-path ../../.eslintignore",
     "test": "jest --rootDir ./src --verbose",
