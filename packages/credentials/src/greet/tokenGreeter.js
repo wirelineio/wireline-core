@@ -146,6 +146,11 @@ export class TokenGreeter {
         if (msg.data.signed.original.challenge !== redeemed.challenge) {
           throw new ProtocolError(401, 'Bad challenge');
         }
+
+        if (!msg.type.startsWith('party.admit.')) {
+          throw new ProtocolError(403, 'Bad message type');
+        }
+
         // And the signature needs to check out.
         const verified = await this._keyring.verify(msg);
         if (!verified) {
