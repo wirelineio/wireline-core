@@ -2,13 +2,15 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-// TODO(burdon): Move to dxos.codec package.
+// TODO(burdon): Move to dxos.proto-codec package.
 
 import defaultsDeep from 'lodash.defaultsdeep';
 import { Root, Type } from 'protobufjs/light';
 
 /**
- * Maintains a dictionary of types and supports encoding/decoding of ANY types.
+ * Protobuf encoder/decoder that follows the hypercore codec API (https://github.com/Level/codec).
+ *
+ * Handles messages that contain nested `google.protobuf.Any` types.
  *
  * ProtobufJS doesn't handle ANY (google.protobuf.Any) types (https://github.com/protobufjs/protobuf.js/issues/435).
  * This is likely since there is no unopinionated way to implement this feature.
@@ -16,6 +18,8 @@ import { Root, Type } from 'protobufjs/light';
  * This module decodes types matching the `type_url` property that are present in the dictionary.
  * In order to provide a natural JSON data structure (i.e., not embed `{ type_url, value  }`) in the JSON object,
  * the type value is set in the `__type_url` property of the underlying object.
+ *
+ * NOTE: Internally, protobufjs uses a `@type` property on the non-JSON objects.
  *
  * Example:
  * ```
@@ -52,10 +56,27 @@ export class Codec {
   /**
    * Parser.
    * https://github.com/protobufjs/protobuf.js/blob/master/src/root.js
-   * __type_url {Object}
+   * @type {Object}
    * @property lookup
    */
   _root = null;
+
+  /**
+   * @param options
+   * @param options.rootTypeUrl - Root type.
+   * @param options.recursive - Recursively decode the buffer.
+   * @param options.strict - Throw an exception if the type is not found.
+   */
+  constructor(options = {}) {
+    console.assert(options);
+    this._options = defaultsDeep(options, {
+      recursive: true,
+      strict: true
+    });
+
+    console.assert(options.rootTypeUrl);
+    this._rootTypeUrl = options.rootTypeUrl;
+  }
 
   /**
    * Returns a copy of the current JSON schema.
@@ -100,13 +121,23 @@ export class Codec {
   }
 
   /**
-   * Encode buffer.
+   * Encode the value.
+   *
+   * @param value
+   * @return {Buffer}
+   */
+  encode(value) {
+    return this.encodeByType(value, this._rootTypeUrl);
+  }
+
+  /**
+   * Encode the value.
    *
    * @param {Object} value - JSON object.
    * @param {string} [type_url]
    * @return {Buffer}
    */
-  encode(value, type_url = undefined) {
+  encodeByType(value, type_url = undefined) {
     if (!type_url) {
       type_url = value['__type_url'];
       if (!type_url) {
@@ -119,7 +150,6 @@ export class Codec {
       throw new Error(`Unknown type: ${type_url}`);
     }
 
-    // Copy object.
     const object = Object.assign({}, value);
 
     for (const field in type.fields) {
@@ -131,7 +161,7 @@ export class Codec {
 
           return {
             type_url,
-            value: this.encode(any, type_url)
+            value: this.encodeByType(any, type_url)
           };
         };
 
@@ -150,6 +180,16 @@ export class Codec {
   }
 
   /**
+   * Decode the buffer.
+   *
+   * @param {Buffer} buffer
+   * @return {Object}
+   */
+  decode(buffer) {
+    return this.decodeByType(buffer, this._rootTypeUrl, this._options);
+  }
+
+  /**
    * Decode buffer.
    *
    * @param {Buffer} buffer - encoded bytes.
@@ -157,7 +197,7 @@ export class Codec {
    * @param {Object} [options]
    * @return {Object} JSON object.
    */
-  decode(buffer, type_url, options = { recursive: true, strict: true }) {
+  decodeByType(buffer, type_url, options = { recursive: true, strict: true }) {
     const type = this.getType(type_url);
     if (!type) {
       if (options.strict) {
@@ -168,21 +208,20 @@ export class Codec {
     }
 
     // Decode returns an object (e.g., with @type info); convert to plain JSON object.
-    const object = Object.assign(type.toObject(type.decode(buffer)), {
-      __type_url: type_url
-    });
+    const object = type.toObject(type.decode(buffer));
 
-    return this.decodeObject(object, options);
+    return this.decodeObject(object, type_url, options);
   }
 
   /**
-   * Decode partially decoded object.
+   * Decode partially decoded object. Looks for
    *
-   * @param object - JSON object to decode.
+   * @param {Object} object - JSON object to decode.
+   * @param {string} type_url
    * @param {Object} [options]
    */
-  decodeObject(object, options = { recursive: true, strict: true }) {
-    const type_url = object['__type_url'];
+  decodeObject(object, type_url, options = { recursive: true, strict: true }) {
+    // const type_url = object['__type_url'];
     if (!type_url) {
       throw new Error('Missing __type_url attribute');
     }
@@ -202,8 +241,6 @@ export class Codec {
 
       if (fieldType === 'google.protobuf.Any' && options.recursive) {
         const decodeAny = (any) => {
-          const { type_url, value: buffer } = any;
-
           // Test if already decoded.
           const { __type_url } = any;
           if (__type_url) {
@@ -211,6 +248,7 @@ export class Codec {
           }
 
           // Check known type, otherwise leave decoded ANY object in place.
+          const { type_url, value: buffer } = any;
           const type = this.getType(type_url);
           if (!type) {
             if (options.strict) {
@@ -220,8 +258,10 @@ export class Codec {
             return any;
           }
 
-          // Recursive.
-          return this.decode(buffer, type_url, options);
+          // Recursively decode the object.
+          return Object.assign(this.decodeByType(buffer, type_url, options), {
+            __type_url: type_url
+          });
         };
 
         if (object[field] !== undefined) {

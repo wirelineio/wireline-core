@@ -8,6 +8,7 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/echodb/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/hyperswarm-network-memory/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/megafeed/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/protobuf/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/protocol/dist" />
     </content>
     <orderEntry type="inheritedJdk" />

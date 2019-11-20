@@ -2,24 +2,26 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import jsonpath from 'jsonpath';
+import { JSONPath } from 'jsonpath-plus';
 
 import { Codec } from './codec';
 
-const codec = new Codec()
+const options = {
+  rootTypeUrl: '.testing.Message'
+};
+
+const codec = new Codec(options)
   .addJson(require('./testing/message.json'))
   .addJson(require('./testing/types.json'))
   .build();
 
-const simple = [
+const messages = [
 
   {
-    __type_url: '.testing.Message',
     bucketId: 'bucket-1'
   },
 
   {
-    __type_url: '.testing.Message',
     bucketId: 'bucket-1',
     payload: [
       {
@@ -27,13 +29,9 @@ const simple = [
         version: '0.0.1'
       }
     ]
-  }
-];
-
-const nested = [
+  },
 
   {
-    __type_url: '.testing.Message',
     bucketId: 'bucket-1',
     payload: [
       {
@@ -50,7 +48,6 @@ const nested = [
   },
 
   {
-    __type_url: '.testing.Message',
     bucketId: 'bucket-1',
     payload: [
       {
@@ -68,7 +65,6 @@ const nested = [
   },
 
   {
-    __type_url: '.testing.Message',
     bucketId: 'bucket-1',
     payload: [
       {
@@ -83,11 +79,11 @@ const nested = [
         ]
       },
       {
-        __type_url: 'testing.Meta',
+        __type_url: '.testing.Meta',
         version: '0.0.1'
       },
       {
-        __type_url: 'testing.Data',
+        __type_url: '.testing.Data',
         value: {
           boolValue: true
         }
@@ -96,9 +92,9 @@ const nested = [
   }
 ];
 
-const messages = [...simple, ...nested];
-
 /* eslint camelcase: "off" */
+
+// TODO(burdon): const db = level({ valueEncoding: codec }) // Hypercore.
 
 test('types', () => {
   const type = codec.getType('.testing.Message');
@@ -107,8 +103,8 @@ test('types', () => {
 
 test('encoding/decoding (basic)', () => {
   const test = ((message) => {
-    const buffer = codec.encode(message, '.testing.Message');
-    const received = codec.decode(buffer, '.testing.Message');
+    const buffer = codec.encode(message);
+    const received = codec.decode(buffer);
     expect(received).toEqual(message);
   });
 
@@ -118,7 +114,7 @@ test('encoding/decoding (basic)', () => {
 test('encoding/decoding (ANY)', () => {
   const test = ((message) => {
     const buffer = codec.encode(message);
-    const received = codec.decode(buffer, '.testing.Message');
+    const received = codec.decode(buffer);
     expect(received).toEqual(message);
   });
 
@@ -128,7 +124,7 @@ test('encoding/decoding (ANY)', () => {
 test('encoding/decoding (nested)', () => {
   const test = ((message) => {
     const buffer = codec.encode(message);
-    const received = codec.decode(buffer, '.testing.Message');
+    const received = codec.decode(buffer);
     expect(received).toEqual(message);
   });
 
@@ -140,7 +136,7 @@ test('encoding/decoding (non-recursive)', () => {
     const buffer = codec.encode(message);
 
     // Partially decode buffer.
-    const received = codec.decode(buffer, '.testing.Message', { recursive: false });
+    const received = codec.decodeByType(buffer, '.testing.Message', { recursive: false });
     expect(received.bucketId).toEqual('bucket-1');
 
     received.payload.forEach(({ type_url, value }) => {
@@ -149,33 +145,35 @@ test('encoding/decoding (non-recursive)', () => {
     });
 
     // Fully decode remaining.
-    codec.decodeObject(received);
+    codec.decodeObject(received, '.testing.Message');
     expect(received).toEqual(message);
   });
 
-  nested.forEach(message => test(message));
+  const filter = '$..payload';
+  messages.filter(message => JSONPath({ path: filter, json: message }).length).forEach((message) => {
+    test(message);
+  });
 });
 
 test('encoding/decoding (missing type)', () => {
   const test = ((message) => {
-    if (!jsonpath.query(message, '$..__type_url').find(type => type === '.testing.Data')) {
-      return;
-    }
-
     const buffer = codec.encode(message);
 
     // Partially decode with missing type defs.
     const { schema } = codec;
     delete schema.nested.testing.nested['Data'];
-    const partialCodec = new Codec().addJson(schema).build();
+    const partialCodec = new Codec(options).addJson(schema).build();
 
-    const received = partialCodec.decode(buffer, '.testing.Message', { recursive: true, strict: false });
+    const received = partialCodec.decodeByType(buffer, '.testing.Message', { recursive: true, strict: false });
     expect(received).not.toEqual(message);
 
     // Fully decode remaining.
-    codec.decodeObject(received);
+    codec.decodeObject(received, '.testing.Message');
     expect(received).toEqual(message);
   });
 
-  nested.forEach(message => test(message));
+  const filter = '$..*[?(@property === "__type_url" && @ === ".testing.Data")]';
+  messages.filter(message => JSONPath({ path: filter, json: message }).length).forEach((message) => {
+    test(message);
+  });
 });
