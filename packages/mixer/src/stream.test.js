@@ -111,13 +111,13 @@ test.skip('readstream', async (done) => {
 
 test('stream', async (done) => {
 
-  // TODO(burdon): Replace kappa with stream that reads from FeedStore directly.
+  // TODO(burdon): Test encoder.
   // TODO(burdon): Protocol/replicator test.
+  // TODO(burdon): Replace kappa with stream that reads from FeedStore directly.
   // TODO(burdon): HOC connect directly to model (read/write methods).
 
   let count = 0;
 
-  // Reader.
   const reader = through.obj(function process(chunk, encoding, next) {
     if (++count === items.length) {
       this.end();
@@ -126,14 +126,13 @@ test('stream', async (done) => {
     next();
   });
 
-  // Writer.
-  const objectStream = through.obj(function process(chunk, encoding, next) {
+  const writer = through.obj(function process(chunk, encoding, next) {
     this.push(JSON.stringify(chunk));
     next();
   });
 
   // Terminates and destroys both streams when EITHER reader or writer calls end.
-  pump(objectStream, reader, (err) => {
+  pump(writer, reader, (err) => {
     if (err) {
       console.error(err);
     }
@@ -142,6 +141,6 @@ test('stream', async (done) => {
   });
 
   items.forEach((item) => {
-    objectStream.write(item);
+    writer.write(item);
   });
 });

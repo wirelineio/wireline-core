@@ -10,7 +10,7 @@ import waitForExpect from 'wait-for-expect';
 
 // TODO(burdon): Takes 5s to load
 import { FeedStore } from '@dxos/feed-store';
-import { Codec } from '@wirelineio/protobuf';
+import { Codec } from '@wirelineio/protobuf-any';
 
 import { Mixer, MultifeedAdapter } from './mixer';
 

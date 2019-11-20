@@ -1,5 +1,5 @@
 {
-  "name": "@wirelineio/protobuf",
+  "name": "@wirelineio/protobuf-any",
   "version": "0.3.4",
   "description": "Protobuf codec.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/protobuf#readme",
@@ -29,7 +29,7 @@
   ],
   "dependencies": {
     "lodash.defaultsdeep": "^4.6.1",
-    "protobufjs": "^6.8.8",
+    "protobufjs": "https://github.com/wirelineio/protobuf.js#wireline-dist",
     "source-map-support": "^0.5.12"
   },
   "devDependencies": {

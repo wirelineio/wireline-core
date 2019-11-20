@@ -4,13 +4,21 @@
 
 import crypto from 'hypercore-crypto';
 
-import { MessageCodec } from './codec';
+import { Codec } from '@wirelineio/protobuf-any';
 
+const schema = require('./schema.json');
 const types = require('./testing/types.json');
 
 test('encoding/decoding', () => {
 
-  const codec = new MessageCodec().addJson(types).build();
+  const options = {
+    rootTypeUrl: '.dxos.Message'
+  };
+
+  const codec = new Codec(options)
+    .addJson(schema)
+    .addJson(types)
+    .build();
 
   const { publicKey } = crypto.keyPair();
 
@@ -33,7 +41,7 @@ test('encoding/decoding', () => {
     }
   ];
 
-  const buffers = messages.map(message => codec.encode(message, '.dxos.Message'));
+  const buffers = messages.map(message => codec.encode(message));
   const received = buffers.map(buffer => codec.decode(buffer));
   expect(received).toEqual(messages);
 });

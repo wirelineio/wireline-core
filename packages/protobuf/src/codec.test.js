@@ -6,7 +6,11 @@ import { JSONPath } from 'jsonpath-plus';
 
 import { Codec } from './codec';
 
-const codec = new Codec()
+const options = {
+  rootTypeUrl: '.testing.Message'
+};
+
+const codec = new Codec(options)
   .addJson(require('./testing/message.json'))
   .addJson(require('./testing/types.json'))
   .build();
@@ -90,6 +94,9 @@ const messages = [
 
 /* eslint camelcase: "off" */
 
+// TODO(burdon): Must API from: https://github.com/mafintosh/codecs
+// TODO(burdon): const db = level({ valueEncoding: codec }) // Hypercore.
+
 test('types', () => {
   const type = codec.getType('.testing.Message');
   expect(type).not.toBeNull();
@@ -97,8 +104,8 @@ test('types', () => {
 
 test('encoding/decoding (basic)', () => {
   const test = ((message) => {
-    const buffer = codec.encode(message, '.testing.Message');
-    const received = codec.decode(buffer, '.testing.Message');
+    const buffer = codec.encode(message);
+    const received = codec.decode(buffer);
     expect(received).toEqual(message);
   });
 
@@ -107,8 +114,8 @@ test('encoding/decoding (basic)', () => {
 
 test('encoding/decoding (ANY)', () => {
   const test = ((message) => {
-    const buffer = codec.encode(message, '.testing.Message');
-    const received = codec.decode(buffer, '.testing.Message');
+    const buffer = codec.encode(message);
+    const received = codec.decode(buffer);
     expect(received).toEqual(message);
   });
 
@@ -117,8 +124,8 @@ test('encoding/decoding (ANY)', () => {
 
 test('encoding/decoding (nested)', () => {
   const test = ((message) => {
-    const buffer = codec.encode(message, '.testing.Message');
-    const received = codec.decode(buffer, '.testing.Message');
+    const buffer = codec.encode(message);
+    const received = codec.decode(buffer);
     expect(received).toEqual(message);
   });
 
@@ -127,10 +134,10 @@ test('encoding/decoding (nested)', () => {
 
 test('encoding/decoding (non-recursive)', () => {
   const test = ((message) => {
-    const buffer = codec.encode(message, '.testing.Message');
+    const buffer = codec.encode(message);
 
     // Partially decode buffer.
-    const received = codec.decode(buffer, '.testing.Message', { recursive: false });
+    const received = codec.decodeByType(buffer, '.testing.Message', { recursive: false });
     expect(received.bucketId).toEqual('bucket-1');
 
     received.payload.forEach(({ type_url, value }) => {
@@ -151,14 +158,14 @@ test('encoding/decoding (non-recursive)', () => {
 
 test('encoding/decoding (missing type)', () => {
   const test = ((message) => {
-    const buffer = codec.encode(message, '.testing.Message');
+    const buffer = codec.encode(message);
 
     // Partially decode with missing type defs.
     const { schema } = codec;
     delete schema.nested.testing.nested['Data'];
-    const partialCodec = new Codec().addJson(schema).build();
+    const partialCodec = new Codec(options).addJson(schema).build();
 
-    const received = partialCodec.decode(buffer, '.testing.Message', { recursive: true, strict: false });
+    const received = partialCodec.decodeByType(buffer, '.testing.Message', { recursive: true, strict: false });
     expect(received).not.toEqual(message);
 
     // Fully decode remaining.
