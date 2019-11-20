@@ -25,11 +25,8 @@ test('Sign a message with all keys', async (done) => {
   const signed = await keyring.sign('Howdy', keyring.keys);
   expect(signed.signatures.length).toEqual(keyring.keys.length);
 
-  for (const sig of signed.signatures) {
-    const { signature, key } = sig;
-    const verified = await keyring.verify(signed.data, signature, keyring.key({ key }));
-    expect(verified).toEqual(true);
-  }
+  const verified = await keyring.verify(signed);
+  expect(verified).toEqual(true);
 
   done();
 });

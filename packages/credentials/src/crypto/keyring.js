@@ -70,9 +70,14 @@ export class Keyring {
   }
 
   async verify(message, signature = null, key = null) {
-    if (!signature && !key && message.data && message.data.signatures) {
-      for await (const sig of message.data.signatures) {
-        const result = await this.verify(message.data.signed, sig.signature, sig.key);
+    if (!signature && !key) {
+      let { signed, signatures } = message;
+      if (message.data && (!signed || !signatures)) {
+        signed = message.data.signed;
+        signatures = message.data.signatures;
+      }
+      for await (const sig of signatures) {
+        const result = await this.verify(signed, sig.signature, sig.key);
         if (!result) {
           log('Signature could not be verified for', sig.signature, sig.key, 'on message', message);
           return false;
