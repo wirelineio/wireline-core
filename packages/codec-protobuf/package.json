@@ -1,8 +1,8 @@
 {
-  "name": "@wirelineio/proto-codec",
+  "name": "@wirelineio/codec-protobuf",
   "version": "0.3.4",
   "description": "Protobuf codec.",
-  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/protobuf#readme",
+  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/codec-protobuf#readme",
   "bugs": {
     "url": "https://github.com/wirelineio/wireline-core/issues"
   },
