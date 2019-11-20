@@ -4,7 +4,7 @@
 
 import debug from 'debug';
 
-import { Keyring } from './crypto';
+import { Keyring } from '../crypto';
 
 const ONE_HOUR = 60 * 60 * 1000;
 const log = debug('creds:authentication');
