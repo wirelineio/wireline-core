@@ -11,7 +11,7 @@ import memdown from 'memdown';
 import pify from 'pify';
 import sub from 'subleveldown';
 
-import { arrayFromStream } from './util';
+import { arrayFromStream } from './stream';
 
 const log = debug('mixer');
 
@@ -105,26 +105,11 @@ const createMessageView = (db, id, subscriptions) => {
         return viewDB.get(key).catch(() => null);
       },
 
-      // TODO(burdon): This goes away -- each CRDT manages it's own data structure.
       getMessages: async (kappa, bucketId) => {
         const stream = viewDB.createValueStream({
           gte: createKey(bucketId, ''),
           lte: createKey(bucketId, '~')
         });
-
-        // stream
-        //   .on('data', (data) => {
-        //     console.log(data.key, '=', data.value);
-        //   })
-        //   .on('error', (err) => {
-        //     console.error(err);
-        //   })
-        //   .on('close', () => {
-        //     console.log('closed');
-        //   })
-        //   .on('end', () => {
-        //     console.log('ended');
-        //   });
 
         return arrayFromStream(stream);
       }

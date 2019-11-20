@@ -20,7 +20,6 @@ const log = debug('test');
 
 jest.setTimeout(10000);
 
-// TODO(burdon): Empty test takes 7s.
 test('sanity', () => {
   expect(true).toBeTruthy();
 });

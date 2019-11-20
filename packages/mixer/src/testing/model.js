@@ -2,19 +2,14 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import pify from 'pify';
-
 /**
  * Test CRDT.
  */
 export class TestModel {
 
-  constructor(codec, feed, bucket) {
+  constructor(codec, bucket) {
     this._codec = codec;
-    this._feed = feed;
     this._bucket = bucket;
-
-    this._append = pify(this._feed.append.bind(this._feed));
   }
 
   /**
