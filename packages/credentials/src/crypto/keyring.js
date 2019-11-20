@@ -3,9 +3,11 @@
 //
 
 import debug from 'debug';
+import crypto from 'hypercore-crypto';
 import stableStringify from 'json-stable-stringify';
 
-import { HyperCryptoEngine } from './crypto';
+import { keyToBuffer, keyToHex } from '@wirelineio/utils';
+
 import { KeyStoreMem } from './keystore';
 
 const log = debug('creds:keyring'); // eslint-disable-line no-unused-vars
@@ -20,15 +22,17 @@ export const KeyTypes = Object.freeze({
 
 export class Keyring {
   constructor(params = {}) {
-    const { keystore, crypto } = params;
+    const { keystore } = params;
 
     this._keystore = keystore || new KeyStoreMem();
-    this._crypto = crypto || new HyperCryptoEngine();
   }
 
   async generate(attributes = {}) {
-    const keypair = await this._crypto.generateKeyPair(attributes);
-    attributes.key = await this._crypto.friendly(keypair.publicKey);
+    const { seed } = attributes;
+    const keypair = crypto.keyPair(seed);
+
+    attributes.key = keyToHex(keypair.publicKey);
+
     return this._keystore.store(keypair, attributes);
   }
 
@@ -89,7 +93,24 @@ export class Keyring {
     if (typeof message === 'object') {
       message = stableStringify(message);
     }
-    return this._crypto.verify(message, signature, key);
+
+    if (key.publicKey) {
+      key = key.publicKey;
+    }
+
+    if (!Buffer.isBuffer(signature)) {
+      signature = Buffer.from(signature, 'base64');
+    }
+
+    if (!Buffer.isBuffer(message)) {
+      message = Buffer.from(message);
+    }
+
+    if (!Buffer.isBuffer(key)) {
+      key = keyToBuffer(key);
+    }
+
+    return crypto.verify(message, signature, key);
   }
 
   async sign(message, keys) {
@@ -112,12 +133,28 @@ export class Keyring {
 
     for await (const key of keys) {
       const sig = {
-        signature: await this._crypto.sign(flat, key.secretKey),
-        key: await this._crypto.friendly(key.publicKey)
+        signature: await this._sign(flat, key.secretKey),
+        key: keyToHex(key.publicKey)
       };
       ret.signatures.push(sig);
     }
 
     return ret;
+  }
+
+  _sign(message, secretKey) {
+    if (secretKey.secretKey) {
+      secretKey = secretKey.secretKey;
+    }
+
+    if (!Buffer.isBuffer(message)) {
+      message = Buffer.from(message);
+    }
+
+    if (!Buffer.isBuffer(secretKey)) {
+      secretKey = keyToBuffer(secretKey);
+    }
+
+    return crypto.sign(message, secretKey).toString('base64');
   }
 }
