@@ -37,9 +37,11 @@ export class Authentication {
       }
     }
 
+    // There is no need to re-process the
     this._view.events.once('party.genesis', this._enqueue.bind(this));
     this._view.events.on('party.admit.key', this._enqueue.bind(this));
     this._view.events.on('party.admit.feed', this._enqueue.bind(this));
+    this._view.events.on('party.greeter.envelope', this._enqueue.bind(this));
 
     this._draining = false;
   }
@@ -59,42 +61,52 @@ export class Authentication {
   }
 
   async authenticate(authHandshake) {
-    if (await this._verifySignatures(authHandshake)) {
-      const now = Date.now();
-      // TODO(telackey): This is not how it should be done.  We
-      // would rather use the remote nonce for anti-replay, but we
-      // will need to add hooks for retrieving it and signing it
-      // between connect() and handshake() to do that.  In the meantime,
-      // not allowing infinite replay is at least something.
-      if (Math.abs(now - authHandshake.signed_at) > 24 * ONE_HOUR) {
-        log('Signature OK, but time skew is too great: Now:', now, ', Signature:', authHandshake.signed_at);
-        return false;
-      }
-      for (const sig of authHandshake.signatures) {
-        if (this._allowedKeys.has(sig.key)) {
-          log('Auth signed by known key:', sig.key);
-          return true;
-        }
-        log('Auth signed by unknown key:', sig.key);
-      }
-    } else {
-      log('Unable to verify auth message:', authHandshake);
+    if (!authHandshake) {
+      log('Missing auth!');
+      return false;
     }
+
+    const verified = await this._verifySignatures(authHandshake);
+    if (!verified) {
+      log('Unable to verify auth message:', authHandshake);
+      return false;
+    }
+
+    // TODO(telackey): This is not how it should be done.  We
+    // would rather use the remote nonce for anti-replay, but we
+    // will need to add hooks for retrieving it and signing it
+    // between connect() and handshake() to do that.  In the meantime,
+    // not allowing infinite replay is at least something.
+    const now = Date.now();
+    if (Math.abs(now - authHandshake.created) > 24 * ONE_HOUR) {
+      log('Signature OK, but time skew is too great: Now:', now, ', Signature:', authHandshake.created);
+      return false;
+    }
+
+    for (const sig of authHandshake.signatures) {
+      if (this._allowedKeys.has(sig.key)) {
+        log('Auth signed by known key:', sig.key);
+        return true;
+      }
+      log('Auth signed by unknown key:', sig.key);
+    }
+
     return false;
   }
 
-  async _verifySignatures(message, requireKnownSigKey = false) {
-    if (!message || !message.signatures) {
-      log(message, 'not signed!');
+  async _verifySignatures(signedMessage, requirePreviouslyAdmittedKey = false) {
+    const { signed, signatures } = signedMessage;
+    if (!signed || !signatures || !Array.isArray(signatures)) {
+      log(signedMessage, 'not signed!');
       return false;
     }
 
     let foundKnownKey = false;
 
-    for await (const sig of message.signatures) {
-      const result = await this._keyring.verify(message.data, sig.signature, sig.key);
+    for await (const sig of signatures) {
+      const result = await this._keyring.verify(signed, sig.signature, sig.key);
       if (!result) {
-        log('Signature could not be verified for', sig.signature, sig.key, 'on message', message);
+        log('Signature could not be verified for', sig.signature, sig.key, 'on message', signedMessage);
         return false;
       }
       if (this._allowedKeys.has(sig.key)) {
@@ -103,44 +115,77 @@ export class Authentication {
       }
     }
 
-    if (requireKnownSigKey && !foundKnownKey) {
-      log('All signatures checked out, but no known key used', message);
+    if (requirePreviouslyAdmittedKey && !foundKnownKey) {
+      log('All signatures checked out, but no known key used', signedMessage);
       return false;
     }
 
     return true;
   }
 
-  async _onAdmit(msg) {
-    const requireKnownSigKey = msg.type !== 'party.genesis';
-    if (await this._verifySignatures(msg, requireKnownSigKey)) {
-      if (msg.data && msg.data.message && Array.isArray(msg.data.message.admit)) {
-        msg.data.message.admit.forEach((k) => {
-          this.admitKey(k);
-        });
-      } else {
-        log('Badly formed admit message:', msg);
-      }
-    } else {
+  async _onAdmit(msg, requirePreviouslyAdmittedKey = true) {
+    const verified = await this._verifySignatures(msg.data, requirePreviouslyAdmittedKey);
+    if (!verified) {
       log('Unable to verify admit message:', msg);
+      return;
+    }
+
+    const { original } = msg.data.signed;
+    if (!original.admit) {
+      log('Badly formed admit message:', msg);
+      return;
+    }
+
+    // TODO(telackey):  Missing checks:
+    //  1. party field matches the party we are under
+
+    if (Array.isArray(original.admit)) {
+      original.admit.forEach((k) => {
+        this.admitKey(k);
+      });
+    } else {
+      this.admitKey(original.admit);
     }
   }
 
   async _onFeed(msg) {
-    if (await this._verifySignatures(msg, true)) {
-      if (msg.data && msg.data.message && msg.data.message.feed) {
-        this.authorizeFeed(msg.data.message.feed);
-      } else {
-        log('Badly formed feed authorization message:', msg);
-      }
-    } else {
+    const verified = await this._verifySignatures(msg.data, true);
+    if (!verified) {
       log('Unable to verify feed authorization message:', msg);
+      return;
     }
+
+    const { original } = msg.data.signed;
+    if (!original.feed) {
+      log('Badly formed feed authorization message:', msg);
+      return;
+    }
+
+    this.authorizeFeed(original.feed);
   }
 
   _enqueue(msg) {
     this._queue.push(msg);
     setImmediate(this._drain.bind(this));
+  }
+
+  async unwrap(msg) {
+    if (msg.type !== 'party.greeter.envelope') {
+      return { msg, greeter: null };
+    }
+
+    // Verify the outer message
+    log(`Unwrapping ${msg.type} ...`);
+    const verified = await this._verifySignatures(msg.data, true);
+    if (!verified) {
+      log('Unable to verify enveloped message:', msg);
+      return null;
+    }
+
+    return {
+      msg: msg.data.signed.original.contents,
+      greeter: msg.author,
+    };
   }
 
   async _drain() {
@@ -151,12 +196,14 @@ export class Authentication {
     this._draining = true;
     while (this._queue.length) {
       try {
-        const msg = this._queue.shift();
+        const { msg, greeter } = await this.unwrap(this._queue.shift());
         log('Processing', msg.type);
         switch (msg.type) {
           case 'party.genesis':
+            await this._onAdmit(msg, false);
+            break;
           case 'party.admit.key':
-            await this._onAdmit(msg);
+            await this._onAdmit(msg, !greeter);
             break;
           case 'party.admit.feed':
             await this._onFeed(msg);

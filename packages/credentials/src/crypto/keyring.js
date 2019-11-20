@@ -69,7 +69,18 @@ export class Keyring {
     return this._keystore.find(criteria);
   }
 
-  async verify(message, signature, key) {
+  async verify(message, signature = null, key = null) {
+    if (!signature && !key && message.data && message.data.signatures) {
+      for await (const sig of message.data.signatures) {
+        const result = await this.verify(message.data.signed, sig.signature, sig.key);
+        if (!result) {
+          log('Signature could not be verified for', sig.signature, sig.key, 'on message', message);
+          return false;
+        }
+      }
+      return true;
+    }
+
     if (typeof message === 'object') {
       message = stableStringify(message);
     }
@@ -82,15 +93,15 @@ export class Keyring {
     }
 
     const data = {
-      message,
+      original: message,
       nonce: Math.random(),
-      signed_at: Date.now(),
+      created: Date.now(),
     };
 
     const flat = stableStringify(data);
 
     const ret = {
-      data,
+      signed: data,
       signatures: []
     };
 

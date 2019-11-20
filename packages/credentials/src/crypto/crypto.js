@@ -3,44 +3,20 @@
 //
 
 import debug from 'debug';
-import { keyPair as hyperKeyPair, sign as hyperSign, verify as hyperVerify } from 'hypercore-crypto';
+import crypto from 'hypercore-crypto';
 
 import { keyToHex, keyToBuffer } from '@wirelineio/utils';
 
 const log = debug('creds:crypto'); // eslint-disable-line no-unused-vars
 
-/* eslint-disable no-unused-vars */
 
 /**
- * CryptoEngine interface.
+ * hypercore-crypto based
  */
-export class CryptoEngine {
-  async generateKeyPair(params = {}) {
-    throw new Error('Not implemented');
-  }
-
-  async friendly(key) {
-    throw new Error('Not implemented');
-  }
-
-  async sign(message, secretKey) {
-    throw new Error('Not implemented');
-  }
-
-  async verify(message, signature, publicKey) {
-    throw new Error('Not implemented');
-  }
-}
-
-/* eslint-enable no-unused-vars */
-
-/**
- * hypercore-crypto based implementation of the CryptoEngine interface.
- */
-export class HyperCryptoEngine extends CryptoEngine {
+export class HyperCryptoEngine {
   async generateKeyPair(params = {}) {
     const { seed } = params;
-    const created = hyperKeyPair(seed);
+    const created = crypto.keyPair(seed);
 
     return {
       publicKey: created.publicKey,
@@ -71,7 +47,7 @@ export class HyperCryptoEngine extends CryptoEngine {
       secretKey = keyToBuffer(secretKey);
     }
 
-    return hyperSign(message, secretKey).toString('base64');
+    return crypto.sign(message, secretKey).toString('base64');
   }
 
   async verify(message, signature, publicKey) {
@@ -91,6 +67,6 @@ export class HyperCryptoEngine extends CryptoEngine {
       publicKey = keyToBuffer(publicKey);
     }
 
-    return hyperVerify(message, signature, publicKey);
+    return crypto.verify(message, signature, publicKey);
   }
 }
