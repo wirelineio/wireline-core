@@ -1,0 +1,53 @@
+{
+  "name": "@wirelineio/proto-codec",
+  "version": "0.3.4",
+  "description": "Protobuf codec.",
+  "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/protobuf#readme",
+  "bugs": {
+    "url": "https://github.com/wirelineio/wireline-core/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wirelineio/wireline-core.git"
+  },
+  "license": "GPL-3.0",
+  "main": "index.js",
+  "browser": "dist/index.js",
+  "scripts": {
+    "build": "npm run clean && npm run build:protobuf && npm run build:babel",
+    "build:babel": "babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps --copy-files",
+    "build:protobuf": "pbjs -t json src/testing/message.proto -o src/testing/message.json && pbjs -t json src/testing/types.proto -o src/testing/types.json",
+    "clean": "del-cli dist",
+    "lint": "eslint ./src --ignore-path ../../.eslintignore",
+    "test": "jest --rootDir ./src --verbose",
+    "posttest": "npm run lint",
+    "prepublishOnly": "npm run test && npm run build",
+    "watch": "babel-watch ./src --out-dir ./dist --source-maps"
+  },
+  "browserslist": [
+    "> 5%"
+  ],
+  "dependencies": {
+    "lodash.defaultsdeep": "^4.6.1",
+    "protobufjs": "https://github.com/wirelineio/protobuf.js#wireline-dist",
+    "source-map-support": "^0.5.12"
+  },
+  "devDependencies": {
+    "@babel/cli": "7.4.4",
+    "@babel/core": "^7.4.5",
+    "@babel/plugin-proposal-class-properties": "^7.5.5",
+    "@babel/plugin-proposal-export-default-from": "^7.5.2",
+    "@babel/preset-env": "^7.4.5",
+    "babel-jest": "^24.8.0",
+    "babel-plugin-add-module-exports": "^1.0.2",
+    "babel-plugin-inline-import": "^3.0.0",
+    "eslint": "^5.16.0",
+    "jest": "^24.8.0",
+    "jsonpath-plus": "^1.1.0",
+    "wait-for-expect": "^3.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "gitHead": "0364698ca71eaf38d892bfc0c6f9b9c7d0f3cb00"
+}
