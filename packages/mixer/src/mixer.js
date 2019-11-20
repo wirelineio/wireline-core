@@ -130,7 +130,7 @@ export class Mixer {
 
     this._codec = codec;
 
-    // TODO(burdon): Remove.
+    // TODO(burdon): Remove kappa and create streaming mixer from FeedStore.
     // https://github.com/kappa-db/kappa-core
     this._kappa = kappa(null, {
       multifeed
@@ -150,7 +150,6 @@ export class Mixer {
     // https://github.com/Level/levelup#api
     const db = levelup(memdown());
 
-    // TODO(burdon): App data, separate from system messages, etc.
     this._kappa.use(viewName, createMessageView(db, viewName, this._subscriptions));
 
     await pify(this._kappa.ready.bind(this._kappa))(viewName);

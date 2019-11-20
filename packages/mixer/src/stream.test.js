@@ -111,6 +111,10 @@ test.skip('readstream', async (done) => {
 
 test('stream', async (done) => {
 
+  // TODO(burdon): Replace kappa with stream that reads from FeedStore directly.
+  // TODO(burdon): Protocol/replicator test.
+  // TODO(burdon): HOC connect directly to model (read/write methods).
+
   let count = 0;
 
   // Reader.
