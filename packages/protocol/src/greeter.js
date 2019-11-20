@@ -12,10 +12,8 @@ import { Extension } from './extension';
 const log = debug('protocol:greeter');
 
 /**
- * An extension for "greet" nodes.  The Greeter
- * operates on party A in the open, verifying nodes'
- * invitations before they are admitted to party B,
- * which requires authentication.
+ * An extension for "greet" nodes.  The Greeter operates on party A in the open, verifying nodes'
+ * invitations before they are admitted to party B, which requires authentication.
  */
 export class Greeter extends EventEmitter {
 
