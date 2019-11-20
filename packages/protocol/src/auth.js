@@ -6,6 +6,7 @@ import debug from 'debug';
 import { EventEmitter } from 'events';
 
 import { Extension } from './extension';
+import { ProtocolError } from './protocol';
 
 const log = debug('protocol:auth');
 
@@ -57,7 +58,7 @@ export class Auth extends EventEmitter {
     if (await this._authentication.authenticate(context.auth)) {
       log('Authenticated!');
     } else {
-      throw new Error('Unauthorized access rejected!');
+      throw new ProtocolError(401, 'Unauthorized access rejected!');
     }
   }
 }
