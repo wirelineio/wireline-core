@@ -66,32 +66,23 @@ export class Authentication {
       return false;
     }
 
-    const verified = await this._verifySignatures(authHandshake);
+    const verified = await this._verifySignatures(authHandshake, true);
     if (!verified) {
       log('Unable to verify auth message:', authHandshake);
       return false;
     }
 
-    // TODO(telackey): This is not how it should be done.  We
-    // would rather use the remote nonce for anti-replay, but we
-    // will need to add hooks for retrieving it and signing it
-    // between connect() and handshake() to do that.  In the meantime,
-    // not allowing infinite replay is at least something.
+    // TODO(telackey): This is not how it should be done.  We would rather use the remote
+    //  nonce for anti-replay, but we will need to add hooks for retrieving it and signing it
+    //  between connect() and handshake() to do that.  In the meantime, not allowing infinite replay
+    //  is at least something.
     const now = Date.now();
     if (Math.abs(now - authHandshake.created) > 24 * ONE_HOUR) {
       log('Signature OK, but time skew is too great: Now:', now, ', Signature:', authHandshake.created);
       return false;
     }
 
-    for (const sig of authHandshake.signatures) {
-      if (this._allowedKeys.has(sig.key)) {
-        log('Auth signed by known key:', sig.key);
-        return true;
-      }
-      log('Auth signed by unknown key:', sig.key);
-    }
-
-    return false;
+    return true;
   }
 
   async _verifySignatures(signedMessage, requirePreviouslyAdmittedKey = false) {
