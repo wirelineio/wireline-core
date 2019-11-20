@@ -7,6 +7,7 @@ import debug from 'debug';
 
 import { keyToHex } from '@wirelineio/utils';
 import { Extension } from './extension';
+import { ProtocolError } from "./protocol";
 
 
 const log = debug('protocol:greeter');
@@ -55,27 +56,21 @@ export class Greeter extends EventEmitter {
   }
 
   async _receive(protocol, context, chunk) {
-    // TODO(telackey): Codec goes here.
-    const decoded = chunk;
-
-    let response;
-
-    if (this._peerMessageHandler) {
-      response = await this._peerMessageHandler(decoded);
-    } else {
-      response = {
-        status: 503,
-        error: 'No handler'
-      };
+    if (!this._peerMessageHandler) {
+      throw new ProtocolError(500, 'No message handler!');
     }
 
-    // TODO(telackey): Codec goes here.
-    const encoded = response;
+    const decoded = chunk; // TODO(telackey): Codec goes here.
+
+    const response = await this._peerMessageHandler(decoded);
+
+    const encoded = response; // TODO(telackey): Codec goes here.
+
     return encoded;
   }
 
   _addPeer(protocol) {
-    const { peerId } = protocol ? protocol.getContext() : {};
+    const { peerId } = protocol && protocol.getContext() ? protocol.getContext() : {};
     if (!peerId) {
       console.warn('peerId is empty.');
       return;
