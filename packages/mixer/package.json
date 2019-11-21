@@ -27,6 +27,9 @@
   "browserslist": [
     "> 5%"
   ],
+  "jest": {
+    "testEnvironment": "node"
+  },
   "dependencies": {
     "@dxos/feed-store": "^1.0.3",
     "@wirelineio/codec-protobuf": "^0.3.4",
