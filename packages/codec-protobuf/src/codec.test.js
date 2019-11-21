@@ -94,7 +94,6 @@ const messages = [
 
 /* eslint camelcase: "off" */
 
-// TODO(burdon): Must API from: https://github.com/mafintosh/codecs
 // TODO(burdon): const db = level({ valueEncoding: codec }) // Hypercore.
 
 test('types', () => {

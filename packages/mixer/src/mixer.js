@@ -124,11 +124,8 @@ export class Mixer {
 
   _subscriptions = new Set();
 
-  constructor(multifeed, codec) {
+  constructor(multifeed) {
     console.assert(multifeed);
-    console.assert(codec);
-
-    this._codec = codec;
 
     // TODO(burdon): Remove kappa and create streaming mixer from FeedStore.
     // https://github.com/kappa-db/kappa-core

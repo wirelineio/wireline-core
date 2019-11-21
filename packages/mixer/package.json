@@ -16,7 +16,7 @@
   "scripts": {
     "build": "npm run clean && npm run build:protobuf && npm run build:babel",
     "build:babel": "babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps --copy-files",
-    "build:protobuf": "./scripts/build_proto.sh ./src/schema.proto ./src/testing/types.proto",
+    "build:protobuf": "pbjs -t json ./src/schema.proto -o ./src/schema.json && pbjs -t json ./src/testing/types.proto -o ./src/testing/types.json",
     "clean": "del-cli dist",
     "lint": "eslint ./src --ignore-path ../../.eslintignore",
     "test": "jest --rootDir ./src --verbose",
@@ -29,7 +29,7 @@
   ],
   "dependencies": {
     "@dxos/feed-store": "^1.0.3",
-    "@wirelineio/protobuf-any": "^0.3.4",
+    "@wirelineio/codec-protobuf": "^0.3.4",
     "charwise": "^3.0.1",
     "debug": "^4.1.1",
     "hypercore": "^7.7.1",

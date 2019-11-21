@@ -18,14 +18,14 @@ async function createPeer(partyKey, name) {
   const peers = new Set();
 
   const framework = new Framework({
-    // TODO(burdon): Remove initial party (call connect after initialize).
-    partyKey,
-    // TODO(burdon): Remove username.
-    name,
     keys,
     swarm,
     storage: ram,
-    extensions: [() => presence.createExtension()]
+    extensions: [() => presence.createExtension()],
+
+    // TODO(burdon): Remove initial party and username.
+    partyKey,
+    name,
   });
 
   framework.on('metric.swarm.connection-open', (_, peer) => {

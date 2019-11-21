@@ -2,15 +2,15 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-// TODO(burdon): Move to dxos.codec package.
+// TODO(burdon): Move to dxos.proto-codec package.
 
 import defaultsDeep from 'lodash.defaultsdeep';
 import { Root, Type } from 'protobufjs/light';
 
 /**
- * Encoder/decoder that follows the leveldb API (also used by hypercore): https://github.com/mafintosh/codecs
+ * Protobuf encoder/decoder that follows the hypercore codec API (https://github.com/Level/codec).
  *
- * Maintains a dictionary of types and supports encoding/decoding of ANY types.
+ * Handles messages that contain nested `google.protobuf.Any` types.
  *
  * ProtobufJS doesn't handle ANY (google.protobuf.Any) types (https://github.com/protobufjs/protobuf.js/issues/435).
  * This is likely since there is no unopinionated way to implement this feature.

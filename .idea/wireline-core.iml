@@ -3,13 +3,13 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/packages/broadcast/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/codec-protobuf/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/discovery-swarm-memory/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/echodb/coverage" />
       <excludeFolder url="file://$MODULE_DIR$/packages/echodb/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/hyperswarm-network-memory/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/megafeed/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/mixer/dist" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/protobuf/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/protocol/dist" />
     </content>
     <orderEntry type="inheritedJdk" />

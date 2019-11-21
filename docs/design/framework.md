@@ -35,6 +35,11 @@ It manages a set of Views (Kappa cores), which are connected to a logical set of
 Topics correspond to a Party's discovery key.
 The Framework can support many concurrent Parties, each of which may have many Participants.
 The Framework also manages Access Control (Authorization) for the Participants (Bots and Users).
+<<<<<<< HEAD
+It maintains a set of Credentials for each Participant, which are written to the Participant's Feed.
+The Framework's Party Manager controls the Policies by which the Database implements Replication.
+
+=======
 It maintains a set of Credentials (for each Participant) that confer specific access rights (e.g., read, write, User administration).
 Users bestow Credentials on other Participants by writing Credentials on their Feeds.
 The Framework's Party Manager uses these Credentials in conjunction with Policies that instruct the Database's Feed Replication mechanism. This is used to control access to the shared Data set.
@@ -76,3 +81,4 @@ expect(app.list()).toBe(['hello', 'world']);
 ## References
 
 * [Appendix](./appendix.md)
+>>>>>>> 856ef67c7e814e31cb08cc25d25bd95aeb37f239

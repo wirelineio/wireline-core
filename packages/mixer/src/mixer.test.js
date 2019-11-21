@@ -10,11 +10,8 @@ import waitForExpect from 'wait-for-expect';
 
 // TODO(burdon): Takes 5s to load
 import { FeedStore } from '@dxos/feed-store';
-import { Codec } from '@wirelineio/protobuf-any';
 
 import { Mixer, MultifeedAdapter } from './mixer';
-
-const codec = new Codec().addJson(require('./schema.json')).build();
 
 const log = debug('test');
 
@@ -47,7 +44,7 @@ test('basic multiplexing', async (done) => {
   const multifeed = new MultifeedAdapter(feedStore, { filter: 'party-1' });
 
   // TODO(burdon): Configure CRDT.
-  const mixer = new Mixer(multifeed, codec);
+  const mixer = new Mixer(multifeed);
 
   // TODO(burdon): Stream from last point.
   // new ChessModel().attach(mixer.subscribe({ bucketId }));

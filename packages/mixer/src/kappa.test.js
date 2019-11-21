@@ -83,11 +83,12 @@ const createTestView = (db, id, callback) => {
   return createIndex(viewDB, {
 
     map: (message) => {
-      const { value: { bucketId } } = message;
+      const { value } = message;
+      const { bucketId } = value;
       if (bucketId) {
         const key = createKey(bucketId, ++n);
         return [
-          [key, message.value]
+          [key, value]
         ];
       }
 
@@ -116,6 +117,28 @@ const viewName = 'test';
 
 test('basic multiplexing', async (done) => {
 
+  const random = chance(0);
+
+  const peers = ['peer-1', 'peer-2'];
+  const parties = ['party-1', 'party-2'];
+  const buckets = ['bucket-1', 'bucket-2'];
+
+  const messages = [...new Array(10)].map(() => ({
+    peer: random.pick(peers),
+    party: random.pick(parties),
+    message: {
+      bucketId: random.pick(buckets),
+      title: random.name()
+    }
+  }));
+
+  const matches = messages
+    .filter(({ party, message: { bucketId } }) => party === 'party-1' && bucketId === 'bucket-1');
+
+  //
+  // Config FeedStore.
+  //
+
   const { publicKey, secretKey } = crypto.keyPair();
   const index = hypertrie(ram, publicKey, { secretKey });
   const feedStore = new FeedStore(index, ram, {
@@ -133,49 +156,34 @@ test('basic multiplexing', async (done) => {
     })
   });
 
+  //
+  // Config Kappa.
+  //
+
   // https://github.com/Level/levelup#api
   const db = levelup(memdown());
 
   // Test index.
   core.use(viewName, createTestView(db, viewName, async () => {
     const items = await core.api[viewName].getMessages('bucket-1');
-
-    // TODO(burdon): Count actual data.
-    if (items.length === 2) {
+    if (items.length === matches.length) {
+      feedStore.close();
       done();
     }
   }));
 
   await pify(core.ready.bind(core))(viewName);
 
+  //
+  // Write message.
+  //
+
   const items = await core.api[viewName].getMessages('bucket-1');
   expect(items).toHaveLength(0);
 
-  // const peers = ['peer-1', 'peer-2'];
-  // const parties = ['party-1', 'party-2'];
-  const buckets = ['bucket-1', 'bucket-2'];
-
-  const feeds = [
-    await feedStore.openFeed('/peer-1/party-1'),
-    await feedStore.openFeed('/peer-2/party-1'),
-    await feedStore.openFeed('/peer-2/party-2')
-  ];
-
-  expect(feedStore.getFeeds()).toHaveLength(3);
-
-  const random = chance(0);
-
-  // TODO(burdon): Higher numbers fail?
-  for (let i = 0; i < 5; i++) {
-    const message = {
-      bucketId: random.pick(buckets),
-      title: random.name()
-    };
-
-    const feed = random.pick(feeds);
+  messages.forEach(async ({ peer, party, message }) => {
+    const path = `/${peer}/${party}`;
+    const feed = await feedStore.openFeed(path);
     feed.append(message);
-  }
-
-  // TODO(burdon): When is it safe to close?
-  // feedStore.close();
+  });
 });

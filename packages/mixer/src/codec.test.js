@@ -4,7 +4,7 @@
 
 import crypto from 'hypercore-crypto';
 
-import { Codec } from '@wirelineio/protobuf-any';
+import { Codec } from '@wirelineio/codec-protobuf';
 
 const schema = require('./schema.json');
 const types = require('./testing/types.json');

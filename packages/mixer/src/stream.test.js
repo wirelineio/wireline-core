@@ -24,7 +24,7 @@ const items = [
   { id: 'bucket-1/test/1', value: 104 },
 ];
 
-test.skip('sanity tests', async () => {
+test('sanity tests', async () => {
   const db = createDB();
 
   for (const item of items) {
@@ -36,7 +36,7 @@ test.skip('sanity tests', async () => {
   expect(item).toBe(items[0].value);
 });
 
-test.skip('arrayFromStream', async (done) => {
+test('arrayFromStream', async (done) => {
   const db = createDB();
 
   const ops = items.map(item => ({
@@ -66,7 +66,7 @@ test.skip('arrayFromStream', async (done) => {
     });
 });
 
-test.skip('readstream', async (done) => {
+test('readstream', async (done) => {
   const db = createDB();
 
   const ops = items.map(item => ({
@@ -97,12 +97,10 @@ test.skip('readstream', async (done) => {
       done(err);
     })
     .on('end', () => {
-      console.log('ended');
       expect(count).toEqual(items.filter(item => item.id.indexOf('bucket-1/item') === 0).length);
     })
     .on('close', () => {
       expect(stream.readable).toBeFalsy();
-      console.log('closed');
       done();
     });
 
