@@ -217,7 +217,7 @@ export class Protocol extends EventEmitter {
         this.emit('handshake', this);
       } catch (err) {
         this._stream.destroy();
-        console.warn(err);
+        console.error(err);
       }
 
       this._stream.on('feed', (discoveryKey) => {

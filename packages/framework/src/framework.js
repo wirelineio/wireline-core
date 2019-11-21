@@ -88,12 +88,13 @@ class Framework extends EventEmitter {
       this._megafeed.createExtensions.bind(this._megafeed)
     ];
 
-    const { swarm, hub, ice, maxPeers, extensions = [] } = this._conf;
+    const { swarm, hub, ice, maxPeers, userData, extensions = [] } = this._conf;
     this._swarm = createSwarm(this._id, partyKey, {
       swarm,
       hub,
       ice,
       maxPeers,
+      userData,
       extensions: [...extensions, ...standardExtensions],
       discoveryToPublicKey: dk => this._partyManager.findPartyByDiscovery(dk),
       emit: this.emit.bind(this)
@@ -151,6 +152,14 @@ class Framework extends EventEmitter {
     };
 
     return `Framework(${JSON.stringify(meta)})`;
+  }
+
+  view(name) {
+    return this._kappa.api[name];
+  }
+
+  get authView() {
+    return this.view('auth');
   }
 
   async initialize() {

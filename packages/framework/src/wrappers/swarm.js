@@ -71,10 +71,11 @@ module.exports = function createSwarm(id, topic, options = {}) {
     }
   };
 
+  const userData = options.userData || { peerId: idHex };
   const defaultOptions = {
     id,
     stream: ({ channel }) => new Protocol(protocolOptions)
-      .setUserData({ peerId: idHex })
+      .setUserData(userData)
       .setExtensions(createExtensions(extensions))
       .init(keyToBuffer(channel))
       .stream,

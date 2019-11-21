@@ -36,6 +36,19 @@
             }
           }
         },
+        "GreeterMessage": {
+          "fields": {
+            "type": {
+              "rule": "required",
+              "type": "string",
+              "id": 1
+            },
+            "data": {
+              "type": "bytes",
+              "id": 2
+            }
+          }
+        },
         "Presence": {
           "fields": {
             "from": {
