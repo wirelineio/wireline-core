@@ -175,7 +175,7 @@ export class Authentication {
 
     return {
       msg: msg.data.signed.original.contents,
-      greeter: msg.author,
+      greeter: msg.author || true,
     };
   }
 
