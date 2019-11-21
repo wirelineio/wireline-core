@@ -8,14 +8,11 @@ import hypertrie from 'hypertrie';
 import ram from 'random-access-memory';
 import waitForExpect from 'wait-for-expect';
 
-// TODO(burdon): Takes 5s to load
 import { FeedStore } from '@dxos/feed-store';
 
 import { Mixer, MultifeedAdapter } from './mixer';
 
 const log = debug('test');
-
-jest.setTimeout(10000);
 
 test('sanity', () => {
   expect(true).toBeTruthy();

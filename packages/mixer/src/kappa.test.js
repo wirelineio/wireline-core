@@ -18,8 +18,6 @@ import { FeedStore } from '@dxos/feed-store';
 
 import { arrayFromStream } from './stream';
 
-jest.setTimeout(10000);
-
 /**
  * Implements multifeed API.
  * https://github.com/kappa-db/multifeed
