@@ -18,7 +18,7 @@
     "clean": "del-cli dist",
     "coverage": "jest --coverage --verbose src",
     "lint": "eslint ./src --ignore-path ../../.eslintignore",
-    "test": "jest --verbose src",
+    "test": "jest --rootDir ./src --verbose",
     "posttest": "npm run lint",
     "prepublishOnly": "npm run test && npm run build",
     "watch": "babel-watch ./src --out-dir ./dist --source-maps"

@@ -13,10 +13,13 @@ import schema from './schema.json';
 export class Codec {
   constructor(options = {}) {
     const { binary = false } = options;
+
     this._codec = new CodecProtobuf({ verify: true });
     this._codec.loadFromJSON(schema);
     this._binary = binary;
   }
+
+  // TODO(burdon): Why is this all needed given CodecProtobuf?
 
   /**
    * @param {Object|Buffer} message
@@ -30,8 +33,10 @@ export class Codec {
     options = Buffer.from(JSON.stringify(options));
     error = error && Buffer.from(JSON.stringify(error));
 
-    // TODO(burdon): Move type to const.
-    return this._codec.encode({ type: 'protocol.Request', message: { id, data, error, options } });
+    return this._codec.encode({
+      type: 'protocol.Request',
+      message: { id, data, error, options }
+    });
   }
 
   /**
@@ -41,11 +46,15 @@ export class Codec {
   decode(buffer) {
     try {
       const request = this._codec.decode(buffer, false);
+
+      // TODO(burdon): Using JSON.parse defeats the purpose of using protobufs.
       request.data = this._binary ? request.data : JSON.parse(request.data);
       request.options = JSON.parse(request.options);
       request.error = request.error && JSON.parse(request.error);
+
       return request;
     } catch (err) {
+      // TODO(burdon): Don't silently catch exceptions.
       return {};
     }
   }

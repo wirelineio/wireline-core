@@ -17,7 +17,7 @@
     "build": "npm run clean && babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps",
     "clean": "del-cli dist",
     "lint": "eslint ./src --ignore-path ../../.eslintignore",
-    "test": "jest --verbose",
+    "test": "jest --rootDir ./src --verbose",
     "posttest": "npm run lint",
     "prepublishOnly": "npm run test && npm run build"
   },
@@ -30,6 +30,7 @@
     "@wirelineio/utils": "^0.3.4",
     "debug": "^4.1.1",
     "end-of-stream": "^1.4.1",
+    "hypercore-crypto": "^1.0.0",
     "hypertrie": "^3.7.1",
     "kappa-core": "^4.0.0",
     "pify": "^4.0.1",

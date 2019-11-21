@@ -76,6 +76,11 @@ export class Megafeed extends EventEmitter {
     return `Megafeed(${JSON.stringify(meta)})`;
   }
 
+  //
+  // FeedStore API
+  // TODO(burdon): Expose FeedStore to entity that requires it.
+  //
+
   getFeedByPath(path) {
     return this._feedStore.findFeed(descriptor => descriptor.path === path);
   }

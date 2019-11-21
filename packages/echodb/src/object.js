@@ -13,7 +13,7 @@ import { sortByProperty } from './util';
  */
 export class ObjectModel extends EventEmitter {
 
-  // TODO(burdon): Move to wireline-core (replace kappa).
+  // TODO(burdon): Dependency Graph: https://www.npmjs.com/package/dependency-graph
   // TODO(burdon): Determine if model is before or after withLogView.
 
   /**

@@ -4,15 +4,17 @@
 
 import { EventEmitter } from 'events';
 import crypto from 'crypto';
-import Codec from '@dxos/codec-protobuf';
-import createDebug from 'debug';
+import debug from 'debug';
+
+import CodecProtobuf from '@dxos/codec-protobuf';
 
 // eslint-disable-next-line
 import schema from './schema.json';
 import TimeLRUSet from './time-lru-set';
 
-createDebug.formatters.h = v => v.toString('hex').slice(0, 6);
-const debug = createDebug('broadcast');
+// TODO(burdon): ???
+debug.formatters.h = v => v.toString('hex').slice(0, 6);
+const log = debug('broadcast');
 
 const msgId = (seqno, from) => {
   console.assert(Buffer.isBuffer(seqno));
@@ -20,6 +22,9 @@ const msgId = (seqno, from) => {
   return `${seqno.toString('hex')}:${from.toString('hex')}`;
 };
 
+/**
+ * TODO(burdon):Document.
+ */
 class Broadcast extends EventEmitter {
   constructor(opts = {}) {
     super();
@@ -40,10 +45,10 @@ class Broadcast extends EventEmitter {
     this._running = false;
     this._seenSeqs = new TimeLRUSet({ maxAge, maxSize });
     this._peers = [];
-    this._codec = new Codec({ verify: true });
+    this._codec = new CodecProtobuf({ verify: true });
     this._codec.loadFromJSON(schema);
 
-    this.on('error', (err) => { debug(err); });
+    this.on('error', (err) => { log(err); });
   }
 
   async publish(data, { seqno = crypto.randomBytes(32) } = {}) {
@@ -65,7 +70,7 @@ class Broadcast extends EventEmitter {
 
     this._subscription = this._subscribe(packetEncoded => this._onPacket(packetEncoded)) || (() => {});
 
-    debug('running %h', this._id);
+    log('running %h', this._id);
   }
 
   stop() {
@@ -75,7 +80,7 @@ class Broadcast extends EventEmitter {
     this._subscription();
     this._seenSeqs.clear();
 
-    debug('stop %h', this._id);
+    log('stop %h', this._id);
   }
 
   _buildLookup(lookup) {
@@ -87,7 +92,7 @@ class Broadcast extends EventEmitter {
         }
         this._peers = await looking;
         looking = null;
-        debug('lookup of %h', this._id, this._peers);
+        log('lookup of %h', this._id, this._peers);
       } catch (err) {
         this.emit('error', err);
         looking = null;
@@ -114,7 +119,7 @@ class Broadcast extends EventEmitter {
         // Don't send the message to neighbors that already seen the message.
         if (this._seenSeqs.has(msgId(message.seqno, peer.id))) return;
 
-        debug('publish %h -> %h', this._id, peer.id, message);
+        log('publish %h -> %h', this._id, peer.id, message);
 
         try {
           this._seenSeqs.add(msgId(message.seqno, peer.id));
@@ -138,11 +143,13 @@ class Broadcast extends EventEmitter {
       this._seenSeqs.add(msgId(packet.seqno, packet.from));
 
       // Check if I already see this packet.
-      if (this._seenSeqs.has(msgId(packet.seqno, this._id))) return;
+      if (this._seenSeqs.has(msgId(packet.seqno, this._id))) {
+        return;
+      }
 
       const peer = this._peers.find(peer => peer.id.equals(packet.from));
 
-      debug('received %h -> %h', this._id, packet.from, packet);
+      log('received %h -> %h', this._id, packet.from, packet);
 
       this.emit('packet', packet, peer);
 
