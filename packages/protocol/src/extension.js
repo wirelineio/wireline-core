@@ -100,7 +100,7 @@ export class Extension extends EventEmitter {
   }
 
   /**
-   error, protocol, context* Sets the close stream handler.
+   * Sets the close stream handler.
    * @param {Function<{protocol, context}>} closeHandler - Close handler.
    * @returns {Extension}
    */
