@@ -21,8 +21,6 @@ import { createKey } from './mixer';
 const schema = require('./schema.json');
 const types = require('./testing/types.json');
 
-jest.setTimeout(10000);
-
 const log = debug('test');
 debug.enable('test');
 
