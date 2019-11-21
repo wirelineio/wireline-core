@@ -92,9 +92,6 @@ test('readstream', async (done) => {
 
   let count = 0;
 
-  // TODO(burdon): Instead of kappa, get stream from FeedStore and pipe through different CRDTs.
-  // TODO(burdon): Create a long-lasting subscription stream.
-
   // https://github.com/Level/levelup#createReadStream
   // https://nodejs.org/api/stream.html
   const stream = db.createReadStream({
@@ -121,11 +118,6 @@ test('readstream', async (done) => {
 });
 
 test('stream', async (done) => {
-
-  // TODO(burdon): Test encoder.
-  // TODO(burdon): Protocol/replicator test.
-  // TODO(burdon): Replace kappa with stream that reads from FeedStore directly.
-  // TODO(burdon): HOC connect directly to model (read/write methods).
 
   let count = 0;
   const reader = through.obj(function process(chunk, encoding, next) {
