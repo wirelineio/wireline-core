@@ -2,7 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-// TODO(burdon): Move to dxos.proto-codec package.
+// TODO(burdon): Move to @dxos.codec-protobuf package.
 
 import defaultsDeep from 'lodash.defaultsdeep';
 import { Root, Type } from 'protobufjs/light';
