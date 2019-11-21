@@ -2,14 +2,29 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+import crypto from 'hypercore-crypto';
+import debug from 'debug';
+import hypertrie from 'hypertrie';
 import levelup from 'levelup';
 import memdown from 'memdown';
 import pump from 'pump';
+import ram from 'random-access-memory';
 import sub from 'subleveldown';
 import through from 'through2';
 
+import { FeedStore } from '@dxos/feed-store';
+import { Codec } from '@wirelineio/codec-protobuf';
+
 import { arrayFromStream } from './stream';
 import { createKey } from './mixer';
+
+const schema = require('./schema.json');
+const types = require('./testing/types.json');
+
+jest.setTimeout(10000);
+
+const log = debug('test');
+debug.enable('test');
 
 const createDB = () => {
   const db = levelup(memdown());
@@ -89,7 +104,7 @@ test('readstream', async (done) => {
     lte: createKey('bucket-1/item~')
   })
     .on('data', ({ key, value }) => {
-      console.log(key, value);
+      log(key, value);
       count++;
     })
     .on('error', (err) => {
@@ -115,7 +130,6 @@ test('stream', async (done) => {
   // TODO(burdon): HOC connect directly to model (read/write methods).
 
   let count = 0;
-
   const reader = through.obj(function process(chunk, encoding, next) {
     if (++count === items.length) {
       this.end();
@@ -141,4 +155,82 @@ test('stream', async (done) => {
   items.forEach((item) => {
     writer.write(item);
   });
+});
+
+test('feedstore proto stream', async (done) => {
+
+  // https://www.npmjs.com/package/through2#see-also
+
+  const options = {
+    rootTypeUrl: '.dxos.Message'
+  };
+
+  const codec = new Codec(options)
+    .addJson(schema)
+    .addJson(types)
+    .build();
+
+  const { publicKey, secretKey } = crypto.keyPair();
+  const index = hypertrie(ram, publicKey, { secretKey });
+  const feedStore = new FeedStore(index, ram, {
+    feedOptions: { valueEncoding: 'codec' },
+    codecs: {
+      codec
+    }
+  });
+
+  await feedStore.initialize();
+
+  const feed = await feedStore.openFeed('/test');
+
+  // TODO(burdon): Replace this with Martin's FeedStore stream.
+  const source = feed.createReadStream({
+    live: true
+  });
+
+  const logger = through.obj(function process(message, encoding, next) {
+    log('logger', JSON.stringify(message));
+    this.push(message);
+
+    next();
+  });
+
+  // TODO(burdon): Create ObjectStore test in EchoDB.
+  let count = 0;
+  const processor = through.obj(function process(message, encoding, next) {
+    if (++count === 2) {
+      this.end();
+    }
+
+    next();
+  });
+
+  pump(source, logger, processor, (err) => {
+    if (err) {
+      console.error(err);
+    }
+
+    done(err);
+  });
+
+  const messages = [
+    {
+      bucketId: 'bucket-1',
+      payload: {
+        __type_url: '.testing.Credential',
+        publicKey: publicKey.toString('hex')
+      }
+    },
+
+    {
+      bucketId: 'bucket-1',
+      payload: {
+        __type_url: '.testing.Mutation',
+        property: 'title',
+        value: 'hello world'
+      }
+    }
+  ];
+
+  messages.forEach(message => feed.append(message));
 });
