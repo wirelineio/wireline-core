@@ -2,6 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+import charwise from 'charwise';
 import chance from 'chance';
 import createIndex from 'kappa-view-level';
 import crypto from 'hypercore-crypto';
@@ -17,6 +18,9 @@ import ram from 'random-access-memory';
 import { FeedStore } from '@dxos/feed-store';
 
 import { arrayFromStream } from './stream';
+
+// Ensures lexical sorting.
+export const createKey = (...args) => args.filter(Boolean).map(charwise.encode).join('/');
 
 /**
  * Implements multifeed API.
@@ -56,11 +60,6 @@ export class MultifeedAdapter extends EventEmitter {
     });
   }
 }
-
-// Ensures lexical sorting.
-// import charwise from 'charwise';
-// export const createKey = (...args) => args.filter(Boolean).map(charwise.encode).join('/');
-export const createKey = (...args) => args.join('/');
 
 /**
  * Test kappa view.
