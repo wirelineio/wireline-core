@@ -162,7 +162,10 @@ test('encoding/decoding (missing type)', () => {
     // Partially decode with missing type defs.
     const { schema } = codec;
     delete schema.nested.testing.nested['Data'];
-    const partialCodec = new Codec(options).addJson(schema).build();
+
+    const partialCodec = new Codec(options)
+      .addJson(schema)
+      .build();
 
     const received = partialCodec.decodeByType(buffer, '.testing.Message', { recursive: true, strict: false });
     expect(received).not.toEqual(message);
