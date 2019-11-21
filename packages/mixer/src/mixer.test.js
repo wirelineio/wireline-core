@@ -20,14 +20,6 @@ test('sanity', () => {
 
 test('basic multiplexing', async (done) => {
 
-  // TODO(burdon): Review FeedStore.
-  // TODO(burdon): What are the codecs for? Is this a hypercore concept? Currently serialized as JSON?
-  // TODO(burdon): Document what is stored, indexed, etc. (avoid multiple copies).
-  // TODO(burdon): Test CRDT plugins to mixer (streams?)
-  // TODO(burdon): Larger test with protocol and swarm (no framework/megafeed).
-  // TODO(burdon): Systematize testing.
-  // TODO(burdon): Error handling.
-
   const { publicKey, secretKey } = crypto.keyPair();
   const index = hypertrie(ram, publicKey, { secretKey });
   const feedStore = new FeedStore(index, ram, {
@@ -40,11 +32,8 @@ test('basic multiplexing', async (done) => {
 
   const multifeed = new MultifeedAdapter(feedStore, { filter: 'party-1' });
 
-  // TODO(burdon): Configure CRDT.
   const mixer = new Mixer(multifeed);
 
-  // TODO(burdon): Stream from last point.
-  // new ChessModel().attach(mixer.subscribe({ bucketId }));
   let count = 0;
   mixer.subscribe('bucket-1', async () => {
     const items = await mixer.api.getMessages('bucket-1');
@@ -85,7 +74,6 @@ test('basic multiplexing', async (done) => {
   // Write data to feeds.
   Object.keys(items).forEach((party) => {
     items[party].forEach((item, i) => {
-      // TODO(burdon): Encode here (wrap with Writer that has appropriate codecs).
       feeds[party][i % feeds[party].length].append(item);
     });
   });
