@@ -45,9 +45,7 @@ export class AuthKappaAdapter {
     this._draining = true;
     while (this._queue.length) {
       try {
-        const message = this._queue.shift();
-        log('Begining message: ', message);
-        await this._auth.processMessage(message);
+        await this._auth.processMessage(this._queue.shift());
       } catch (err) {
         log(err);
       }

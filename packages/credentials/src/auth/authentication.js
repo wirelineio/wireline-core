@@ -167,7 +167,7 @@ export class Authentication {
     }
 
     const { original } = message.data.signed;
-    this._admitFeed(original.admit);
+    this._admitFeed(original.feed);
   }
 
   /**
