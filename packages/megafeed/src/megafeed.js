@@ -37,7 +37,7 @@ export class Megafeed extends EventEmitter {
     // We save all our personal information like the feed list in a private feed.
     this._db = hypertrie(storage, options.publicKey, { secretKey: options.secretKey });
 
-    // Feeds manager instance
+    // Feeds manager instance.
     this._feedStore = new FeedStore(this._db, storage, {
       feedOptions: {
         valueEncoding: options.valueEncoding

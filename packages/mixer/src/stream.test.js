@@ -147,6 +147,43 @@ test('stream', async (done) => {
 });
 
 test('feedstore proto stream', async (done) => {
+  const { publicKey, secretKey } = crypto.keyPair();
+
+  const messages = [
+    {
+      bucketId: 'bucket-1',
+      payload: {
+        __type_url: '.testing.Credential',
+        publicKey: publicKey.toString('hex')
+      }
+    },
+
+    {
+      bucketId: 'bucket-1',
+      payload: {
+        __type_url: '.testing.Mutation',
+        property: 'title',
+        value: 'hello world'
+      }
+    },
+
+    {
+      bucketId: 'bucket-1',
+      payload: {
+        __type_url: '.testing.Chess',
+        from: 'e2',
+        to: 'e4'
+      }
+    },
+    {
+      bucketId: 'bucket-1',
+      payload: {
+        __type_url: '.testing.Chess',
+        from: 'e6',
+        to: 'e5'
+      }
+    }
+  ];
 
   // https://www.npmjs.com/package/through2#see-also
 
@@ -159,7 +196,6 @@ test('feedstore proto stream', async (done) => {
     .addJson(types)
     .build();
 
-  const { publicKey, secretKey } = crypto.keyPair();
   const index = hypertrie(ram, publicKey, { secretKey });
   const feedStore = new FeedStore(index, ram, {
     feedOptions: { valueEncoding: 'codec' },
@@ -178,48 +214,44 @@ test('feedstore proto stream', async (done) => {
   });
 
   const logger = through.obj(function process(message, encoding, next) {
-    log('logger', JSON.stringify(message));
+    const { bucketId, payload: { __type_url: type } } = message;
+    log('logger', bucketId, type);
     this.push(message);
-
     next();
   });
 
-  // TODO(burdon): Create ObjectStore test in EchoDB.
+  const credentialProcessor = ({ payload: { publicKey } }) => log(`credential: ${publicKey}`);
+  const mutationProcessor = ({ payload: { property, value } }) => log(`mutation: [${property}=>${value}]`);
+  const chessProcessor = ({ payload: { from, to } }) => log(`chess: [${from}=>${to}]`);
+
+  const stateMachines = {
+    '.testing.Credential': credentialProcessor,
+    '.testing.Chess': chessProcessor,
+    '.testing.Mutation': mutationProcessor,
+  };
+
   let count = 0;
-  const processor = through.obj(function process(message, encoding, next) {
-    if (++count === 2) {
+  const mixer = through.obj(function process(message, encoding, next) {
+    const { payload: { __type_url: type } } = message;
+    const processor = stateMachines[type];
+    if (processor) {
+      processor(message);
+    }
+
+    if (++count === messages.length) {
       this.end();
     }
 
     next();
   });
 
-  pump(source, logger, processor, (err) => {
+  pump(source, logger, mixer, (err) => {
     if (err) {
       console.error(err);
     }
 
     done(err);
   });
-
-  const messages = [
-    {
-      bucketId: 'bucket-1',
-      payload: {
-        __type_url: '.testing.Credential',
-        publicKey: publicKey.toString('hex')
-      }
-    },
-
-    {
-      bucketId: 'bucket-1',
-      payload: {
-        __type_url: '.testing.Mutation',
-        property: 'title',
-        value: 'hello world'
-      }
-    }
-  ];
 
   messages.forEach(message => feed.append(message));
 });

@@ -171,7 +171,6 @@ export class Replicator extends EventEmitter {
   /**
    * Replicate a feed.
    * @param {Protocol} protocol
-   * @param {string} topic
    * @param {Hypercore} feed
    * @returns {boolean} - true if `feed.replicate` was called.
    * @private

@@ -22,6 +22,7 @@ const createPeer = (publicKey) => {
   const peerId = crypto.randomBytes(6);
 
   const presence = new Presence(peerId);
+
   const stream = () => new Protocol({
     streamOptions: {
       live: true
