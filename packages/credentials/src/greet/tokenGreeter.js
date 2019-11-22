@@ -119,7 +119,7 @@ export class TokenGreeter {
     }
 
     if (!this._isAllowedParty(party)) {
-      throw new Error(`${party} is not an allowed party!`);
+      throw new Error(`Invalid party: ${party}`);
     }
 
     const ret = new Token(party, expiration);
