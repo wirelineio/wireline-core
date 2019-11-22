@@ -208,7 +208,6 @@ test('feedstore proto stream', async (done) => {
 
   const feed = await feedStore.openFeed('/test');
 
-  // TODO(burdon): Replace this with Martin's FeedStore stream.
   const source = feed.createReadStream({
     live: true
   });

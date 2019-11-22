@@ -18,9 +18,10 @@ export class Mixer {
    */
   constructor(feedStore) {
     console.assert(feedStore);
+    this._feedStore = feedStore;
   }
 
-  subscribe(query, callback) {
+  getReader(query, callback) {
     const subscription = { query, callback };
     this._subscriptions.add(subscription);
 
