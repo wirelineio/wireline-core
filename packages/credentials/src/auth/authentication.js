@@ -7,6 +7,7 @@ import debug from 'debug';
 import { Keyring, KeyTypes } from '../crypto';
 
 const ONE_HOUR = 60 * 60 * 1000;
+
 const log = debug('creds:authentication');
 
 export const AuthMessageTypes = Object.freeze({
