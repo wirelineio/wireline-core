@@ -9,15 +9,19 @@ import { Keyring } from '../crypto';
 const ONE_HOUR = 60 * 60 * 1000;
 const log = debug('creds:authentication');
 
+export const AuthMessageTypes = Object.freeze({
+  GENESIS: 'party.genesis',
+  ADMIT_KEY: 'party.admit.key',
+  ADMIT_FEED: 'party.admit.feed',
+  ENVELOPE: 'party.envelope',
+});
+
 /**
  * Authenticate and verify messages.
- * Used by AuthExtension for authenticating nodes during
- * handshake.
+ * Used by AuthExtension for authenticating nodes during handshake.
  */
 export class Authentication {
-  constructor(view, authHints) {
-    this._view = view;
-    this._queue = [];
+  constructor(authHints = null) {
     this._allowedKeys = new Set();
     this._allowedFeeds = new Set();
     this._keyring = new Keyring();
@@ -25,50 +29,35 @@ export class Authentication {
     if (authHints) {
       if (authHints.keys) {
         for (const key of authHints.keys) {
-          this._allowedKeys.add(key);
           log('Allowing hinted key:', key);
+          this._allowedKeys.add(key);
         }
       }
       if (authHints.feeds) {
         for (const feed of authHints.feeds) {
-          this._allowedFeeds.add(feed);
           log('Allowing hinted feed:', feed);
+          this._allowedFeeds.add(feed);
         }
       }
     }
-
-    // There is no need to re-process the
-    this._view.events.once('party.genesis', this._enqueue.bind(this));
-    this._view.events.on('party.admit.key', this._enqueue.bind(this));
-    this._view.events.on('party.admit.feed', this._enqueue.bind(this));
-    this._view.events.on('party.greeter.envelope', this._enqueue.bind(this));
-
-    this._draining = false;
   }
 
-  admitKey(key) {
-    if (key && !this._allowedKeys.has(key)) {
-      log('Admitting key:', key);
-      this._allowedKeys.add(key);
-    }
-  }
-
-  authorizeFeed(feed) {
-    if (feed && !this._allowedFeeds.has(feed)) {
-      log('Authorizing feed:', feed);
-      this._allowedFeeds.add(feed);
-    }
-  }
-
-  async authenticate(authHandshake) {
-    if (!authHandshake) {
-      log('Missing auth!');
+  /**
+   * Authenticate the credentials presented during handshake.
+   * The signatures must be valid and belong to an approved key.
+   * @param credentials
+   * @returns {Promise<boolean>} true if authenticated, else false
+   */
+  async authenticate(credentials) {
+    console.assert(credentials);
+    if (!credentials) {
+      log(`Bad credentials: ${credentials}`);
       return false;
     }
 
-    const verified = await this._verifySignatures(authHandshake, true);
+    const verified = await this._verifySignatures(credentials, true);
     if (!verified) {
-      log('Unable to verify auth message:', authHandshake);
+      log(`Bad credentials: ${credentials}`);
       return false;
     }
 
@@ -77,15 +66,192 @@ export class Authentication {
     //  between connect() and handshake() to do that.  In the meantime, not allowing infinite replay
     //  is at least something.
     const now = Date.now();
-    if (Math.abs(now - authHandshake.created) > 24 * ONE_HOUR) {
-      log('Signature OK, but time skew is too great: Now:', now, ', Signature:', authHandshake.created);
+    if (Math.abs(now - credentials.created) > 24 * ONE_HOUR) {
+      log(`Time skew too great: Now: ${now}; Sig: ${credentials.created}`);
       return false;
     }
 
     return true;
   }
 
-  async _verifySignatures(signedMessage, requirePreviouslyAdmittedKey = false) {
+  /**
+   * Process a replicated party authentication message, admitting keys or feeds to the party.
+   * @param message
+   * @returns {Promise<undefined|void>}
+   */
+  async processMessage(message) {
+    let requireKnownKey = true;
+
+    if (message.type === AuthMessageTypes.ENVELOPE) {
+      message = await this._unwrap(message);
+      // With an envelope, the outer message will be signed by the known key of the Greeter, but the inner message
+      // will be signed by unknown keys, since they were submitted during the greeting process (ie, before being
+      // admitted to the party.
+      requireKnownKey = false;
+    }
+
+    switch (message.type) {
+      case AuthMessageTypes.GENESIS:
+        return this._processGenesis(message);
+      case AuthMessageTypes.ADMIT_KEY:
+        return this._processAdmitKey(message, requireKnownKey);
+      case AuthMessageTypes.ADMIT_FEED:
+        return this._processAdmitFeed(message, requireKnownKey);
+      default:
+        throw new Error(`Bad message type: ${message.type}`);
+    }
+  }
+
+
+  /**
+   * Process a party.genesis message.
+   * @param message
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _processGenesis(message) {
+    console.assert(message);
+    if (message.type !== AuthMessageTypes.GENESIS) {
+      throw new Error(`Wrong type: ${message.type}`);
+    }
+
+    // The Genesis is the root message, so cannot require a previous key.
+    const verified = await this._verifyMsg(message, false);
+    if (!verified) {
+      throw new Error(`Bad message: ${message}`);
+    }
+
+    const { original } = message.data.signed;
+    this._admitKey(original.admit);
+    this._admitFeed(original.feed);
+  }
+
+  /**
+   * Process a party.admit.key message.
+   * @param message
+   * @param requireKnownKey
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _processAdmitKey(message, requireKnownKey = true) {
+    console.assert(message);
+    if (message.type !== AuthMessageTypes.ADMIT_KEY) {
+      throw new Error(`Wrong type: ${message.type}`);
+    }
+
+    const verified = await this._verifyMsg(message, requireKnownKey);
+    if (!verified) {
+      throw new Error(`Bad message: ${message}`);
+    }
+
+    const { original } = message.data.signed;
+    this._admitKey(original.admit);
+  }
+
+  /**
+   * Process a party.admit.feed message.
+   * @param message
+   * @param requireKnownKey
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _processAdmitFeed(message, requireKnownKey = true) {
+    console.assert(message);
+    if (message.type !== AuthMessageTypes.ADMIT_FEED) {
+      throw new Error(`Wrong type: ${message.type}`);
+    }
+
+    const verified = await this._verifyMsg(message, requireKnownKey);
+    if (!verified) {
+      throw new Error(`Bad message: ${message}`);
+    }
+
+    const { original } = message.data.signed;
+    this._admitFeed(original.admit);
+  }
+
+  /**
+   * If this is an envelope, return the interior message, else the message.
+   * @param message
+   * @returns {Promise<*>}
+   * @private
+   */
+  async _unwrap(message) {
+    console.assert(message);
+    if (message.type !== AuthMessageTypes.ENVELOPE) {
+      return message;
+    }
+
+    // The outer envelope must always be signed with a known key.
+    const verified = await this._verifySignatures(message.data, true);
+    if (!verified) {
+      throw new Error(`Bad envelope: ${message}`);
+    }
+
+    return message.data.signed.original.contents;
+  }
+
+  /**
+   * Verify the signatures and basic structure common to all messages.
+   * @param message
+   * @param requireKnownKey
+   * @returns {Promise<boolean>}
+   * @private
+   */
+  async _verifyMsg(message, requireKnownKey) {
+    console.assert(message);
+
+    const { original } = message.data.signed;
+    if (!original) {
+      log(`Bad message: ${message}`);
+      return false;
+    }
+
+    switch (message.type) {
+      case AuthMessageTypes.GENESIS:
+        if (!original.admit || !original.feed) {
+          log(`Bad message: ${message}`);
+          return false;
+        }
+        break;
+      case AuthMessageTypes.ADMIT_FEED:
+        if (!original.feed) {
+          log(`Bad message: ${message}`);
+          return false;
+        }
+        break;
+      case AuthMessageTypes.ADMIT_KEY:
+        if (!original.admit) {
+          log(`Bad message: ${message}`);
+          return false;
+        }
+        break;
+      default:
+        log(`Bad message type: ${message.type}`);
+    }
+
+    const sigOk = await this._verifySignatures(message.data, requireKnownKey);
+    if (!sigOk) {
+      log(`Bad signature: ${message}`);
+      return false;
+    }
+
+    // TODO(telackey):  Missing checks:
+    //  1. That the party field in the message matches the party we are under.
+    //  2. If this is the Genesis message, check that the signing party is this party.
+
+    return true;
+  }
+
+  /**
+   * Verify that all the signatures on a signed message are valid.
+   * Optionally, also require that the signature belong to know, already approved keys.
+   * @param signedMessage
+   * @param requireKnownKey
+   * @returns {Promise<boolean>}
+   * @private
+   */
+  async _verifySignatures(signedMessage, requireKnownKey = false) {
     const { signed, signatures } = signedMessage;
     if (!signed || !signatures || !Array.isArray(signatures)) {
       log(signedMessage, 'not signed!');
@@ -97,115 +263,48 @@ export class Authentication {
     for await (const sig of signatures) {
       const result = await this._keyring.verify(signed, sig.signature, sig.key);
       if (!result) {
-        log('Signature could not be verified for', sig.signature, sig.key, 'on message', signedMessage);
+        log(`Bad signature: Sig: ${sig.signature}; Key: ${sig.key}; Msg: ${signedMessage}`);
         return false;
       }
       if (this._allowedKeys.has(sig.key)) {
-        log('Message signed with known key:', sig.key);
+        log(`Message signed with known key: ${sig.key}`);
         foundKnownKey = true;
       }
     }
 
-    if (requirePreviouslyAdmittedKey && !foundKnownKey) {
-      log('All signatures checked out, but no known key used', signedMessage);
+    if (requireKnownKey && !foundKnownKey) {
+      log(`Valid signatures, but no known key: ${JSON.stringify(signedMessage)}`);
       return false;
     }
 
     return true;
   }
 
-  async _onAdmit(msg, requirePreviouslyAdmittedKey = true) {
-    const verified = await this._verifySignatures(msg.data, requirePreviouslyAdmittedKey);
-    if (!verified) {
-      log('Unable to verify admit message:', msg);
-      return;
-    }
-
-    const { original } = msg.data.signed;
-    if (!original.admit) {
-      log('Badly formed admit message:', msg);
-      return;
-    }
-
-    // TODO(telackey):  Missing checks:
-    //  1. party field matches the party we are under
-
-    if (Array.isArray(original.admit)) {
-      original.admit.forEach((k) => {
-        this.admitKey(k);
-      });
-    } else {
-      this.admitKey(original.admit);
+  /**
+   * Admit the key to the allowed list.
+   * @param key
+   * @returns {boolean} true if added, false if already present
+   * @private
+   */
+  _admitKey(key) {
+    if (key && !this._allowedKeys.has(key)) {
+      log('Admitting key:', key);
+      this._allowedKeys.add(key);
     }
   }
 
-  async _onFeed(msg) {
-    const verified = await this._verifySignatures(msg.data, true);
-    if (!verified) {
-      log('Unable to verify feed authorization message:', msg);
-      return;
+  /**
+   * Admit the feed to the allowed list.
+   * @param feed
+   * @returns {boolean} true if added, false if already present
+   * @private
+   */
+  _admitFeed(feed) {
+    if (feed && !this._allowedFeeds.has(feed)) {
+      log('Admitting feed:', feed);
+      this._allowedFeeds.add(feed);
+      return true;
     }
-
-    const { original } = msg.data.signed;
-    if (!original.feed) {
-      log('Badly formed feed authorization message:', msg);
-      return;
-    }
-
-    this.authorizeFeed(original.feed);
-  }
-
-  _enqueue(msg) {
-    this._queue.push(msg);
-    setImmediate(this._drain.bind(this));
-  }
-
-  async unwrap(msg) {
-    if (msg.type !== 'party.greeter.envelope') {
-      return { msg, greeter: null };
-    }
-
-    // Verify the outer message
-    log(`Unwrapping ${msg.type} ...`);
-    const verified = await this._verifySignatures(msg.data, true);
-    if (!verified) {
-      log('Unable to verify enveloped message:', msg);
-      return null;
-    }
-
-    return {
-      msg: msg.data.signed.original.contents,
-      greeter: msg.author || true,
-    };
-  }
-
-  async _drain() {
-    if (this._draining) {
-      return;
-    }
-
-    this._draining = true;
-    while (this._queue.length) {
-      try {
-        const { msg, greeter } = await this.unwrap(this._queue.shift());
-        log('Processing', msg.type);
-        switch (msg.type) {
-          case 'party.genesis':
-            await this._onAdmit(msg, false);
-            break;
-          case 'party.admit.key':
-            await this._onAdmit(msg, !greeter);
-            break;
-          case 'party.admit.feed':
-            await this._onFeed(msg);
-            break;
-          default:
-            log('Unknown message type:', msg.type);
-        }
-      } catch (err) {
-        log(err);
-      }
-    }
-    this._draining = false;
+    return false;
   }
 }

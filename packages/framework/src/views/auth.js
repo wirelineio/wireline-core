@@ -31,6 +31,8 @@ module.exports = function AuthView(viewId, db, core, { append, isLocal }) {
           return [[uuid('admit.party', value.id), value]];
         case 'party.admit.feed':
           return [[uuid('admit.feed', value.id), value]];
+        case 'party.envelope':
+          return [[uuid('envelope', value.id), value]];
         default:
           return [];
       }
