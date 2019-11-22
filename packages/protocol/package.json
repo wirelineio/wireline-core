@@ -16,7 +16,7 @@
   "scripts": {
     "build": "npm run clean && npm run build:protobuf && npm run build:babel",
     "build:babel": "babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps --copy-files",
-    "build:protobuf": "pbjs -t json src/schema.proto -o src/schema.proto",
+    "build:protobuf": "pbjs -t json src/schema.proto -o src/schema.json",
     "clean": "del-cli dist",
     "lint": "eslint ./src --ignore-path ../../.eslintignore",
     "test": "jest --rootDir ./src --verbose",
@@ -27,6 +27,9 @@
   "browserslist": [
     "> 5%"
   ],
+  "jest": {
+    "testEnvironment": "node"
+  },
   "dependencies": {
     "@dxos/codec-protobuf": "^1.0.0",
     "@wirelineio/broadcast": "^0.3.4",

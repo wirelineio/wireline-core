@@ -1,67 +1,30 @@
-{
-  "nested": {
-    "protocol": {
-      "nested": {
-        "Request": {
-          "fields": {
-            "id": {
-              "type": "bytes",
-              "id": 1
-            },
-            "error": {
-              "type": "bytes",
-              "id": 2
-            },
-            "data": {
-              "type": "bytes",
-              "id": 3
-            },
-            "options": {
-              "type": "bytes",
-              "id": 4
-            }
-          }
-        },
-        "PeerChatMessage": {
-          "fields": {
-            "type": {
-              "type": "string",
-              "id": 1
-            },
-            "data": {
-              "type": "bytes",
-              "id": 2
-            }
-          }
-        },
-        "Presence": {
-          "fields": {
-            "from": {
-              "type": "bytes",
-              "id": 1
-            },
-            "connections": {
-              "rule": "repeated",
-              "type": "Connection",
-              "id": 2
-            }
-          },
-          "nested": {
-            "Connection": {
-              "fields": {
-                "peerId": {
-                  "type": "bytes",
-                  "id": 1
-                },
-                "initiator": {
-                  "type": "bool",
-                  "id": 2
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+//
+// Copyright 2019 Wireline, Inc.
+//
+
+syntax = "proto3";
+
+package protocol;
+
+message Request {
+  required bytes id = 1;
+  bytes error = 2;
+  bytes data = 3;
+  bytes options = 4;
+}
+
+// TODO(burdon): Rename. Move from protocol package.
+message PeerChatMessage {
+  required string type = 1;
+  bytes data = 2;
+}
+
+message Presence {
+  message Connection {
+    required bytes peerId = 1;
+    bool initiator = 2;
   }
+
+  required bytes from = 1;
+  repeated Connection connections = 2;
 }
