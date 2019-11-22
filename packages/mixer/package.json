@@ -31,7 +31,7 @@
     "testEnvironment": "node"
   },
   "dependencies": {
-    "@dxos/feed-store": "^1.0.3",
+    "@dxos/feed-store": "^1.1.1",
     "@wirelineio/codec-protobuf": "^0.3.4",
     "charwise": "^3.0.1",
     "debug": "^4.1.1",

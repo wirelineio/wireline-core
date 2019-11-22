@@ -28,44 +28,48 @@ const createDB = () => {
   return sub(db, 'test', { valueEncoding: 'json' });
 };
 
-const items = [
-  { id: 'bucket-1/item/1', value: 100 },
-  { id: 'bucket-1/item/2', value: 101 },
-  { id: 'bucket-1/item/3', value: 102 },
-  { id: 'bucket-1/item/4', value: 103 },
+const credentialProcessor = ({ payload: { publicKey } }) => log(`credential: ${publicKey}`);
+const mutationProcessor = ({ payload: { property, value } }) => log(`mutation: [${property}=>${value}]`);
+const chessProcessor = ({ payload: { from, to } }) => log(`chess: [${from}=>${to}]`);
+
+const messages = [
+  { id: 'bucket-1/message/1', value: 100 },
+  { id: 'bucket-1/message/2', value: 101 },
+  { id: 'bucket-1/message/3', value: 102 },
+  { id: 'bucket-1/message/4', value: 103 },
   { id: 'bucket-1/test/1', value: 104 },
 ];
 
 test('sanity tests', async () => {
   const db = createDB();
 
-  for (const item of items) {
-    const { id, value } = item;
+  for (const message of messages) {
+    const { id, value } = message;
     await db.put(id, value);
   }
 
-  const item = await db.get(items[0].id);
-  expect(item).toBe(items[0].value);
+  const message = await db.get(messages[0].id);
+  expect(message).toBe(messages[0].value);
 });
 
 test('arrayFromStream', async (done) => {
   const db = createDB();
 
-  const ops = items.map(item => ({
+  const ops = messages.map(message => ({
     type: 'put',
-    key: item.id,
-    value: item.value
+    key: message.id,
+    value: message.value
   }));
 
   await db.batch(ops);
 
   const ids = await arrayFromStream(db.createKeyStream());
-  expect(ids).toEqual(items.map(item => item.id));
+  expect(ids).toEqual(messages.map(message => message.id));
 
   let count = 0;
   db.createReadStream({
-    gte: 'bucket-1/item/',
-    lte: 'bucket-1/item/~'
+    gte: 'bucket-1/message/',
+    lte: 'bucket-1/message/~'
   })
     .on('data', (data) => {
       expect(data.id).not.toBeNull();
@@ -81,10 +85,10 @@ test('arrayFromStream', async (done) => {
 test('readstream', async (done) => {
   const db = createDB();
 
-  const ops = items.map(item => ({
+  const ops = messages.map(message => ({
     type: 'put',
-    key: item.id,
-    value: item.value
+    key: message.id,
+    value: message.value
   }));
 
   await db.batch(ops);
@@ -94,8 +98,8 @@ test('readstream', async (done) => {
   // https://github.com/Level/levelup#createReadStream
   // https://nodejs.org/api/stream.html
   const stream = db.createReadStream({
-    gte: 'bucket-1/item',
-    lte: 'bucket-1/item~'
+    gte: 'bucket-1/message',
+    lte: 'bucket-1/message~'
   })
     .on('data', ({ key, value }) => {
       log(key, value);
@@ -106,7 +110,7 @@ test('readstream', async (done) => {
       done(err);
     })
     .on('end', () => {
-      expect(count).toEqual(items.filter(item => item.id.indexOf('bucket-1/item') === 0).length);
+      expect(count).toEqual(messages.filter(message => message.id.indexOf('bucket-1/message') === 0).length);
     })
     .on('close', () => {
       // expect(stream.readable).toBeFalsy();
@@ -120,7 +124,7 @@ test('stream', async (done) => {
 
   let count = 0;
   const reader = through.obj(function process(chunk, encoding, next) {
-    if (++count === items.length) {
+    if (++count === messages.length) {
       this.end();
     }
 
@@ -141,8 +145,8 @@ test('stream', async (done) => {
     done(err);
   });
 
-  items.forEach((item) => {
-    writer.write(item);
+  messages.forEach((message) => {
+    writer.write(message);
   });
 });
 
@@ -218,10 +222,6 @@ test('feedstore proto stream', async (done) => {
     this.push(message);
     next();
   });
-
-  const credentialProcessor = ({ payload: { publicKey } }) => log(`credential: ${publicKey}`);
-  const mutationProcessor = ({ payload: { property, value } }) => log(`mutation: [${property}=>${value}]`);
-  const chessProcessor = ({ payload: { from, to } }) => log(`chess: [${from}=>${to}]`);
 
   const stateMachines = {
     '.testing.Credential': credentialProcessor,

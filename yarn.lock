@@ -743,6 +743,26 @@
     sodium-universal "^2.0.0"
     source-map-support "^0.5.12"
 
+"@dxos/feed-store@^1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@dxos/feed-store/-/feed-store-1.1.1.tgz#1e6bfa451852edb96f51f82d4322e3a8d42bfe61"
+  integrity sha512-4zSq6MWc1YBl5p9tPk3b5qRsDXy4ecDoS43fVdz7cdPnCPXyiYkt30et7yLlUoILOuwL6216FlwfC5JVkIZIAw==
+  dependencies:
+    "@dxos/codec-protobuf" "^1.0.0"
+    buffer-json-encoding "^1.0.2"
+    debug "^4.1.1"
+    end-of-stream "^1.4.4"
+    hypercore "^7.7.1"
+    hypercore-crypto "^1.0.0"
+    hypertrie "^3.8.0"
+    multi-read-stream "^2.0.0"
+    mutexify "^1.2.0"
+    p-timeout "^3.2.0"
+    pify "^4.0.1"
+    random-access-file "^2.1.0"
+    sodium-universal "^2.0.0"
+    source-map-support "^0.5.12"
+
 "@evocateur/libnpmaccess@^3.1.2":
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/@evocateur/libnpmaccess/-/libnpmaccess-3.1.2.tgz#ecf7f6ce6b004e9f942b098d92200be4a4b1c845"
@@ -4721,7 +4741,7 @@ hyperid@^2.0.2:
     uuid "^3.3.2"
     uuid-parse "^1.0.0"
 
-hypertrie@^3.6.1, hypertrie@^3.7.1:
+hypertrie@^3.6.1, hypertrie@^3.7.1, hypertrie@^3.8.0:
   version "3.8.0"
   resolved "https://registry.yarnpkg.com/hypertrie/-/hypertrie-3.8.0.tgz#8227c7cae5c4a15401f0d088d8e53486d963143c"
   integrity sha512-mAZpE3FwrwHQvg5IUx0P2rsOUM8cCFhNv7pdrXL0O3sX8dpjmyX6mxedM26HfifyM40BJdrDer4ZQltfIf+3JA==

@@ -2,16 +2,12 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-// import debug from 'debug';
-
-// const log = debug('mixer');
+export const feedKey = (peer, party) => `/${peer}/${party}`;
 
 /**
  * De-multiplexes messages into buckets.
  */
 export class Mixer {
-
-  _subscriptions = new Set();
 
   /**
    * @param {FeedStore} feedStore
@@ -21,13 +17,20 @@ export class Mixer {
     this._feedStore = feedStore;
   }
 
-  getReader(query, callback) {
-    const subscription = { query, callback };
-    this._subscriptions.add(subscription);
+  /**
+   * @param feedKey
+   */
+  createKeyStream(feedKey) {
+    const pattern = new RegExp(feedKey);
 
-    return {
-      query,
-      close: () => this._subscriptions.delete(subscription)
+    const filter = descriptor => !!pattern.exec(descriptor.path);
+
+    // https://github.com/mafintosh/hypercore#var-stream--feedcreatereadstreamoptions
+    const options = {
+      live: true
     };
+
+    // TODO(burdon): Filter bucket.
+    return this._feedStore.createReadStreamByFilter(filter, options);
   }
 }
