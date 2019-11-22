@@ -189,8 +189,6 @@ test('feedstore proto stream', async (done) => {
     }
   ];
 
-  // https://www.npmjs.com/package/through2#see-also
-
   const options = {
     rootTypeUrl: '.dxos.Message'
   };
@@ -203,6 +201,7 @@ test('feedstore proto stream', async (done) => {
   const index = hypertrie(ram, publicKey, { secretKey });
   const feedStore = new FeedStore(index, ram, {
     feedOptions: { valueEncoding: 'codec' },
+    // TODO(burdon): Doesn't make sense to maintain map; keep hypercore API.
     codecs: {
       codec
     }
