@@ -5,27 +5,12 @@
 import debug from 'debug';
 import Loki from 'lokijs';
 
+import { keyToHex } from '@wirelineio/utils';
+
 const log = debug('creds:keystore'); // eslint-disable-line no-unused-vars
 
-/* eslint-disable no-unused-vars */
 export class KeyStore {
-  constructor(props) {
-    this._props = props;
-  }
-
-  store(keyOrKeypair, attributes = {}) {
-    throw new Error('Not implemented');
-  }
-
-  find(attributes = {}) {
-    throw new Error('Not implemented');
-  }
-}
-/* eslint-enable no-unused-vars */
-
-export class KeyStoreMem extends KeyStore {
-  constructor(props) {
-    super(props);
+  constructor() {
     this._db = new Loki('keystore.db');
     this._keys = this._db.addCollection('keys');
   }
@@ -39,8 +24,7 @@ export class KeyStoreMem extends KeyStore {
 
     let { key } = attributes;
     if (!key) {
-      // TODO(telackey): This conversion should be done by the CryptoEngine.
-      key = publicKey.toString('hex');
+      key = keyToHex(publicKey);
     }
 
     const existing = this._keys.findOne({ 'attributes.key': key });

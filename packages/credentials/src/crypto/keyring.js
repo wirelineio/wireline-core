@@ -8,7 +8,7 @@ import stableStringify from 'json-stable-stringify';
 
 import { keyToBuffer, keyToHex } from '@wirelineio/utils';
 
-import { KeyStoreMem } from './keystore';
+import { KeyStore } from './keystore';
 
 const log = debug('creds:keyring'); // eslint-disable-line no-unused-vars
 
@@ -27,7 +27,7 @@ export class Keyring {
   constructor(params = {}) {
     const { keystore } = params;
 
-    this._keystore = keystore || new KeyStoreMem();
+    this._keystore = keystore || new KeyStore();
   }
 
   async generate(attributes = {}) {
@@ -157,7 +157,7 @@ export class Keyring {
 
     const data = {
       original: message,
-      nonce: Math.random(),
+      nonce: crypto.randomBytes(32),
       created: Date.now(),
     };
 
