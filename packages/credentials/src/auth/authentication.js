@@ -4,7 +4,7 @@
 
 import debug from 'debug';
 
-import { Keyring } from '../crypto';
+import { Keyring, KeyTypes } from '../crypto';
 
 const ONE_HOUR = 60 * 60 * 1000;
 const log = debug('creds:authentication');
@@ -22,24 +22,26 @@ export const AuthMessageTypes = Object.freeze({
  */
 export class Authentication {
   constructor(authHints = null) {
-    this._allowedKeys = new Set();
-    this._allowedFeeds = new Set();
+    this._hints = authHints;
     this._keyring = new Keyring();
+  }
 
-    if (authHints) {
-      if (authHints.keys) {
-        for (const key of authHints.keys) {
+  async init() {
+    if (this._hints) {
+      if (this._hints.keys) {
+        for (const key of this._hints.keys) {
           log('Allowing hinted key:', key);
-          this._allowedKeys.add(key);
+          await this._admitKey(key, { hint: true });
         }
       }
-      if (authHints.feeds) {
-        for (const feed of authHints.feeds) {
+      if (this._hints.feeds) {
+        for (const feed of this._hints.feeds) {
           log('Allowing hinted feed:', feed);
-          this._allowedFeeds.add(feed);
+          await this._admitFeed(feed, { hint: true });
         }
       }
     }
+    return this;
   }
 
   /**
@@ -122,8 +124,10 @@ export class Authentication {
     }
 
     const { original } = message.data.signed;
-    this._admitKey(original.admit);
-    this._admitFeed(original.feed);
+    const signedBy = this.signingKeys(message.data);
+
+    this._admitKey(original.admit, { signedBy });
+    this._admitFeed(original.feed, { signedBy });
   }
 
   /**
@@ -145,7 +149,9 @@ export class Authentication {
     }
 
     const { original } = message.data.signed;
-    this._admitKey(original.admit);
+    const signedBy = this.signingKeys(message.data);
+
+    this._admitKey(original.admit, { signedBy });
   }
 
   /**
@@ -167,7 +173,9 @@ export class Authentication {
     }
 
     const { original } = message.data.signed;
-    this._admitFeed(original.feed);
+    const signedBy = this.signingKeys(message.data);
+
+    this._admitFeed(original.feed, { signedBy });
   }
 
   /**
@@ -266,7 +274,9 @@ export class Authentication {
         log(`Bad signature: Sig: ${sig.signature}; Key: ${sig.key}; Msg: ${signedMessage}`);
         return false;
       }
-      if (this._allowedKeys.has(sig.key)) {
+
+      const known = await this._hasKey(sig.key);
+      if (known) {
         log(`Message signed with known key: ${sig.key}`);
         foundKnownKey = true;
       }
@@ -280,17 +290,51 @@ export class Authentication {
     return true;
   }
 
+  signingKeys(signedMessage) {
+    const { signed, signatures } = signedMessage;
+    if (!signed || !signatures || !Array.isArray(signatures)) {
+      log(signedMessage, 'not signed!');
+      return [];
+    }
+
+    return signatures.map(sig => sig.key);
+  }
+
+  /**
+   * Is the key in the keyring.
+   * @param key
+   * @returns {Promise<boolean>}
+   * @private
+   */
+  async _hasKey(key) {
+    const existing = await this._keyring.get(key);
+    return !!existing;
+  }
+
+  /**
+   * Is the feed in the keyring.
+   * @param feed
+   * @returns {Promise<boolean>}
+   * @private
+   */
+  async _hasFeed(feed) {
+    const existing = await this._keyring.findOne({ key: feed, type: KeyTypes.FEED });
+    return !!existing;
+  }
+
   /**
    * Admit the key to the allowed list.
    * @param key
+   * @param attributes
    * @returns {boolean} true if added, false if already present
    * @private
    */
-  _admitKey(key) {
+  async _admitKey(key, attributes = {}) {
     console.assert(key);
-    if (!this._allowedKeys.has(key)) {
+    const existing = await this._hasKey(key);
+    if (!existing) {
       log('Admitting key:', key);
-      this._allowedKeys.add(key);
+      await this._keyring.add(key, attributes);
       return true;
     }
     return false;
@@ -299,14 +343,17 @@ export class Authentication {
   /**
    * Admit the feed to the allowed list.
    * @param feed
+   * @param attributes
    * @returns {boolean} true if added, false if already present
    * @private
    */
-  _admitFeed(feed) {
+  async _admitFeed(feed, attributes = {}) {
     console.assert(feed);
-    if (!this._allowedFeeds.has(feed)) {
+    const existing = await this._hasFeed(feed);
+    if (!existing) {
       log('Admitting feed:', feed);
-      this._allowedFeeds.add(feed);
+      attributes.type = KeyTypes.FEED;
+      await this._keyring.add(feed, attributes);
       return true;
     }
     return false;

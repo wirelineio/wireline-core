@@ -12,12 +12,15 @@ import { KeyStoreMem } from './keystore';
 
 const log = debug('creds:keyring'); // eslint-disable-line no-unused-vars
 
+
 export const KeyTypes = Object.freeze({
   IDENTITY: 'IDENTITY',
   PSEUDONYM: 'PSEUDONYM',
   DEVICE: 'DEVICE',
   DEVICE_IDENTITY: 'DEVICE_IDENTITY',
   DEVICE_PSEUDONYM: 'DEVICE_PSEUDONYM',
+  PARTY: 'PARTY',
+  FEED: 'FEED',
 });
 
 export class Keyring {
@@ -31,37 +34,71 @@ export class Keyring {
     const { seed } = attributes;
     const keypair = crypto.keyPair(seed);
 
-    attributes.key = keyToHex(keypair.publicKey);
+    attributes.trusted = true;
+    attributes.own = true;
 
-    return this._keystore.store(keypair, attributes);
+    return this.add(keypair, attributes);
+  }
+
+  async add(key, attributes = {}) {
+    if (typeof key === 'string' || key instanceof String) {
+      key = {
+        publicKey: keyToBuffer(key),
+      };
+    }
+
+    const withDefaults = Object.assign({
+      own: false,
+      hint: false,
+      trusted: true,
+      key: keyToHex(key.publicKey),
+    }, attributes);
+
+    return this._keystore.store(key, withDefaults);
   }
 
   get identity() {
-    return this.findOne({ type: KeyTypes.IDENTITY, secretKey: { $exists: true } });
+    return this.findOne({ type: KeyTypes.IDENTITY, trusted: true, own: true, secretKey: { $exists: true } });
   }
 
   get pseudonym() {
-    return this.findOne({ type: KeyTypes.PSEUDONYM, secretKey: { $exists: true } });
+    return this.findOne({ type: KeyTypes.PSEUDONYM, trusted: true, own: true, secretKey: { $exists: true } });
   }
 
   get device() {
-    return this.findOne({ type: KeyTypes.DEVICE, secretKey: { $exists: true } });
+    return this.findOne({ type: KeyTypes.DEVICE, trusted: true, own: true, secretKey: { $exists: true } });
   }
 
   get deviceIdentity() {
-    return this.findOne({ type: KeyTypes.DEVICE_IDENTITY, secretKey: { $exists: true } });
+    return this.findOne({ type: KeyTypes.DEVICE_IDENTITY, trusted: true, own: true, secretKey: { $exists: true } });
   }
 
   get devicePseudonym() {
-    return this.findOne({ type: KeyTypes.DEVICE_PSEUDONYM, secretKey: { $exists: true } });
+    return this.findOne({ type: KeyTypes.DEVICE_PSEUDONYM, trusted: true, own: true, secretKey: { $exists: true } });
+  }
+
+  get party() {
+    return this.findOne({ type: KeyTypes.PARTY, trusted: true, own: true, secretKey: { $exists: true } });
+  }
+
+  get feed() {
+    return this.findOne({ type: KeyTypes.FEED, trusted: true, own: true, secretKey: { $exists: true } });
   }
 
   get keys() {
     return this.find();
   }
 
-  key(criteria = {}) {
-    return this.findOne(criteria);
+  get(key, trusted = true) {
+    if (key.publicKey) {
+      key = keyToHex(key.publicKey);
+    }
+
+    if (Buffer.isBuffer(key)) {
+      key = keyToHex(key);
+    }
+
+    return this.findOne({ key, trusted });
   }
 
   findOne(criteria = {}) {

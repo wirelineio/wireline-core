@@ -13,7 +13,7 @@ const keyring = new Keyring();
 test('Generate basic keys', async (done) => {
   for await (const type of Object.getOwnPropertyNames(KeyTypes)) {
     const keypair = await keyring.generate({ type });
-    const match = keyring.key({ type });
+    const match = keyring.findOne({ type });
     log(keypair.type, keypair.key);
     expect(keypair.key).toEqual(match.key);
   }

@@ -31,30 +31,28 @@ const mockKeyring = async () => {
 
 test('Process Basic Message Types', async (done) => {
   const keyring = await mockKeyring();
-  const auth = new Authentication();
+  const auth = await new Authentication().init();
 
-  const partyKey = await keyring.generate();
-  const feedKey = await keyring.generate();
-  const extraFeed = await keyring.generate();
+  const extraFeed = await keyring.generate({ type: KeyTypes.FEED });
 
   const messages = [
     // The Genesis message is signed by the party private key and one admitted key.
     await signMessage({
       type: AuthMessageTypes.GENESIS,
-      party: partyKey.key,
+      party: keyring.party.key,
       admit: keyring.pseudonym.key,
-      feed: feedKey.key,
-    }, [partyKey, keyring.pseudonym, feedKey]),
+      feed: keyring.feed.key,
+    }, [keyring.party, keyring.pseudonym, keyring.feed]),
     // A user (represented by the pseudonym key) will also need a device.
     await signMessage({
       type: AuthMessageTypes.ADMIT_KEY,
-      party: partyKey.key,
+      party: keyring.party.key,
       admit: keyring.devicePseudonym.key,
     }, [keyring.pseudonym, keyring.devicePseudonym]),
     // We don't actually need this feed, since the initial feed is in the Genesis message, but we want to test all types.
     await signMessage({
       type: AuthMessageTypes.ADMIT_FEED,
-      party: partyKey.key,
+      party: keyring.party,
       feed: extraFeed.key,
     }, [keyring.devicePseudonym, extraFeed])
   ];
@@ -63,33 +61,31 @@ test('Process Basic Message Types', async (done) => {
     await auth.processMessage(message);
   }
 
-  expect(auth._allowedKeys).toContain(keyring.pseudonym.key);
-  expect(auth._allowedKeys).toContain(keyring.devicePseudonym.key);
-  expect(auth._allowedFeeds).toContain(feedKey.key);
-  expect(auth._allowedFeeds).toContain(extraFeed.key);
+  expect(auth._keyring.get(keyring.pseudonym).key).toEqual(keyring.pseudonym.key);
+  expect(auth._keyring.get(keyring.devicePseudonym).key).toEqual(keyring.devicePseudonym.key);
+  expect(auth._keyring.findOne({ key: keyring.feed.key, type: KeyTypes.FEED }).key).toContain(keyring.feed.key);
+  expect(auth._keyring.findOne({ key: extraFeed.key, type: KeyTypes.FEED }).key).toContain(extraFeed.key);
 
   done();
 });
 
 test('Reject Message from Unknown Source', async (done) => {
   const keyring = await mockKeyring();
-  const auth = new Authentication();
+  const auth = await new Authentication().init();
 
-  const partyKey = await keyring.generate();
-  const feedKey = await keyring.generate();
   const unknownKey = await keyring.generate();
 
   const messages = [
     // We always need a Genesis.
     await signMessage({
       type: AuthMessageTypes.GENESIS,
-      party: partyKey.key,
+      party: keyring.party.key,
       admit: keyring.pseudonym.key,
-      feed: feedKey.key,
-    }, [partyKey, keyring.pseudonym, feedKey]),
+      feed: keyring.feed.key,
+    }, [keyring.party, keyring.pseudonym, keyring.feed]),
     await signMessage({
       type: AuthMessageTypes.ADMIT_KEY,
-      party: partyKey.key,
+      party: keyring.party.key,
       admit: keyring.devicePseudonym.key
     }, [unknownKey, keyring.devicePseudonym]),
   ];
@@ -106,39 +102,37 @@ test('Reject Message from Unknown Source', async (done) => {
   }
 
   expect(hadError).toBeTruthy();
-  expect(auth._allowedKeys).toContain(keyring.pseudonym.key);
-  expect(auth._allowedKeys).not.toContain(keyring.devicePseudonym.key);
+  expect(auth._keyring.get(keyring.pseudonym).key).toEqual(keyring.pseudonym.key);
+  expect(auth._keyring.get(keyring.devicePseudonym)).toBeNull();
 
   done();
 });
 
 test('Authentication (GOOD)', async (done) => {
   const keyring = await mockKeyring();
-  const auth = new Authentication();
+  const auth = await new Authentication().init();
 
-  const partyKey = await keyring.generate();
-  const feedKey = await keyring.generate();
   const peer = await keyring.generate();
 
   const messages = [
     // We always need a Genesis.
     await signMessage({
       type: AuthMessageTypes.GENESIS,
-      party: partyKey.key,
+      party: keyring.party.key,
       admit: keyring.pseudonym.key,
-      feed: feedKey.key,
-    }, [partyKey, keyring.pseudonym, feedKey]),
+      feed: keyring.feed.key,
+    }, [keyring.party, keyring.pseudonym, keyring.feed]),
   ];
 
   for await (const message of messages) {
     await auth.processMessage(message);
   }
 
-  expect(auth._allowedKeys).toContain(keyring.pseudonym.key);
-  expect(auth._allowedFeeds).toContain(feedKey.key);
+  expect(auth._keyring.get(keyring.pseudonym).key).toEqual(keyring.pseudonym.key);
+  expect(auth._keyring.findOne({ key: keyring.feed.key, type: KeyTypes.FEED }).key).toContain(keyring.feed.key);
 
   const credentials = await keyring.sign({
-    party: partyKey.key,
+    party: keyring.party.key,
     peerId: peer.key,
   }, [keyring.pseudonym]);
 
@@ -152,31 +146,30 @@ test('Authentication (BAD)', async (done) => {
   const keyring = await mockKeyring();
   const auth = new Authentication();
 
-  const partyKey = await keyring.generate();
-  const feedKey = await keyring.generate();
   const peer = await keyring.generate();
 
   const messages = [
     // We always need a Genesis.
     await signMessage({
       type: AuthMessageTypes.GENESIS,
-      party: partyKey.key,
+      party: keyring.party.key,
       admit: keyring.pseudonym.key,
-      feed: feedKey.key,
-    }, [partyKey, keyring.pseudonym, feedKey]),
+      feed: keyring.feed.key,
+    }, [keyring.party, keyring.pseudonym, keyring.feed]),
   ];
 
   for await (const message of messages) {
     await auth.processMessage(message);
   }
 
-  expect(auth._allowedKeys).toContain(keyring.pseudonym.key);
-  expect(auth._allowedFeeds).toContain(feedKey.key);
+  expect(auth._keyring.get(keyring.pseudonym).key).toEqual(keyring.pseudonym.key);
+  expect(auth._keyring.findOne({ key: keyring.feed.key, type: KeyTypes.FEED }).key).toContain(keyring.feed.key);
+
 
   const unknownKey = await keyring.generate();
 
   const credentials = await keyring.sign({
-    party: partyKey.key,
+    party: keyring.party.key,
     peerId: peer.key,
   }, [unknownKey]);
 
