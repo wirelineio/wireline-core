@@ -23,7 +23,7 @@ test('Good token', async (done) => {
   };
 
   await greeter.handleMessage(message);
-  
+
   done();
 });
 
@@ -44,7 +44,7 @@ test('Bad token', async (done) => {
     log(e);
     expect(e).toBeInstanceOf(ProtocolError);
   }
-  
+
   done();
 });
 

@@ -4,6 +4,8 @@
 
 import debug from 'debug';
 
+import { keyToHex } from '@wirelineio/utils';
+
 import { Keyring, KeyTypes } from '../crypto';
 
 const ONE_HOUR = 60 * 60 * 1000;
@@ -31,13 +33,13 @@ export class Authentication {
     if (this._hints) {
       if (this._hints.keys) {
         for (const key of this._hints.keys) {
-          log('Allowing hinted key:', key);
+          log('Allowing hinted key:', keyToHex(key));
           await this._admitKey(key, { hint: true });
         }
       }
       if (this._hints.feeds) {
         for (const feed of this._hints.feeds) {
-          log('Allowing hinted feed:', feed);
+          log('Allowing hinted feed:', keyToHex(feed));
           await this._admitFeed(feed, { hint: true });
         }
       }
@@ -83,9 +85,15 @@ export class Authentication {
    * @returns {Promise<undefined|void>}
    */
   async processMessage(message) {
+    console.assert(message);
+
+    const { signed, signatures } = message;
+    if (!signed || !signatures || !Array.isArray(signatures)) {
+      throw new Error(`Bad message: ${JSON.stringify(message)}`);
+    }
     let requireKnownKey = true;
 
-    if (message.type === AuthMessageTypes.ENVELOPE) {
+    if (signed.type === AuthMessageTypes.ENVELOPE) {
       message = await this._unwrap(message);
       // With an envelope, the outer message will be signed by the known key of the Greeter, but the inner message
       // will be signed by unknown keys, since they were submitted during the greeting process (ie, before being
@@ -93,7 +101,7 @@ export class Authentication {
       requireKnownKey = false;
     }
 
-    switch (message.type) {
+    switch (signed.type) {
       case AuthMessageTypes.GENESIS:
         return this._processGenesis(message);
       case AuthMessageTypes.ADMIT_KEY:
@@ -101,7 +109,7 @@ export class Authentication {
       case AuthMessageTypes.ADMIT_FEED:
         return this._processAdmitFeed(message, requireKnownKey);
       default:
-        throw new Error(`Bad message type: ${message.type}`);
+        throw new Error(`Bad type: ${signed.type}`);
     }
   }
 
@@ -114,21 +122,21 @@ export class Authentication {
    */
   async _processGenesis(message) {
     console.assert(message);
-    if (message.type !== AuthMessageTypes.GENESIS) {
-      throw new Error(`Wrong type: ${message.type}`);
+    if (message.signed.type !== AuthMessageTypes.GENESIS) {
+      throw new Error(`Wrong type: ${message.signed.type}`);
     }
 
     // The Genesis is the root message, so cannot require a previous key.
     const verified = await this._verifyMsg(message, false);
     if (!verified) {
-      throw new Error(`Bad message: ${message}`);
+      throw new Error(`Unverifiable message: ${JSON.stringify(message)}`);
     }
 
-    const { original } = message.data.signed;
-    const signedBy = this.signingKeys(message.data);
+    const signedBy = this.signingKeys(message);
 
-    this._admitKey(original.admit, { signedBy });
-    this._admitFeed(original.feed, { signedBy });
+    const { admit, feed } = message.signed;
+    this._admitKey(admit, { signedBy });
+    this._admitFeed(feed, { signedBy });
   }
 
   /**
@@ -140,8 +148,8 @@ export class Authentication {
    */
   async _processAdmitKey(message, requireKnownKey = true) {
     console.assert(message);
-    if (message.type !== AuthMessageTypes.ADMIT_KEY) {
-      throw new Error(`Wrong type: ${message.type}`);
+    if (message.signed.type !== AuthMessageTypes.ADMIT_KEY) {
+      throw new Error(`Wrong type: ${message.signed.type}`);
     }
 
     const verified = await this._verifyMsg(message, requireKnownKey);
@@ -149,10 +157,10 @@ export class Authentication {
       throw new Error(`Bad message: ${message}`);
     }
 
-    const { original } = message.data.signed;
-    const signedBy = this.signingKeys(message.data);
+    const signedBy = this.signingKeys(message);
 
-    this._admitKey(original.admit, { signedBy });
+    const { admit } = message.signed;
+    this._admitKey(admit, { signedBy });
   }
 
   /**
@@ -164,8 +172,8 @@ export class Authentication {
    */
   async _processAdmitFeed(message, requireKnownKey = true) {
     console.assert(message);
-    if (message.type !== AuthMessageTypes.ADMIT_FEED) {
-      throw new Error(`Wrong type: ${message.type}`);
+    if (message.signed.type !== AuthMessageTypes.ADMIT_FEED) {
+      throw new Error(`Wrong type: ${message.signed.type}`);
     }
 
     const verified = await this._verifyMsg(message, requireKnownKey);
@@ -173,10 +181,10 @@ export class Authentication {
       throw new Error(`Bad message: ${message}`);
     }
 
-    const { original } = message.data.signed;
-    const signedBy = this.signingKeys(message.data);
+    const signedBy = this.signingKeys(message);
 
-    this._admitFeed(original.feed, { signedBy });
+    const { feed } = message.signed;
+    this._admitFeed(feed, { signedBy });
   }
 
   /**
@@ -187,17 +195,17 @@ export class Authentication {
    */
   async _unwrap(message) {
     console.assert(message);
-    if (message.type !== AuthMessageTypes.ENVELOPE) {
+    if (message.signed.type !== AuthMessageTypes.ENVELOPE) {
       return message;
     }
 
     // The outer envelope must always be signed with a known key.
-    const verified = await this._verifySignatures(message.data, true);
+    const verified = await this._verifySignatures(message, true);
     if (!verified) {
       throw new Error(`Bad envelope: ${message}`);
     }
 
-    return message.data.signed.original.contents;
+    return message.signed.original.contents;
   }
 
   /**
@@ -210,38 +218,40 @@ export class Authentication {
   async _verifyMsg(message, requireKnownKey) {
     console.assert(message);
 
-    const { original } = message.data.signed;
-    if (!original) {
-      log(`Bad message: ${message}`);
+    const { signed, signatures } = message;
+    if (!signed || !signatures || !Array.isArray(signatures)) {
+      log('Bad message:', message);
       return false;
     }
 
-    switch (message.type) {
+    const { party, admit, feed } = message.signed;
+
+    switch (signed.type) {
       case AuthMessageTypes.GENESIS:
-        if (!original.admit || !original.feed) {
-          log(`Bad message: ${message}`);
+        if (!admit || !feed) {
+          log('Bad message:', message);
           return false;
         }
         break;
       case AuthMessageTypes.ADMIT_FEED:
-        if (!original.feed) {
-          log(`Bad message: ${message}`);
+        if (!feed) {
+          log('Bad message:', message);
           return false;
         }
         break;
       case AuthMessageTypes.ADMIT_KEY:
-        if (!original.admit) {
-          log(`Bad message: ${message}`);
+        if (!admit) {
+          log('Bad message:', message);
           return false;
         }
         break;
       default:
-        log(`Bad message type: ${message.type}`);
+        log(`Bad type: ${signed.type}`);
     }
 
-    const sigOk = await this._verifySignatures(message.data, requireKnownKey);
+    const sigOk = await this._verifySignatures(message, requireKnownKey);
     if (!sigOk) {
-      log(`Bad signature: ${message}`);
+      log('Bad signature: ', message);
       return false;
     }
 
@@ -255,15 +265,15 @@ export class Authentication {
   /**
    * Verify that all the signatures on a signed message are valid.
    * Optionally, also require that the signature belong to know, already approved keys.
-   * @param signedMessage
+   * @param message
    * @param requireKnownKey
    * @returns {Promise<boolean>}
    * @private
    */
-  async _verifySignatures(signedMessage, requireKnownKey = false) {
-    const { signed, signatures } = signedMessage;
+  async _verifySignatures(message, requireKnownKey = false) {
+    const { signed, signatures } = message;
     if (!signed || !signatures || !Array.isArray(signatures)) {
-      log(signedMessage, 'not signed!');
+      log(message, 'not signed!');
       return false;
     }
 
@@ -272,19 +282,19 @@ export class Authentication {
     for await (const sig of signatures) {
       const result = await this._keyring.verify(signed, sig.signature, sig.key);
       if (!result) {
-        log(`Bad signature: Sig: ${sig.signature}; Key: ${sig.key}; Msg: ${signedMessage}`);
+        log('Bad signature:', sig);
         return false;
       }
 
       const known = await this._hasKey(sig.key);
       if (known) {
-        log(`Message signed with known key: ${sig.key}`);
+        log('Message signed with known key:', keyToHex(sig.key));
         foundKnownKey = true;
       }
     }
 
     if (requireKnownKey && !foundKnownKey) {
-      log(`Valid signatures, but no known key: ${JSON.stringify(signedMessage)}`);
+      log('Valid signatures, but no known key:', message);
       return false;
     }
 
@@ -293,13 +303,12 @@ export class Authentication {
 
   /**
    * What keys were used to sign this message?
-   * @param signedMessage
+   * @param message
    * @returns {Array|*}
    */
-  signingKeys(signedMessage) {
-    const { signed, signatures } = signedMessage;
+  signingKeys(message) {
+    const { signed, signatures } = message;
     if (!signed || !signatures || !Array.isArray(signatures)) {
-      log(signedMessage, 'not signed!');
       return [];
     }
 
@@ -313,6 +322,9 @@ export class Authentication {
    * @private
    */
   async _hasKey(key) {
+    if (Buffer.isBuffer(key)) {
+      key = keyToHex(key);
+    }
     const existing = await this._keyring.get(key);
     return !!existing;
   }
@@ -339,7 +351,7 @@ export class Authentication {
     console.assert(key);
     const existing = await this._hasKey(key);
     if (!existing) {
-      log('Admitting key:', key);
+      log('Admitting key:', keyToHex(key));
       await this._keyring.add(key, attributes);
       return true;
     }
@@ -357,7 +369,7 @@ export class Authentication {
     console.assert(feed);
     const existing = await this._hasFeed(feed);
     if (!existing) {
-      log('Admitting feed:', feed);
+      log('Admitting feed:', keyToHex(feed));
       attributes.type = KeyTypes.FEED;
       await this._keyring.add(feed, attributes);
       return true;

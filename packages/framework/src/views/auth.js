@@ -41,8 +41,6 @@ module.exports = function AuthView(viewId, db, core, { append, isLocal }) {
     indexed(msgs) {
       msgs
         .filter(msg => msg.value.type.startsWith('party.'))
-        // We should have causal ordering, not self-reported timestamps.
-        .sort((a, b) => a.value.timestamp - b.value.timestamp)
         .forEach(({ value }) => {
           events.emit(value.type, value, isLocal(value));
         });

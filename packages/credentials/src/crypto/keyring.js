@@ -44,6 +44,10 @@ export class Keyring {
       key = {
         publicKey: keyToBuffer(key),
       };
+    } else if (Buffer.isBuffer(key)) {
+      key = {
+        publicKey: keyToBuffer(key),
+      };
     }
 
     const withDefaults = Object.assign({
@@ -101,11 +105,18 @@ export class Keyring {
   }
 
   findOne(criteria = {}) {
+    if (Buffer.isBuffer(criteria.key)) {
+      criteria.key = keyToHex(criteria.key);
+    }
+
     const ret = this.find(criteria);
     return ret.length ? ret[0] : null;
   }
 
   find(criteria = {}) {
+    if (Buffer.isBuffer(criteria.key)) {
+      criteria.key = keyToHex(criteria.key);
+    }
     return this._keystore.find(criteria);
   }
 
@@ -154,11 +165,10 @@ export class Keyring {
       keys = [keys];
     }
 
-    const data = {
-      original: message,
-      nonce: crypto.randomBytes(32),
+    const data = Object.assign({
       created: Date.now(),
-    };
+      nonce: crypto.randomBytes(32)
+    }, message);
 
     const flat = stableStringify(data);
 
@@ -170,7 +180,7 @@ export class Keyring {
     for await (const key of keys) {
       const sig = {
         signature: await this._sign(flat, key.secretKey),
-        key: keyToHex(key.publicKey)
+        key: key.publicKey
       };
       ret.signatures.push(sig);
     }
@@ -191,6 +201,6 @@ export class Keyring {
       secretKey = keyToBuffer(secretKey);
     }
 
-    return crypto.sign(message, secretKey).toString('base64');
+    return crypto.sign(message, secretKey);
   }
 }

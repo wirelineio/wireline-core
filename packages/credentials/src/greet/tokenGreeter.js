@@ -92,7 +92,7 @@ export class TokenGreeter {
   }
 
   _isAllowedParty(party) {
-    //TODO(telackey): Truly perform this check.
+    // TODO(telackey): Truly perform this check.
     return true;
   }
 

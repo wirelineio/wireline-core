@@ -4,21 +4,43 @@
 
 import debug from 'debug';
 
-import { Authentication, AuthMessageTypes, } from '.';
+import { Codec } from '@wirelineio/codec-protobuf';
+
+import authTypes from './authTypes';
+import { Authentication, AuthMessageTypes, } from './authentication';
 import { Keyring, KeyTypes } from '../crypto';
 
 const log = debug('creds:authentication:test');
 
+jest.setTimeout(60000);
+
+const codec = new Codec({
+  rootTypeUrl: '.dxos.auth.SignedMessage'
+}).addJson(authTypes).build();
+
 const signMessage = async (payload, keys) => {
   const keyring = new Keyring();
-  const now = Date.now();
-  return {
-    id: `${now}/${Math.random().toString(36).substr(2)}`,
-    timestamp: now,
-    type: payload.type,
-    author: keys[0].key,
-    data: await keyring.sign(payload, keys)
+
+  switch (payload.type) {
+    case AuthMessageTypes.GENESIS:
+      payload.__type_url = '.dxos.auth.PartyGenesis';
+      break;
+    case AuthMessageTypes.ADMIT_KEY:
+      payload.__type_url = '.dxos.auth.KeyAdmit';
+      break;
+    case AuthMessageTypes.ADMIT_FEED:
+      payload.__type_url = '.dxos.auth.FeedAdmit';
+      break;
+  }
+
+  const signed = {
+    bucketId: 'party',
+    ...await keyring.sign(payload, keys)
   };
+
+  // Loop it through the codec to make sure every message we use is valid to the protobuf def.
+  const encoded = codec.encode(signed);
+  return codec.decode(encoded);
 };
 
 const mockKeyring = async () => {
@@ -28,6 +50,7 @@ const mockKeyring = async () => {
   }
   return keyring;
 };
+
 
 test('Process Basic Message Types', async (done) => {
   const keyring = await mockKeyring();
@@ -39,21 +62,21 @@ test('Process Basic Message Types', async (done) => {
     // The Genesis message is signed by the party private key and one admitted key.
     await signMessage({
       type: AuthMessageTypes.GENESIS,
-      party: keyring.party.key,
-      admit: keyring.pseudonym.key,
-      feed: keyring.feed.key,
+      party: keyring.party.publicKey,
+      admit: keyring.pseudonym.publicKey,
+      feed: keyring.feed.publicKey,
     }, [keyring.party, keyring.pseudonym, keyring.feed]),
     // A user (represented by the pseudonym key) will also need a device.
     await signMessage({
       type: AuthMessageTypes.ADMIT_KEY,
-      party: keyring.party.key,
-      admit: keyring.devicePseudonym.key,
+      party: keyring.party.publicKey,
+      admit: keyring.devicePseudonym.publicKey,
     }, [keyring.pseudonym, keyring.devicePseudonym]),
     // We don't actually need this feed, since the initial feed is in the Genesis message, but we want to test all types.
     await signMessage({
       type: AuthMessageTypes.ADMIT_FEED,
-      party: keyring.party,
-      feed: extraFeed.key,
+      party: keyring.party.publicKey,
+      feed: extraFeed.publicKey,
     }, [keyring.devicePseudonym, extraFeed])
   ];
 
@@ -79,13 +102,13 @@ test('Reject Message from Unknown Source', async (done) => {
     // We always need a Genesis.
     await signMessage({
       type: AuthMessageTypes.GENESIS,
-      party: keyring.party.key,
-      admit: keyring.pseudonym.key,
-      feed: keyring.feed.key,
+      party: keyring.party.publicKey,
+      admit: keyring.pseudonym.publicKey,
+      feed: keyring.feed.publicKey,
     }, [keyring.party, keyring.pseudonym, keyring.feed]),
     await signMessage({
       type: AuthMessageTypes.ADMIT_KEY,
-      party: keyring.party.key,
+      party: keyring.party.publicKey,
       admit: keyring.devicePseudonym.key
     }, [unknownKey, keyring.devicePseudonym]),
   ];
@@ -118,9 +141,9 @@ test('Authentication (GOOD)', async (done) => {
     // We always need a Genesis.
     await signMessage({
       type: AuthMessageTypes.GENESIS,
-      party: keyring.party.key,
-      admit: keyring.pseudonym.key,
-      feed: keyring.feed.key,
+      party: keyring.party.publicKey,
+      admit: keyring.pseudonym.publicKey,
+      feed: keyring.feed.publicKey,
     }, [keyring.party, keyring.pseudonym, keyring.feed]),
   ];
 
@@ -132,8 +155,8 @@ test('Authentication (GOOD)', async (done) => {
   expect(auth._keyring.findOne({ key: keyring.feed.key, type: KeyTypes.FEED }).key).toContain(keyring.feed.key);
 
   const credentials = await keyring.sign({
-    party: keyring.party.key,
-    peerId: peer.key,
+    party: keyring.party.publicKey,
+    peerId: peer.publicKey,
   }, [keyring.pseudonym]);
 
   const ok = await auth.authenticate(credentials);
@@ -152,9 +175,9 @@ test('Authentication (BAD)', async (done) => {
     // We always need a Genesis.
     await signMessage({
       type: AuthMessageTypes.GENESIS,
-      party: keyring.party.key,
-      admit: keyring.pseudonym.key,
-      feed: keyring.feed.key,
+      party: keyring.party.publicKey,
+      admit: keyring.pseudonym.publicKey,
+      feed: keyring.feed.publicKey,
     }, [keyring.party, keyring.pseudonym, keyring.feed]),
   ];
 
@@ -169,8 +192,8 @@ test('Authentication (BAD)', async (done) => {
   const unknownKey = await keyring.generate();
 
   const credentials = await keyring.sign({
-    party: keyring.party.key,
-    peerId: peer.key,
+    party: keyring.party.publicKey,
+    peerId: peer.publicKey,
   }, [unknownKey]);
 
   const ok = await auth.authenticate(credentials);
