@@ -16,6 +16,7 @@ const log = debug('creds:greet:token');
  */
 class Token {
   constructor(targetParty, expiration = null) {
+    console.assert(targetParty);
     this._party = targetParty;
     this._expiration = expiration;
     this._value = crypto.randomBytes(32).toString('hex');
