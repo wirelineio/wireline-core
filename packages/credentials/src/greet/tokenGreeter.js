@@ -98,12 +98,12 @@ export class TokenGreeter {
     // Do we recognize the key?
     const token = this._tokens.get(tokenValue);
     if (!token) {
-      log('Unable to locate token:', tokenValue);
+      log('No such token:', tokenValue);
       return null;
     }
 
     if (targetParty !== token.party) {
-      log(`${targetParty} does not match ${token.party}`);
+      log(`${targetParty} !== ${token.party}`);
       token.revoke();
       return null;
     }
@@ -119,7 +119,7 @@ export class TokenGreeter {
     }
 
     if (!this._isAllowedParty(party)) {
-      throw new Error(`Invalid party: ${party}`);
+      throw new Error(`Bad party: ${party}`);
     }
 
     const ret = new Token(party, expiration);
