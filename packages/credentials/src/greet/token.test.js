@@ -1,9 +1,16 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 import debug from 'debug';
+import crypto from 'hypercore-crypto';
+
 import { ProtocolError } from '@wirelineio/protocol';
+
 import { TokenGreeter } from './tokenGreeter';
 
 const log = debug('creds:test');
-const PARTY = 'abc';
+const PARTY = crypto.randomBytes(32).toString('hex');
 
 test('Good token', async (done) => {
   const greeter = new TokenGreeter(() => {}, () => {});
