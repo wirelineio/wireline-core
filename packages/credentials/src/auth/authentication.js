@@ -290,6 +290,11 @@ export class Authentication {
     return true;
   }
 
+  /**
+   * What keys were used to sign this message?
+   * @param signedMessage
+   * @returns {Array|*}
+   */
   signingKeys(signedMessage) {
     const { signed, signatures } = signedMessage;
     if (!signed || !signatures || !Array.isArray(signatures)) {
