@@ -7,10 +7,11 @@ import through from 'through2';
 
 // TODO(burdon): Factor out: hyper-util?
 
+// https://www.npmjs.com/package/through2#see-also
 // https://www.freecodecamp.org/news/node-js-streams-everything-you-need-to-know-c9141306be93
 // https://www.npmjs.com/package/pump (replaces pipe)
 // https://github.com/rvagg/through2 (converts streams to objects)
-// https://nodesource.com/blog/understanding-object-streams/
+// https://nodesource.com/blog/understanding-object-streams
 
 /**
  * Create list from iterator.

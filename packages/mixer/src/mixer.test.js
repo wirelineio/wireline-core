@@ -53,15 +53,16 @@ test('basic multiplexing', async (done) => {
 
   await feedStore.initialize();
 
-  let count = 0;
   const mixer = new Mixer(feedStore);
   const stream = mixer.createKeyStream(feedKey('.*', 'party-1'), { bucketId: 'bucket-1' });
 
+  let count = 0;
+  const matches = messages['party-1'].filter(({ bucketId }) => bucketId === 'bucket-1');
   // TODO(burdon): Should be 'append' like hypercore?
   stream.on('data', (message) => {
     log(message);
 
-    if (++count === messages['party-1'].length) {
+    if (++count === matches.length) {
       done();
     }
   });
