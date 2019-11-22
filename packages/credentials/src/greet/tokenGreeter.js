@@ -128,11 +128,12 @@ export class TokenGreeter {
   }
 
   async handleMessage(message) {
+    console.assert(message);
     const { command, token, party, params } = message;
 
     const redeemed = await this._redeemToken(token, party);
     if (!redeemed) {
-      throw new ProtocolError(401, 'Bad token');
+      throw new ProtocolError(401, `Bad token: ${token}`);
     }
 
     if (command === 'negotiate') {
@@ -144,11 +145,11 @@ export class TokenGreeter {
       for await (const msg of params) {
         // The message needs to have our challenge inside it.
         if (msg.data.signed.original.challenge !== redeemed.challenge) {
-          throw new ProtocolError(401, 'Bad challenge');
+          throw new ProtocolError(401, `Bad challenge: ${msg.data.signed.original.challenge}`);
         }
 
         if (!msg.type.startsWith('party.admit.')) {
-          throw new ProtocolError(403, 'Bad message type');
+          throw new ProtocolError(403, `Bad type: ${msg.type}`);
         }
 
         // And the signature needs to check out.
