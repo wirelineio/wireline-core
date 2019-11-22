@@ -12,7 +12,7 @@ import { Keyring } from '../crypto';
 const log = debug('creds:greet:token');
 
 /**
- * To be used for outside-of-party auth with the Greeter (NYI).
+ * To be used for outside-of-party auth with the Greeter.
  */
 class Token {
   constructor(targetParty, expiration = null) {
@@ -92,11 +92,11 @@ export class TokenGreeter {
   }
 
   _isAllowedParty(party) {
-    return true;  // NYI
+    //TODO(telackey): Truly perform this check.
+    return true;
   }
 
   async _redeemToken(tokenValue, targetParty) {
-    // Do we recognize the key?
     const token = this._tokens.get(tokenValue);
     if (!token) {
       log('No such token:', tokenValue);
@@ -169,6 +169,6 @@ export class TokenGreeter {
     }
 
     // Default case.
-    throw new ProtocolError(404, `Unknown command ${command}`);
+    throw new ProtocolError(404, `Unknown command: ${command}`);
   }
 }
