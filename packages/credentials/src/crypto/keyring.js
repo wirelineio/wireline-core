@@ -10,8 +10,7 @@ import { keyToBuffer, keyToHex } from '@wirelineio/utils';
 
 import { KeyStore } from './keystore';
 
-const log = debug('creds:keyring'); // eslint-disable-line no-unused-vars
-
+const log = debug('creds:keyring');
 
 export const KeyTypes = Object.freeze({
   IDENTITY: 'IDENTITY',
@@ -120,7 +119,7 @@ export class Keyring {
       for await (const sig of signatures) {
         const result = await this.verify(signed, sig.signature, sig.key);
         if (!result) {
-          log('Signature could not be verified for', sig.signature, sig.key, 'on message', message);
+          log(`Bad signature ${sig.signature} ${sig.key}:`, message);
           return false;
         }
       }

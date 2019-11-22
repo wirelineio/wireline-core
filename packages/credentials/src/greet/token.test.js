@@ -32,7 +32,7 @@ test('Bad token', async (done) => {
 
   try {
     await greeter.handleMessage(message);
-    expect(1).toEqual(0);
+    done.fail();
   } catch (e) {
     log(e);
     expect(e).toBeInstanceOf(ProtocolError);
@@ -54,7 +54,7 @@ test('Re-use token', async (done) => {
 
   try {
     await greeter.handleMessage(message);
-    expect(1).toEqual(0);
+    done.fail();
   } catch (e) {
     log(e);
     expect(e).toBeInstanceOf(ProtocolError);

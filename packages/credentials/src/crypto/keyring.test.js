@@ -21,7 +21,7 @@ test('Generate basic keys', async (done) => {
   done();
 });
 
-test('Sign a message with all keys', async (done) => {
+test('Sign and verify a message with all keys', async (done) => {
   const signed = await keyring.sign('Howdy', keyring.keys);
   expect(signed.signatures.length).toEqual(keyring.keys.length);
 
