@@ -15,9 +15,9 @@ const log = debug('creds:greet:token');
  * To be used for outside-of-party auth with the Greeter.
  */
 class Token {
-  constructor(targetParty, expiration = null) {
-    console.assert(targetParty);
-    this._party = targetParty;
+  constructor(party, expiration = null) {
+    console.assert(party);
+    this._party = party;
     this._expiration = expiration;
     this._value = crypto.randomBytes(32).toString('hex');
     this._challenge = crypto.randomBytes(8).toString('hex');
