@@ -86,7 +86,7 @@ export class Authentication {
       message = await this._unwrap(message);
       // With an envelope, the outer message will be signed by the known key of the Greeter, but the inner message
       // will be signed by unknown keys, since they were submitted during the greeting process (ie, before being
-      // admitted to the party.
+      // admitted to the party).
       requireKnownKey = false;
     }
 
@@ -287,10 +287,13 @@ export class Authentication {
    * @private
    */
   _admitKey(key) {
-    if (key && !this._allowedKeys.has(key)) {
+    console.assert(key);
+    if (!this._allowedKeys.has(key)) {
       log('Admitting key:', key);
       this._allowedKeys.add(key);
+      return true;
     }
+    return false;
   }
 
   /**
@@ -300,7 +303,8 @@ export class Authentication {
    * @private
    */
   _admitFeed(feed) {
-    if (feed && !this._allowedFeeds.has(feed)) {
+    console.assert(feed);
+    if (!this._allowedFeeds.has(feed)) {
       log('Admitting feed:', feed);
       this._allowedFeeds.add(feed);
       return true;
