@@ -2,7 +2,6 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import get from 'lodash.get';
 import through from 'through2';
 
 export const feedKey = (peer, party) => `/${peer}/${party}`;
@@ -46,15 +45,16 @@ export class Mixer {
       next();
     });
 
-    const matcher = (message) => {
-      let match = true;
-      Object.keys(filter).forEach((key) => {
-        if (get(message, key) !== filter[key]) {
-          match = false;
-        }
-      });
+    const matcher = ({ bucketId, payload: { __type_url: type } }) => {
+      if (filter.bucketId && filter.bucketId !== bucketId) {
+        return false;
+      }
 
-      return match;
+      if (filter.types && filter.types.find(t => t === type) === undefined) {
+        return false;
+      }
+
+      return true;
     };
 
     // TODO(burdon): Is this the right way to filter a stream (e.g., https://github.com/brycebaril/through2-filter)?

@@ -46,17 +46,30 @@ test('basic multiplexing', async (done) => {
     }
   });
 
+  const chessBulder = (bucketId, from, to) => ({
+    bucketId,
+    payload: {
+      __type_url: '.testing.Chess',
+      from,
+      to
+    }
+  });
+
   const messages = {
     'party-1': [
       bucketBuilder('bucket-1', 'Bucket 1'),
       mutationBulder('bucket-1', 'title', 'Title 1'),
+
+      chessBulder('bucket-1', 'e2', 'e4'),
+
       bucketBuilder('bucket-2', 'Bucket 2'),
       mutationBulder('bucket-2', 'title', 'Title 2'),
+      mutationBulder('bucket-2', 'title', 'Title 3'),
     ],
     'party-2': [
       bucketBuilder('bucket-3', 'Bucket 3'),
-      mutationBulder('bucket-3', 'title', 'Title 3'),
       mutationBulder('bucket-3', 'title', 'Title 4'),
+      mutationBulder('bucket-3', 'title', 'Title 5'),
     ]
   };
 
@@ -109,20 +122,27 @@ test('basic multiplexing', async (done) => {
 
   let count = 0;
   const buckets = new Map();
-  const bucketStream = mixer.createKeyStream(feedKey('.*', 'party-1'), { 'payload.__type_url': '.dxos.BucketGenesis' });
-  bucketStream.on('data', (message) => {
-    const { bucketId, meta } = message;
-    buckets.set(bucketId, meta);
+  mixer.createKeyStream(feedKey('.*', 'party-1'), {
+    types: ['.dxos.BucketGenesis']
+  })
+    .on('data', (message) => {
+      const { bucketId, meta } = message;
+      buckets.set(bucketId, meta);
 
-    // Separate stream for each bucket.
-    const appStream = mixer.createKeyStream(feedKey('.*', 'party-1'), { bucketId });
-    appStream.on('data', ({ payload }) => {
-      log(bucketId, JSON.stringify(payload));
-      if (++count === messages['party-1'].length) {
-        done();
-      }
+      // Separate stream for each bucket.
+      const appStream = mixer.createKeyStream(feedKey('.*', 'party-1'), {
+        bucketId,
+        types: ['.dxos.BucketGenesis', '.testing.Mutation']
+      });
+
+      appStream.on('data', ({ payload }) => {
+        log(bucketId, JSON.stringify(payload));
+        if (++count === 5) {
+          appStream.end();
+          done();
+        }
+      });
     });
-  });
 
   //
   // Write data to feeds.
