@@ -31,6 +31,9 @@ const signMessage = async (payload, keys) => {
     case AuthMessageTypes.ADMIT_FEED:
       payload.__type_url = '.dxos.auth.FeedAdmit';
       break;
+    case AuthMessageTypes.ENVELOPE:
+      payload.__type_url = '.dxos.auth.Envelope';
+      break;
   }
 
   const signed = {
@@ -50,7 +53,6 @@ const mockKeyring = async () => {
   }
   return keyring;
 };
-
 
 test('Process Basic Message Types', async (done) => {
   const keyring = await mockKeyring();
@@ -198,6 +200,44 @@ test('Authentication (BAD)', async (done) => {
 
   const ok = await auth.authenticate(credentials);
   expect(ok).toBeFalsy();
+
+  done();
+});
+
+test('Greeter Envelopes', async (done) => {
+  const keyring = await mockKeyring();
+  const auth = await new Authentication().init();
+
+  const genesis = await signMessage({
+    type: AuthMessageTypes.GENESIS,
+    party: keyring.party.publicKey,
+    admit: keyring.pseudonym.publicKey,
+    feed: keyring.feed.publicKey,
+  }, [keyring.party, keyring.pseudonym, keyring.feed]);
+
+  await auth.processMessage(genesis);
+
+  expect(auth._keyring.get(keyring.pseudonym).key).toEqual(keyring.pseudonym.key);
+
+  const secondKeyring = await mockKeyring();
+
+  const pseudo = await signMessage({
+    type: AuthMessageTypes.ADMIT_KEY,
+    party: keyring.party.publicKey,
+    admit: secondKeyring.pseudonym.publicKey,
+  }, [secondKeyring.pseudonym]);
+
+  const envelope = await signMessage({
+    type: AuthMessageTypes.ENVELOPE,
+    contents: {
+      ...pseudo,
+      __type_url: '.dxos.auth.SignedMessage'
+    }
+  }, [keyring.pseudonym]);
+
+  await auth.processMessage(envelope);
+
+  expect(auth._keyring.get(secondKeyring.pseudonym).key).toEqual(secondKeyring.pseudonym.key);
 
   done();
 });

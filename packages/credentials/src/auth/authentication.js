@@ -87,7 +87,7 @@ export class Authentication {
   async processMessage(message) {
     console.assert(message);
 
-    const { signed, signatures } = message;
+    let { signed, signatures } = message;
     if (!signed || !signatures || !Array.isArray(signatures)) {
       throw new Error(`Bad message: ${JSON.stringify(message)}`);
     }
@@ -95,6 +95,8 @@ export class Authentication {
 
     if (signed.type === AuthMessageTypes.ENVELOPE) {
       message = await this._unwrap(message);
+      signed = message.signed;
+      signatures = message.signatures;
       // With an envelope, the outer message will be signed by the known key of the Greeter, but the inner message
       // will be signed by unknown keys, since they were submitted during the greeting process (ie, before being
       // admitted to the party).
@@ -202,10 +204,10 @@ export class Authentication {
     // The outer envelope must always be signed with a known key.
     const verified = await this._verifySignatures(message, true);
     if (!verified) {
-      throw new Error(`Bad envelope: ${message}`);
+      throw new Error(`Bad envelope: ${JSON.stringify(message)}`);
     }
 
-    return message.signed.original.contents;
+    return message.signed.contents;
   }
 
   /**
@@ -282,7 +284,7 @@ export class Authentication {
     for await (const sig of signatures) {
       const result = await this._keyring.verify(signed, sig.signature, sig.key);
       if (!result) {
-        log('Bad signature:', sig);
+        log('Bad signature:', keyToHex(sig));
         return false;
       }
 
