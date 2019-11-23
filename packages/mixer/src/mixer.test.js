@@ -46,12 +46,12 @@ test('basic multiplexing', async (done) => {
     }
   });
 
-  const chessBulder = (bucketId, from, to) => ({
+  const gameBuilder = (bucketId, position, piece) => ({
     bucketId,
     payload: {
-      __type_url: '.testing.Chess',
-      from,
-      to
+      __type_url: '.testing.Game',
+      position,
+      piece
     }
   });
 
@@ -60,7 +60,7 @@ test('basic multiplexing', async (done) => {
       bucketBuilder('bucket-1', 'Bucket 1'),
       mutationBulder('bucket-1', 'title', 'Title 1'),
 
-      chessBulder('bucket-1', 'e2', 'e4'),
+      gameBuilder('bucket-1', 'a1', 'o'),
 
       bucketBuilder('bucket-2', 'Bucket 2'),
       mutationBulder('bucket-2', 'title', 'Title 2'),

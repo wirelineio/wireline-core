@@ -11,7 +11,7 @@ message Mutation {
   string value = 2;
 }
 
-message Chess {
-  string from = 1;
-  string to = 2;
+message Game {
+  string position = 1;
+  string piece = 2;
 }

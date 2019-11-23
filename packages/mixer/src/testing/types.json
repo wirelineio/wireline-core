@@ -14,15 +14,11 @@
             }
           }
         },
-        "Chess": {
+        "Game": {
           "fields": {
-            "from": {
+            "move": {
               "type": "string",
               "id": 1
-            },
-            "to": {
-              "type": "string",
-              "id": 2
             }
           }
         }
