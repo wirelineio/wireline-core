@@ -6,10 +6,6 @@ syntax = "proto3";
 
 package testing;
 
-message Credential {
-  string publicKey = 1;
-}
-
 message Mutation {
   string property = 1;
   string value = 2;

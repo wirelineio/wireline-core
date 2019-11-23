@@ -2,6 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+import get from 'lodash.get';
 import through from 'through2';
 
 export const feedKey = (peer, party) => `/${peer}/${party}`;
@@ -45,8 +46,16 @@ export class Mixer {
       next();
     });
 
-    // TODO(burdon): Implement query matcher.
-    const matcher = ({ bucketId }) => bucketId === filter.bucketId;
+    const matcher = (message) => {
+      let match = true;
+      Object.keys(filter).forEach((key) => {
+        if (get(message, key) !== filter[key]) {
+          match = false;
+        }
+      });
+
+      return match;
+    };
 
     // TODO(burdon): Is this the right way to filter a stream (e.g., https://github.com/brycebaril/through2-filter)?
     reader.on('data', (message) => {

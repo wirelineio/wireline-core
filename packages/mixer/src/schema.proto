@@ -16,3 +16,32 @@ message Message {
 
   google.protobuf.Any payload = 10;
 }
+
+//
+// Bucket metadata (overwrites previous).
+// TODO(burdon): CRDT for meta state? Esp. changing proto types?
+//
+message BucketMeta {
+
+  message Type {
+    string proto = 1;
+    string version = 2;
+  }
+
+  string timestamp = 1;
+  repeated Type types = 2;
+
+  string title = 10;
+
+  // TODO(burdon): Add generic key value properties.
+}
+
+//
+// Marks the beginning of a new bucket.
+// TODO(burdon): Signed message proving ownership of bucket.
+//
+message BucketGenesis {
+  string publicKey = 1;
+
+  BucketMeta meta = 2;
+}

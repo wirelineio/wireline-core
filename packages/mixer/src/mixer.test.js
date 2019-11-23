@@ -8,64 +8,82 @@ import hypertrie from 'hypertrie';
 import ram from 'random-access-memory';
 
 import { FeedStore } from '@dxos/feed-store';
+import { Codec } from '@wirelineio/codec-protobuf';
 
 import { Mixer, feedKey } from './mixer';
 
+const schema = require('./schema.json');
+const types = require('./testing/types.json');
+
 const log = debug('test');
+debug.enable('test');
 
 test('basic multiplexing', async (done) => {
 
+  //
+  // Data
+  //
+
   const { publicKey, secretKey } = crypto.keyPair();
 
-  const credentialBulder = publicKey => ({
-    __type_url: '.testing.Credential',
-    publicKey
+  const bucketBuilder = (bucketId, publicKey, title) => ({
+    bucketId,
+    payload: {
+      __type_url: '.dxos.BucketGenesis',
+      publicKey,
+      meta: {
+        title
+      }
+    }
   });
 
-  const mutationBulder = (property, value) => ({
-    __type_url: '.testing.Mutation',
-    property,
-    value
+  const mutationBulder = (bucketId, property, value) => ({
+    bucketId,
+    payload: {
+      __type_url: '.testing.Mutation',
+      property,
+      value
+    }
   });
 
   const messages = {
     'party-1': [
-      { bucketId: 'system',   payload: credentialBulder(publicKey) },
-      { bucketId: 'bucket-1', payload: mutationBulder('a', 1) },      // match
-      { bucketId: 'bucket-2', payload: mutationBulder('a', 1) },
-      { bucketId: 'bucket-1', payload: mutationBulder('b', 1) },      // match
-      { bucketId: 'bucket-1', payload: mutationBulder('b', 1) },      // match
-      { bucketId: 'bucket-2', payload: mutationBulder('a', 1) },
+      bucketBuilder('bucket-1', 'Bucket 1'),
+      mutationBulder('bucket-1', 'title', 'Title 1'),
+      bucketBuilder('bucket-2', 'Bucket 2'),
+      mutationBulder('bucket-2', 'title', 'Title 2'),
     ],
     'party-2': [
-      { bucketId: 'system',   payload: mutationBulder('a', 1) },
-      { bucketId: 'bucket-1', payload: mutationBulder('b', 1) },
-      { bucketId: 'bucket-1', payload: mutationBulder('c', 1) },
+      bucketBuilder('bucket-3', 'Bucket 3'),
+      mutationBulder('bucket-3', 'title', 'Title 3'),
+      mutationBulder('bucket-3', 'title', 'Title 4'),
     ]
   };
+
+  //
+  // FeedStore
+  //
+
+  const options = {
+    rootTypeUrl: '.dxos.Message'
+  };
+
+  const codec = new Codec(options)
+    .addJson(schema)
+    .addJson(types)
+    .build();
 
   const index = hypertrie(ram, publicKey, { secretKey });
   const feedStore = new FeedStore(index, ram, {
     feedOptions: {
-      valueEncoding: 'json'
+      valueEncoding: 'mixer'
+    },
+    codecs: {
+      mixer: codec
     }
   });
 
   await feedStore.initialize();
-
-  const mixer = new Mixer(feedStore);
-  const stream = mixer.createKeyStream(feedKey('.*', 'party-1'), { bucketId: 'bucket-1' });
-
-  let count = 0;
-  const matches = messages['party-1'].filter(({ bucketId }) => bucketId === 'bucket-1');
-  // TODO(burdon): Should be 'append' like hypercore?
-  stream.on('data', (message) => {
-    log(message);
-
-    if (++count === matches.length) {
-      done();
-    }
-  });
 
   const feeds = {
     'party-1': [
@@ -79,7 +97,37 @@ test('basic multiplexing', async (done) => {
 
   expect(feedStore.getFeeds()).toHaveLength(3);
 
+  //
+  // Mixer
+  //
+
+  const mixer = new Mixer(feedStore);
+
+  //
+  // Streams
+  //
+
+  let count = 0;
+  const buckets = new Map();
+  const bucketStream = mixer.createKeyStream(feedKey('.*', 'party-1'), { 'payload.__type_url': '.dxos.BucketGenesis' });
+  bucketStream.on('data', (message) => {
+    const { bucketId, meta } = message;
+    buckets.set(bucketId, meta);
+
+    // Separate stream for each bucket.
+    const appStream = mixer.createKeyStream(feedKey('.*', 'party-1'), { bucketId });
+    appStream.on('data', ({ payload }) => {
+      log(bucketId, JSON.stringify(payload));
+      if (++count === messages['party-1'].length) {
+        done();
+      }
+    });
+  });
+
+  //
   // Write data to feeds.
+  //
+
   Object.keys(messages).forEach((party) => {
     messages[party].forEach((message, i) => {
       const feed = feeds[party][i % feeds[party].length];

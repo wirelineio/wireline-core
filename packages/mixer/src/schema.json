@@ -13,6 +13,49 @@
               "id": 10
             }
           }
+        },
+        "BucketMeta": {
+          "fields": {
+            "timestamp": {
+              "type": "string",
+              "id": 1
+            },
+            "types": {
+              "rule": "repeated",
+              "type": "Type",
+              "id": 2
+            },
+            "title": {
+              "type": "string",
+              "id": 10
+            }
+          },
+          "nested": {
+            "Type": {
+              "fields": {
+                "proto": {
+                  "type": "string",
+                  "id": 1
+                },
+                "version": {
+                  "type": "string",
+                  "id": 2
+                }
+              }
+            }
+          }
+        },
+        "BucketGenesis": {
+          "fields": {
+            "publicKey": {
+              "type": "string",
+              "id": 1
+            },
+            "meta": {
+              "type": "BucketMeta",
+              "id": 2
+            }
+          }
         }
       }
     },

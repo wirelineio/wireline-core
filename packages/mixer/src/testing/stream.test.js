@@ -17,8 +17,8 @@ import { Codec } from '@wirelineio/codec-protobuf';
 
 import { arrayFromStream } from './stream';
 
-const schema = require('./schema.json');
-const types = require('./testing/types.json');
+const schema = require('../schema.json');
+const types = require('./types.json');
 
 const log = debug('test');
 debug.enable('test');
@@ -28,7 +28,6 @@ const createDB = () => {
   return sub(db, 'test', { valueEncoding: 'json' });
 };
 
-const credentialProcessor = ({ payload: { publicKey } }) => log(`credential: ${publicKey}`);
 const mutationProcessor = ({ payload: { property, value } }) => log(`mutation: [${property}=>${value}]`);
 const chessProcessor = ({ payload: { from, to } }) => log(`chess: [${from}=>${to}]`);
 
@@ -157,14 +156,6 @@ test('feedstore proto stream', async (done) => {
     {
       bucketId: 'bucket-1',
       payload: {
-        __type_url: '.testing.Credential',
-        publicKey: publicKey.toString('hex')
-      }
-    },
-
-    {
-      bucketId: 'bucket-1',
-      payload: {
         __type_url: '.testing.Mutation',
         property: 'title',
         value: 'hello world'
@@ -172,7 +163,7 @@ test('feedstore proto stream', async (done) => {
     },
 
     {
-      bucketId: 'bucket-1',
+      bucketId: 'bucket-2',
       payload: {
         __type_url: '.testing.Chess',
         from: 'e2',
@@ -180,7 +171,7 @@ test('feedstore proto stream', async (done) => {
       }
     },
     {
-      bucketId: 'bucket-1',
+      bucketId: 'bucket-2',
       payload: {
         __type_url: '.testing.Chess',
         from: 'e6',
@@ -223,7 +214,6 @@ test('feedstore proto stream', async (done) => {
   });
 
   const stateMachines = {
-    '.testing.Credential': credentialProcessor,
     '.testing.Chess': chessProcessor,
     '.testing.Mutation': mutationProcessor,
   };

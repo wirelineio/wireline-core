@@ -2,8 +2,6 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-import crypto from 'hypercore-crypto';
-
 import { Codec } from '@wirelineio/codec-protobuf';
 
 const schema = require('./schema.json');
@@ -20,23 +18,21 @@ test('encoding/decoding', () => {
     .addJson(types)
     .build();
 
-  const { publicKey } = crypto.keyPair();
-
   const messages = [
-    {
-      bucketId: 'bucket-1',
-      payload: {
-        __type_url: '.testing.Credential',
-        publicKey: publicKey.toString('hex')
-      }
-    },
-
     {
       bucketId: 'bucket-1',
       payload: {
         __type_url: '.testing.Mutation',
         property: 'title',
         value: 'hello world'
+      }
+    },
+    {
+      bucketId: 'bucket-2',
+      payload: {
+        __type_url: '.testing.Chess',
+        from: 'e2',
+        to: 'e4'
       }
     }
   ];
