@@ -29,7 +29,9 @@ const createDB = () => {
 };
 
 const mutationProcessor = ({ payload: { property, value } }) => log(`mutation: [${property}=>${value}]`);
-const chessProcessor = ({ payload: { from, to } }) => log(`chess: [${from}=>${to}]`);
+
+// TODO(burdon): Use Game.
+const gameProcessor = ({ payload: { move, piece } }) => log(`game: [${move}:${piece}]`);
 
 const messages = [
   { id: 'bucket-1/message/1', value: 100 },
@@ -165,17 +167,17 @@ test('feedstore proto stream', async (done) => {
     {
       bucketId: 'bucket-2',
       payload: {
-        __type_url: '.testing.Chess',
-        from: 'e2',
-        to: 'e4'
+        __type_url: '.testing.Game',
+        position: 'a1',
+        piece: 0
       }
     },
     {
       bucketId: 'bucket-2',
       payload: {
-        __type_url: '.testing.Chess',
-        from: 'e6',
-        to: 'e5'
+        __type_url: '.testing.Game',
+        position: 'b2',
+        piece: 1
       }
     }
   ];
@@ -214,7 +216,7 @@ test('feedstore proto stream', async (done) => {
   });
 
   const stateMachines = {
-    '.testing.Chess': chessProcessor,
+    '.testing.Game': gameProcessor,
     '.testing.Mutation': mutationProcessor,
   };
 

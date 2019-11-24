@@ -30,9 +30,9 @@ test('encoding/decoding', () => {
     {
       bucketId: 'bucket-2',
       payload: {
-        __type_url: '.testing.Chess',
-        from: 'e2',
-        to: 'e4'
+        __type_url: '.testing.Game',
+        position: 'a1',
+        piece: 0
       }
     }
   ];

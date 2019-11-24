@@ -12,6 +12,16 @@ message Mutation {
 }
 
 message Game {
-  string position = 1;
-  string piece = 2;
+  enum Piece {
+    O = 0;
+    X = 1;
+  }
+
+  // Hash of previous game state.
+  string hash = 1;
+
+  // a1 ... c3
+  string position = 2;
+
+  Piece piece = 3;
 }

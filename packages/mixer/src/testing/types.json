@@ -16,9 +16,25 @@
         },
         "Game": {
           "fields": {
-            "move": {
+            "hash": {
               "type": "string",
               "id": 1
+            },
+            "position": {
+              "type": "string",
+              "id": 2
+            },
+            "piece": {
+              "type": "Piece",
+              "id": 3
+            }
+          },
+          "nested": {
+            "Piece": {
+              "values": {
+                "O": 0,
+                "X": 1
+              }
             }
           }
         }

@@ -15,6 +15,15 @@ const lines = [
   ['a3', 'b2', 'c1'],
 ];
 
+export const GameBuilder = (bucketId, position, piece) => ({
+  bucketId,
+  payload: {
+    __type_url: '.testing.Game',
+    position,
+    piece
+  }
+});
+
 /**
  * Noughts-and-crosses game.
  */
@@ -25,8 +34,9 @@ export class Game {
 
   ascii() {
     const rows = [];
+    const pieces = 'ox';
     this._state.forEach((row, i) => {
-      rows.push(row.map(c => c || ' ').join('|'));
+      rows.push(row.map((c => (c === undefined ? ' ' : pieces[c]))).join('|'));
       if (i < 2) {
         rows.push('-+-+-');
       }
@@ -42,20 +52,21 @@ export class Game {
   winner() {
     let winner;
     lines.forEach((line) => {
-      const count = {
-        o: 0,
-        x: 0
-      };
+      const count = [0, 0];
 
       line.forEach((position) => {
         const { row, column } = this.position(position);
         const piece = this._state[row][column];
-        if (piece) {
+        if (piece !== undefined) {
           count[piece]++;
         }
       });
 
-      Object.keys(count).forEach((piece) => { if (count[piece] === 3) { winner = piece; } });
+      count.forEach((value, i) => {
+        if (value === 3) {
+          winner = i;
+        }
+      });
     });
 
     return winner;
@@ -84,7 +95,11 @@ export class Game {
       throw new Error(`Illegal move: ${position}`);
     }
 
-    this._state[row][column] = piece.toLowerCase();
+    if (piece !== 0 && piece !== 1) {
+      throw new Error(`Illegal piece: ${piece}`);
+    }
+
+    this._state[row][column] = piece;
     this._move++;
 
     return this;
