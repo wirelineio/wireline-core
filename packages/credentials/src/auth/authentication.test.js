@@ -6,7 +6,7 @@ import debug from 'debug';
 
 import { Codec } from '@wirelineio/codec-protobuf';
 
-import authTypes from './authTypes';
+import partyProtobuf from './party';
 import { Authentication, AuthMessageTypes, } from './authentication';
 import { Keyring, KeyTypes } from '../crypto';
 
@@ -15,25 +15,27 @@ const log = debug('creds:authentication:test');
 jest.setTimeout(60000);
 
 const codec = new Codec({
-  rootTypeUrl: '.dxos.auth.SignedMessage'
-}).addJson(authTypes).build();
+  rootTypeUrl: '.dxos.party.SignedMessage'
+}).addJson(partyProtobuf).build();
 
 const signMessage = async (payload, keys) => {
   const keyring = new Keyring();
 
   switch (payload.type) {
     case AuthMessageTypes.GENESIS:
-      payload.__type_url = '.dxos.auth.PartyGenesis';
+      payload.__type_url = '.dxos.party.PartyGenesis';
       break;
     case AuthMessageTypes.ADMIT_KEY:
-      payload.__type_url = '.dxos.auth.KeyAdmit';
+      payload.__type_url = '.dxos.party.KeyAdmit';
       break;
     case AuthMessageTypes.ADMIT_FEED:
-      payload.__type_url = '.dxos.auth.FeedAdmit';
+      payload.__type_url = '.dxos.party.FeedAdmit';
       break;
     case AuthMessageTypes.ENVELOPE:
-      payload.__type_url = '.dxos.auth.Envelope';
+      payload.__type_url = '.dxos.party.Envelope';
       break;
+    default:
+      log('Unknown type:', payload.type);
   }
 
   const signed = {
@@ -231,7 +233,7 @@ test('Greeter Envelopes', async (done) => {
     type: AuthMessageTypes.ENVELOPE,
     contents: {
       ...pseudo,
-      __type_url: '.dxos.auth.SignedMessage'
+      __type_url: '.dxos.party.SignedMessage'
     }
   }, [keyring.pseudonym]);
 
