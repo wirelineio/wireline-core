@@ -10,7 +10,8 @@ import { Extension } from './extension';
 import { ProtocolError } from './protocol';
 
 
-const log = debug('protocol:greeter');
+const log = debug('protocol:greeter'); // eslint-disable-line no-unused-vars
+
 
 /**
  * An extension for 'greet' nodes.  The Greeter operates on party A in the open, verifying nodes'
@@ -20,7 +21,7 @@ export class Greeter extends EventEmitter {
 
   static EXTENSION_NAME = 'greeter';
 
-  constructor(peerId, peerMessageHandler, options = {}) {
+  constructor(peerId, peerMessageHandler, params = {}) {
     super();
 
     console.assert(Buffer.isBuffer(peerId));
@@ -28,6 +29,7 @@ export class Greeter extends EventEmitter {
     this._peerId = peerId;
     this._peers = new Map();
     this._peerMessageHandler = peerMessageHandler;
+    this._params = params;
   }
 
   get peerId() {
