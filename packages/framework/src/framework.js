@@ -154,14 +154,6 @@ class Framework extends EventEmitter {
     return `Framework(${JSON.stringify(meta)})`;
   }
 
-  view(name) {
-    return this._kappa.api[name];
-  }
-
-  get authView() {
-    return this.view('auth');
-  }
-
   async initialize() {
     console.assert(!this._initialized);
 
