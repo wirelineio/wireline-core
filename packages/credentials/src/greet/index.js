@@ -3,3 +3,4 @@
 //
 
 export * from './tokenGreeter';
+export * from './codec';

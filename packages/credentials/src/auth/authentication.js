@@ -87,6 +87,11 @@ export class Authentication {
   async processMessage(message) {
     console.assert(message);
 
+    const original = message;
+    if (message.data) {
+      message = message.data;
+    }
+
     let { signed, signatures } = message;
     if (!signed || !signatures || !Array.isArray(signatures)) {
       throw new Error(`Bad message: ${JSON.stringify(message)}`);

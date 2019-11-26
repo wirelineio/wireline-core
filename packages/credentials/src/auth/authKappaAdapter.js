@@ -26,7 +26,7 @@ export class AuthKappaAdapter {
 
     // Process N messages of other types.
     Object.getOwnPropertyNames(AuthMessageTypes).forEach((type) => {
-      if (type !== AuthMessageTypes.GENESIS) {
+      if (AuthMessageTypes[type] !== AuthMessageTypes.GENESIS) {
         this._view.events.on(AuthMessageTypes[type], this._enqueue.bind(this));
       }
     });

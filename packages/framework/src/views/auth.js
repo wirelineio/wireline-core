@@ -2,6 +2,8 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+const { Keyring, AuthMessageTypes, partyCodec } = require('@wirelineio/credentials');
+
 const EventEmitter = require('events');
 const view = require('kappa-view-level');
 const sub = require('subleveldown');
@@ -17,7 +19,7 @@ module.exports = function AuthView(viewId, db, core, { append, isLocal }) {
   return view(viewDB, {
     map(msg) {
       const { value } = msg;
-      if (!value.type.startsWith('party.')) {
+      if (value.bucketId !== 'party' && !value.type.startsWith('party.')) {
         return [];
       }
 
@@ -42,23 +44,73 @@ module.exports = function AuthView(viewId, db, core, { append, isLocal }) {
       msgs
         .filter(msg => msg.value.type.startsWith('party.'))
         .forEach(({ value }) => {
+          if (value.data && !Buffer.isBuffer(value.data)) {
+            value.data = Buffer.from(value.data);
+          }
+          value.data = partyCodec.decode(value.data);
           events.emit(value.type, value, isLocal(value));
         });
     },
 
     api: {
-      async write(core, { data }) {
-        const { type } = data;
-        if (!type) {
-          throw new Error('type must be specified!');
+      async signAndWrite(core, data, keys) {
+        const keyring = new Keyring();
+
+        switch (data.type) {
+          case AuthMessageTypes.GENESIS:
+            data.__type_url = '.dxos.party.PartyGenesis';
+            break;
+          case AuthMessageTypes.ADMIT_KEY:
+            data.__type_url = '.dxos.party.KeyAdmit';
+            break;
+          case AuthMessageTypes.ADMIT_FEED:
+            data.__type_url = '.dxos.party.FeedAdmit';
+            break;
+          case AuthMessageTypes.ENVELOPE:
+            data.__type_url = '.dxos.party.Envelope';
+            break;
+          default:
+            throw new Error(`Bad message type: ${data.type}`);
         }
+
+        const signed = {
+          bucketId: 'party',
+          __type_url: '.dxos.party.SignedMessage',
+          ...await keyring.sign(data, keys)
+        };
+
+        return core.api[viewId].write(signed);
+      },
+
+      async write(core, data) {
+        // All of our data should be signed.
+        const keyring = new Keyring();
+
+        const { signed, signatures } = data;
+        if (!signed || !signatures || !Array.isArray(signatures)) {
+          throw new Error(`Bad message: ${JSON.stringify(data)}`);
+        }
+
+        const verified = await keyring.verify(data);
+        if (!verified) {
+          throw new Error(`Unverifiable message: ${JSON.stringify(data)}`);
+        }
+
+        const { type } = signed;
+        if (!type) {
+          throw new Error(`Bad message type: ${type}`);
+        }
+
+        const encoded = partyCodec.encode(data);
 
         const msg = await append({
           type,
-          data
+          data: encoded
         });
 
-        events.emit(type, msg, true);
+        msg.data = partyCodec.decode(msg.data);
+        msg.data.__type_url = data.__type_url;
+
         return msg;
       },
 

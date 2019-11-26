@@ -97,6 +97,10 @@ export class Keyring {
       key = keyToHex(key.publicKey);
     }
 
+    if (key.data && key.type === 'Buffer') {
+      key = Buffer.from(key);
+    }
+
     if (Buffer.isBuffer(key)) {
       key = keyToHex(key);
     }

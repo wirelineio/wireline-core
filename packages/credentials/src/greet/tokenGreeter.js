@@ -20,7 +20,7 @@ class Token {
     this._party = party;
     this._expiration = expiration;
     this._value = crypto.randomBytes(32).toString('hex');
-    this._challenge = crypto.randomBytes(8).toString('hex');
+    this._challenge = crypto.randomBytes(32);
     this._redeemed = null;
     this._revoked = null;
   }
@@ -103,8 +103,8 @@ export class TokenGreeter {
       return null;
     }
 
-    if (targetParty !== token.party) {
-      log(`${targetParty} !== ${token.party}`);
+    if (!targetParty.equals(token.party)) {
+      log(targetParty, '!==', token.party);
       token.revoke();
       return null;
     }
@@ -139,18 +139,21 @@ export class TokenGreeter {
 
     if (command === 'negotiate') {
       const next = this.issueToken(redeemed);
-      return { token: next.token, challenge: next.challenge };
+      return {
+        __type_url: '.dxos.greet.Message',
+        payload: { __type_url: '.dxos.greet.NegotiateResponse', token: next.token, challenge: next.challenge }
+      };
     }
 
     if (command === 'submit') {
       for await (const msg of params) {
         // The message needs to have our challenge inside it.
-        if (msg.data.signed.original.challenge !== redeemed.challenge) {
-          throw new ProtocolError(401, `Bad challenge: ${msg.data.signed.original.challenge}`);
+        if (!msg.signed.nonce.equals(redeemed.challenge)) {
+          throw new ProtocolError(401, `Bad challenge: ${msg.signed.nonce.toString('hex')}`);
         }
 
-        if (!msg.type.startsWith('party.admit.')) {
-          throw new ProtocolError(403, `Bad type: ${msg.type}`);
+        if (!msg.signed.type.startsWith('party.admit.')) {
+          throw new ProtocolError(403, `Bad type: ${msg.signed.type}`);
         }
 
         // And the signature needs to check out.
@@ -160,11 +163,18 @@ export class TokenGreeter {
         }
       }
 
-      const messages = await this._partyWriter(params);
+      const copies = await this._partyWriter(params);
       const hints = await this._gatherHints(params);
       return {
-        messages,
-        hints
+        __type_url: '.dxos.greet.Message',
+        payload: {
+          __type_url: '.dxos.greet.SubmitResponse',
+          copies,
+          hints: {
+            __type_url: '.dxos.greet.Hints',
+            ...hints
+          }
+        }
       };
     }
 

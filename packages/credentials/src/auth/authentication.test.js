@@ -4,19 +4,13 @@
 
 import debug from 'debug';
 
-import { Codec } from '@wirelineio/codec-protobuf';
-
-import partyProtobuf from './party';
 import { Authentication, AuthMessageTypes, } from './authentication';
+import { partyCodec } from './codec';
 import { Keyring, KeyTypes } from '../crypto';
 
 const log = debug('creds:authentication:test');
 
 jest.setTimeout(60000);
-
-const codec = new Codec({
-  rootTypeUrl: '.dxos.party.SignedMessage'
-}).addJson(partyProtobuf).build();
 
 const signMessage = async (payload, keys) => {
   const keyring = new Keyring();
@@ -44,8 +38,8 @@ const signMessage = async (payload, keys) => {
   };
 
   // Loop it through the codec to make sure every message we use is valid to the protobuf def.
-  const encoded = codec.encode(signed);
-  return codec.decode(encoded);
+  const encoded = partyCodec.encode(signed);
+  return partyCodec.decode(encoded);
 };
 
 const mockKeyring = async () => {
