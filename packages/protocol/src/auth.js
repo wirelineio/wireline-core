@@ -23,13 +23,15 @@ export class Auth extends EventEmitter {
    * @param {string} peerId
    * @param authentication
    */
-  constructor(peerId, authentication = null) {
+  constructor(peerId, codec, authentication = null) {
     super();
 
     console.assert(Buffer.isBuffer(peerId));
+    console.assert(codec);
 
     this._peerId = peerId;
     this._authentication = authentication;
+    this._codec = codec;
   }
 
   get authentication() {
@@ -55,7 +57,25 @@ export class Auth extends EventEmitter {
       return;
     }
 
-    if (await this._authentication.authenticate(context.auth)) {
+    let creds = context.auth;
+
+    if (creds) {
+      if (!Buffer.isBuffer(creds)) {
+        creds = Buffer.from(creds, 'base64');
+      }
+      try {
+        creds = this._codec.decode(creds);
+      } catch (e) {
+        throw new ProtocolError(401, e);
+      }
+    }
+
+    // TODO(telackey): The signed auth message should contain verifiable information for both ends, eg,
+    //  the ID of both source and target, and a nonce or challenge provided by the target to the source
+    //  for this particular exchange.  We will need to add appropriate hooks between the connect and
+    //  handshake calls to do that though.
+
+    if (await this._authentication.authenticate(creds)) {
       log('Authenticated!');
     } else {
       throw new ProtocolError(401, 'Unauthorized access rejected!');
