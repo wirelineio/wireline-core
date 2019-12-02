@@ -10,10 +10,10 @@ import { ProtocolError } from '@wirelineio/protocol';
 import { TokenGreeter } from './tokenGreeter';
 
 const log = debug('creds:test');
-const PARTY = crypto.randomBytes(32).toString('hex');
+const PARTY = crypto.randomBytes(32);
 
 test('Good token', async (done) => {
-  const greeter = new TokenGreeter(() => {}, () => {});
+  const greeter = new TokenGreeter(() => {}, () => {}, { party: PARTY });
   const token = await greeter.issueToken({ party: PARTY });
 
   const message = {
@@ -28,7 +28,7 @@ test('Good token', async (done) => {
 });
 
 test('Bad token', async (done) => {
-  const greeter = new TokenGreeter(() => {}, () => {});
+  const greeter = new TokenGreeter(() => {}, () => {}, { party: PARTY });
   const token = await greeter.issueToken({ party: PARTY });
 
   const message = {
@@ -49,7 +49,7 @@ test('Bad token', async (done) => {
 });
 
 test('Re-use token', async (done) => {
-  const greeter = new TokenGreeter(() => {}, () => {});
+  const greeter = new TokenGreeter(() => {}, () => {}, { party: PARTY });
   const token = await greeter.issueToken({ party: PARTY });
 
   const message = {
@@ -62,6 +62,21 @@ test('Re-use token', async (done) => {
 
   try {
     await greeter.handleMessage(message);
+    done.fail();
+  } catch (e) {
+    log(e);
+    expect(e).toBeInstanceOf(ProtocolError);
+  }
+
+  done();
+});
+
+test('Wrong party', async (done) => {
+  const greeter = new TokenGreeter(() => {}, () => {}, { party: PARTY });
+  const wrongParty = crypto.randomBytes(32);
+
+  try {
+    const token = await greeter.issueToken({ party: wrongParty });
     done.fail();
   } catch (e) {
     log(e);

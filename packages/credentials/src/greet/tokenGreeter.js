@@ -6,6 +6,7 @@ import debug from 'debug';
 import crypto from 'hypercore-crypto';
 
 import { ProtocolError } from '@wirelineio/protocol';
+import { keyToHex } from '@wirelineio/utils';
 
 import { Keyring } from '../crypto';
 
@@ -83,17 +84,38 @@ class Token {
 }
 
 export class TokenGreeter {
-  constructor(partyWriter, gatherHints, props) {
+  constructor(partyWriter, gatherHints, props = {}) {
     this._props = props;
     this._keyring = new Keyring();
     this._tokens = new Map();
     this._partyWriter = partyWriter;
     this._gatherHints = gatherHints;
+    this._allowedParties = new Set();
+
+    this.addAllowedParty(props.party);
   }
 
-  _isAllowedParty(party) {
-    // TODO(telackey): Truly perform this check.
-    return true;
+  addAllowedParty(party) {
+    if (!party) {
+      return;
+    }
+
+    if (Buffer.isBuffer(party)) {
+      party = keyToHex(party);
+    }
+    this._allowedParties.add(party);
+  }
+
+  isAllowedParty(party) {
+    if (!party) {
+      return false;
+    }
+
+    if (Buffer.isBuffer(party)) {
+      party = keyToHex(party);
+    }
+
+    return this._allowedParties.has(party);
   }
 
   async _redeemToken(tokenValue, targetParty) {
@@ -114,13 +136,14 @@ export class TokenGreeter {
   }
 
   issueToken({ token, party, expiration }) {
+    // If token is present, always use its values.
     if (token) {
       party = token.party;
       expiration = token.expiration;
     }
 
-    if (!this._isAllowedParty(party)) {
-      throw new Error(`Bad party: ${party}`);
+    if (!this.isAllowedParty(party)) {
+      throw new ProtocolError(403, `Bad party: ${party}`);
     }
 
     const ret = new Token(party, expiration);
