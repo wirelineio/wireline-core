@@ -4,4 +4,5 @@
 
 export * from './party';
 export * from './partyKappaAdapter';
+export * from './partyMessageTypes';
 export * from './codec';

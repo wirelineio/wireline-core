@@ -15,7 +15,9 @@ const log = debug('creds:party');
  * Build up the party from signed messages.
  */
 export class Party {
-  constructor() {
+  constructor(partyKey) {
+    console.assert(Buffer.isBuffer(partyKey));
+    this._partyKey = partyKey;
     this._keyring = new Keyring();
   }
 
@@ -77,6 +79,8 @@ export class Party {
     if (!verified) {
       throw new Error(`Unverifiable message: ${JSON.stringify(message)}`);
     }
+
+    // TODO: Check that the Genesis message matches our expected party.
 
     const signedBy = this.signingKeys(message);
 

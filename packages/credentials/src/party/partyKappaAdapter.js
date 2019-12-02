@@ -9,12 +9,12 @@ import { PartyMessageTypes } from './partyMessageTypes';
 const log = debug('creds:party:kappa');
 
 export class PartyKappaAdapter {
-  constructor(view, partyConstruction) {
+  constructor(view, party) {
     console.assert(view);
-    console.assert(partyConstruction);
+    console.assert(party);
 
     this._view = view;
-    this._partyConstruction = partyConstruction;
+    this._party = party;
     this._queue = [];
 
     this._draining = false;
@@ -45,7 +45,7 @@ export class PartyKappaAdapter {
     this._draining = true;
     while (this._queue.length) {
       try {
-        await this._partyConstruction.processMessage(this._queue.shift());
+        await this._party.processMessage(this._queue.shift());
       } catch (err) {
         log(err);
       }

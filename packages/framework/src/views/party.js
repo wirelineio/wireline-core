@@ -2,7 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const { Keyring, AuthMessageTypes, partyCodec } = require('@wirelineio/credentials');
+const { Keyring, PartyMessageTypes, partyCodec } = require('@wirelineio/credentials');
 
 const EventEmitter = require('events');
 const view = require('kappa-view-level');
@@ -10,7 +10,7 @@ const sub = require('subleveldown');
 
 const { uuid } = require('../utils/uuid');
 
-module.exports = function AuthView(viewId, db, core, { append, isLocal }) {
+module.exports = function PartyView(viewId, db, core, { append, isLocal }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
@@ -57,16 +57,16 @@ module.exports = function AuthView(viewId, db, core, { append, isLocal }) {
         const keyring = new Keyring();
 
         switch (data.type) {
-          case AuthMessageTypes.GENESIS:
+          case PartyMessageTypes.GENESIS:
             data.__type_url = '.dxos.party.PartyGenesis';
             break;
-          case AuthMessageTypes.ADMIT_KEY:
+          case PartyMessageTypes.ADMIT_KEY:
             data.__type_url = '.dxos.party.KeyAdmit';
             break;
-          case AuthMessageTypes.ADMIT_FEED:
+          case PartyMessageTypes.ADMIT_FEED:
             data.__type_url = '.dxos.party.FeedAdmit';
             break;
-          case AuthMessageTypes.ENVELOPE:
+          case PartyMessageTypes.ENVELOPE:
             data.__type_url = '.dxos.party.Envelope';
             break;
           default:

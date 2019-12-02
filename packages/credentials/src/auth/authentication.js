@@ -17,10 +17,10 @@ const log = debug('creds:authentication');
  * Used by AuthExtension for authenticating nodes during handshake.
  */
 export class Authentication {
-  constructor(partyConstruction, hints = null) {
-    console.assert(partyConstruction);
+  constructor(party, hints = null) {
+    console.assert(party);
     this._hints = hints;
-    this._partyConstruction = partyConstruction;
+    this._party = party;
     this._keyring = new Keyring();
   }
 
@@ -74,13 +74,13 @@ export class Authentication {
 
     // Now check that the signing key is truly authorized.
     for await (const sig of credentials.signatures) {
-      const trusted = await this._partyConstruction.isTrustedKey(sig.key);
+      const trusted = await this._party.isTrustedKey(sig.key);
       if (trusted) {
         log('Credentials signed with trusted key:', keyToHex(sig.key));
         return true;
       }
 
-      const hinted = await this._keyring.has({ key: sig.key });
+      const hinted = await this._keyring.has(sig.key);
       if (hinted) {
         log('Credentials signed with hinted key:', keyToHex(sig.key));
         return true;

@@ -54,7 +54,7 @@ const mockKeyring = async () => {
 
 test('Process Basic Message Types', async (done) => {
   const keyring = await mockKeyring();
-  const partyConstruction = new Party();
+  const party = new Party(keyring.party.publicKey);
 
   const extraFeed = await keyring.generate({ type: KeyTypes.FEED });
 
@@ -81,20 +81,20 @@ test('Process Basic Message Types', async (done) => {
   ];
 
   for await (const message of messages) {
-    await partyConstruction.processMessage(message);
+    await party.processMessage(message);
   }
 
-  expect(partyConstruction._keyring.get(keyring.pseudonym).key).toEqual(keyring.pseudonym.key);
-  expect(partyConstruction._keyring.get(keyring.devicePseudonym).key).toEqual(keyring.devicePseudonym.key);
-  expect(partyConstruction._keyring.findOne({ key: keyring.feed.key, type: KeyTypes.FEED }).key).toContain(keyring.feed.key);
-  expect(partyConstruction._keyring.findOne({ key: extraFeed.key, type: KeyTypes.FEED }).key).toContain(extraFeed.key);
+  expect(party._keyring.get(keyring.pseudonym).key).toEqual(keyring.pseudonym.key);
+  expect(party._keyring.get(keyring.devicePseudonym).key).toEqual(keyring.devicePseudonym.key);
+  expect(party._keyring.findOne({ key: keyring.feed.key, type: KeyTypes.FEED }).key).toContain(keyring.feed.key);
+  expect(party._keyring.findOne({ key: extraFeed.key, type: KeyTypes.FEED }).key).toContain(extraFeed.key);
 
   done();
 });
 
 test('Reject Message from Unknown Source', async (done) => {
   const keyring = await mockKeyring();
-  const partyConstruction = new Party();
+  const party = new Party(keyring.party.publicKey);
 
   const unknownKey = await keyring.generate();
 
@@ -117,22 +117,22 @@ test('Reject Message from Unknown Source', async (done) => {
 
   for await (const message of messages) {
     try {
-      await partyConstruction.processMessage(message);
+      await party.processMessage(message);
     } catch (e) {
       hadError = true;
     }
   }
 
   expect(hadError).toBeTruthy();
-  expect(partyConstruction._keyring.get(keyring.pseudonym).key).toEqual(keyring.pseudonym.key);
-  expect(partyConstruction._keyring.get(keyring.devicePseudonym)).toBeNull();
+  expect(party._keyring.get(keyring.pseudonym).key).toEqual(keyring.pseudonym.key);
+  expect(party._keyring.get(keyring.devicePseudonym)).toBeNull();
 
   done();
 });
 
 test('Greeter Envelopes', async (done) => {
   const keyring = await mockKeyring();
-  const partyConstruction = new Party();
+  const party = new Party(keyring.party.publicKey);
 
   const genesis = await signMessage({
     type: PartyMessageTypes.GENESIS,
@@ -141,9 +141,9 @@ test('Greeter Envelopes', async (done) => {
     feed: keyring.feed.publicKey,
   }, [keyring.party, keyring.pseudonym, keyring.feed]);
 
-  await partyConstruction.processMessage(genesis);
+  await party.processMessage(genesis);
 
-  expect(partyConstruction._keyring.get(keyring.pseudonym).key).toEqual(keyring.pseudonym.key);
+  expect(party._keyring.get(keyring.pseudonym).key).toEqual(keyring.pseudonym.key);
 
   const secondKeyring = await mockKeyring();
 
@@ -161,9 +161,9 @@ test('Greeter Envelopes', async (done) => {
     }
   }, [keyring.pseudonym]);
 
-  await partyConstruction.processMessage(envelope);
+  await party.processMessage(envelope);
 
-  expect(partyConstruction._keyring.get(secondKeyring.pseudonym).key).toEqual(secondKeyring.pseudonym.key);
+  expect(party._keyring.get(secondKeyring.pseudonym).key).toEqual(secondKeyring.pseudonym.key);
 
   done();
 });

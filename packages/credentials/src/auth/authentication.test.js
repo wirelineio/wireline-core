@@ -54,8 +54,8 @@ const mockKeyring = async () => {
 
 test('Authentication (GOOD)', async (done) => {
   const keyring = await mockKeyring();
-  const partyConstruction = new Party();
-  const auth = await new Authentication(partyConstruction).init();
+  const party = new Party(keyring.party.publicKey);
+  const auth = await new Authentication(party).init();
 
   const peer = await keyring.generate();
 
@@ -70,7 +70,7 @@ test('Authentication (GOOD)', async (done) => {
   ];
 
   for await (const message of messages) {
-    await partyConstruction.processMessage(message);
+    await party.processMessage(message);
   }
 
   const credentials = await keyring.sign({
@@ -86,8 +86,8 @@ test('Authentication (GOOD)', async (done) => {
 
 test('Authentication (BAD)', async (done) => {
   const keyring = await mockKeyring();
-  const partyConstruction = new Party();
-  const auth = await new Authentication(partyConstruction).init();
+  const party = new Party(keyring.party.publicKey);
+  const auth = await new Authentication(party).init();
 
   const peer = await keyring.generate();
 
@@ -102,7 +102,7 @@ test('Authentication (BAD)', async (done) => {
   ];
 
   for await (const message of messages) {
-    await partyConstruction.processMessage(message);
+    await party.processMessage(message);
   }
 
   const unknownKey = await keyring.generate();
