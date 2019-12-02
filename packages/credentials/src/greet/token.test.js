@@ -41,7 +41,6 @@ test('Bad token', async (done) => {
     await greeter.handleMessage(message);
     done.fail();
   } catch (e) {
-    log(e);
     expect(e).toBeInstanceOf(ProtocolError);
   }
 
@@ -64,7 +63,6 @@ test('Re-use token', async (done) => {
     await greeter.handleMessage(message);
     done.fail();
   } catch (e) {
-    log(e);
     expect(e).toBeInstanceOf(ProtocolError);
   }
 
@@ -79,7 +77,6 @@ test('Wrong party', async (done) => {
     const token = await greeter.issueToken({ party: wrongParty });
     done.fail();
   } catch (e) {
-    log(e);
     expect(e).toBeInstanceOf(ProtocolError);
   }
 

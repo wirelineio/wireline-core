@@ -4,12 +4,10 @@
 
 import { Codec } from '@wirelineio/codec-protobuf';
 
-import partyProtobuf from './party';
 import authProtobuf from './auth';
+import partyProtobuf from '../party/partyConstruction';
 
-export const partyCodec = new Codec({ rootTypeUrl: '.dxos.party.SignedMessage' })
+export const authCodec = new Codec({ rootTypeUrl: '.dxos.party.SignedMessage' })
   .addJson(partyProtobuf)
   .addJson(authProtobuf)
   .build();
-
-export const authCodec = partyCodec;

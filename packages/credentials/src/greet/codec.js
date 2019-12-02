@@ -4,7 +4,7 @@
 
 import { Codec } from '@wirelineio/codec-protobuf';
 
-import partyProtobuf from '../auth/party';
+import partyProtobuf from '../party/partyConstruction';
 import greetProtobuf from './greet';
 
 export const greeterCodec = new Codec({
