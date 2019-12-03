@@ -10,16 +10,18 @@ const sub = require('subleveldown');
 
 const { uuid } = require('../utils/uuid');
 
+const BUCKET = 'party';
+
 module.exports = function PartyView(viewId, db, core, { append, isLocal }) {
   const events = new EventEmitter();
   events.setMaxListeners(Infinity);
 
-  const viewDB = sub(db, 'party', { valueEncoding: 'json' });
+  const viewDB = sub(db, BUCKET, { valueEncoding: 'json' });
 
   return view(viewDB, {
     map(msg) {
       const { value } = msg;
-      if (value.bucketId !== 'party' && !value.type.startsWith('party.')) {
+      if (value.bucketId !== BUCKET && !value.type.startsWith(`${BUCKET}.`)) {
         return [];
       }
 
@@ -42,7 +44,7 @@ module.exports = function PartyView(viewId, db, core, { append, isLocal }) {
 
     indexed(msgs) {
       msgs
-        .filter(msg => msg.value.type.startsWith('party.'))
+        .filter(msg => msg.value.type.startsWith(`${BUCKET}.`))
         .forEach(({ value }) => {
           if (value.data && !Buffer.isBuffer(value.data)) {
             value.data = Buffer.from(value.data);
@@ -74,7 +76,6 @@ module.exports = function PartyView(viewId, db, core, { append, isLocal }) {
         }
 
         const signed = {
-          bucketId: 'party',
           __type_url: '.dxos.party.SignedMessage',
           ...await keyring.sign(data, keys)
         };
@@ -105,6 +106,9 @@ module.exports = function PartyView(viewId, db, core, { append, isLocal }) {
 
         const msg = await append({
           type,
+          extension: {
+            bucketId: BUCKET
+          },
           data: encoded
         });
 

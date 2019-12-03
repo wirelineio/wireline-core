@@ -17,6 +17,13 @@ const log = debug('creds:authentication');
  * Used by AuthExtension for authenticating nodes during handshake.
  */
 export class Authentication {
+  /**
+   * The Party object, and any authentication hints required to get us going.
+   * Hints will only be needed immediately after Greeting, for our first round
+   * of replication.
+   * @param party
+   * @param hints
+   */
   constructor(party, hints = null) {
     console.assert(party);
     this._hints = hints;

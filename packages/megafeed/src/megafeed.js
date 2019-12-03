@@ -7,6 +7,7 @@ import hypertrie from 'hypertrie';
 import pify from 'pify';
 
 import { FeedStore } from '@dxos/feed-store';
+import { Mixer } from '@wirelineio/mixer';
 
 import { Replicator } from './replicator';
 
@@ -41,7 +42,8 @@ export class Megafeed extends EventEmitter {
     this._feedStore = new FeedStore(this._db, storage, {
       feedOptions: {
         valueEncoding: options.valueEncoding
-      }
+      },
+      codecs: options.codecs || {}
     })
       .on('feed', (feed, descriptor) => {
         this.emit('feed', feed, descriptor);
@@ -54,6 +56,12 @@ export class Megafeed extends EventEmitter {
     // Manages feed replication.
     this._replicator = new Replicator(this._feedStore)
       .on('error', err => this.emit('error', err));
+
+    this._mixer = new Mixer(this._feedStore);
+  }
+
+  get mixer() {
+    return this._mixer;
   }
 
   get id() {

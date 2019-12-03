@@ -4,7 +4,7 @@
 
 import through from 'through2';
 
-export const feedKey = (peer, party) => `/${peer}/${party}`;
+export const feedKey = (peer, party) => `${peer}/${party}`;
 
 /**
  * De-multiplexes messages into buckets.

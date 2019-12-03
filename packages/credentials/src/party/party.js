@@ -21,6 +21,10 @@ export class Party {
     this._keyring = new Keyring();
   }
 
+  get key() {
+    return this._partyKey;
+  }
+
   /**
    * Process a replicated party authentication message, admitting keys or feeds to the party.
    * @param message
@@ -228,7 +232,6 @@ export class Party {
     }
 
     let foundKnownKey = false;
-
     for await (const sig of signatures) {
       const result = await this._keyring.verify(signed, sig.signature, sig.key);
       if (!result) {
