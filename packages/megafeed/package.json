@@ -17,15 +17,18 @@
     "build": "npm run clean && babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps",
     "clean": "del-cli dist",
     "lint": "eslint ./src --ignore-path ../../.eslintignore",
-    "test": "jest --verbose",
+    "test": "jest --verbose src",
     "posttest": "npm run lint",
     "prepublishOnly": "npm run test && npm run build"
   },
   "browserslist": [
     "> 5%"
   ],
+  "jest": {
+    "testEnvironment": "node"
+  },
   "dependencies": {
-    "@dxos/feed-store": "^1.0.3",
+    "@dxos/feed-store": "^1.1.1",
     "@wirelineio/protocol": "^0.3.4",
     "@wirelineio/utils": "^0.3.4",
     "debug": "^4.1.1",
@@ -49,6 +52,7 @@
     "del-cli": "^2.0.0",
     "eslint": "^5.16.0",
     "jest": "^24.8.0",
+    "ngraph.generators": "^18.0.1",
     "wait-for-expect": "^3.0.0"
   },
   "publishConfig": {

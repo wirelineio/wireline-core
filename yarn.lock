@@ -725,17 +725,19 @@
     protobufjs "https://github.com/wirelineio/protobuf.js#wireline-dist"
     source-map-support "^0.5.12"
 
-"@dxos/feed-store@^1.0.3":
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/@dxos/feed-store/-/feed-store-1.0.3.tgz#5273b0d19daea104d689f5cf3e8d8072094eb785"
-  integrity sha512-lhKYJoXOjyUurt4/vhoVGI9OqyRp2L/wQR8EKMgbqcj8WhS0y0N74qLGZtazGbKQOjy7jvo4yZefV87MO/YRBQ==
+"@dxos/feed-store@^1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@dxos/feed-store/-/feed-store-1.1.1.tgz#1e6bfa451852edb96f51f82d4322e3a8d42bfe61"
+  integrity sha512-4zSq6MWc1YBl5p9tPk3b5qRsDXy4ecDoS43fVdz7cdPnCPXyiYkt30et7yLlUoILOuwL6216FlwfC5JVkIZIAw==
   dependencies:
     "@dxos/codec-protobuf" "^1.0.0"
     buffer-json-encoding "^1.0.2"
     debug "^4.1.1"
-    hypercore "^6.24.0"
+    end-of-stream "^1.4.4"
+    hypercore "^7.7.1"
     hypercore-crypto "^1.0.0"
-    hypertrie "^3.6.1"
+    hypertrie "^3.8.0"
+    multi-read-stream "^2.0.0"
     mutexify "^1.2.0"
     p-timeout "^3.2.0"
     pify "^4.0.1"
@@ -4573,7 +4575,7 @@ hypercore-protocol@^6.11.1, hypercore-protocol@^6.4.1, hypercore-protocol@^6.5.0
     sorted-indexof "^1.0.0"
     varint "^5.0.0"
 
-hypercore@^6.24.0, hypercore@^6.25.2:
+hypercore@^6.25.2:
   version "6.26.0"
   resolved "https://registry.yarnpkg.com/hypercore/-/hypercore-6.26.0.tgz#a3b53f7980229da8e5badfd117ead8feebcaae5a"
   integrity sha512-su/bucp958SyFWWF5uzeLT05N0k7gTbktvLCo0TaloXWSSs2OiFyj3Ka7v93yaD9u0vBT3i0foPoZnj1yC/dog==
@@ -4608,7 +4610,7 @@ hypercore@^6.24.0, hypercore@^6.25.2:
   optionalDependencies:
     fd-lock "^1.0.2"
 
-hypercore@^7.0.0, hypercore@^7.4.0:
+hypercore@^7.0.0, hypercore@^7.4.0, hypercore@^7.7.1:
   version "7.7.1"
   resolved "https://registry.yarnpkg.com/hypercore/-/hypercore-7.7.1.tgz#2a6b3fd84496b562fde07e5d39bfbab096a37fbc"
   integrity sha512-boEiPCK848pNGACW1j111tJApu530e/UPpwbHytJZlrVf3YdgUIP1KL3aSi5xJFLUnuO8GLGl4lIsSeH8TaQQA==
@@ -4648,7 +4650,7 @@ hyperid@^2.0.2:
     uuid "^3.3.2"
     uuid-parse "^1.0.0"
 
-hypertrie@^3.6.1, hypertrie@^3.7.1:
+hypertrie@^3.7.1, hypertrie@^3.8.0:
   version "3.8.0"
   resolved "https://registry.yarnpkg.com/hypertrie/-/hypertrie-3.8.0.tgz#8227c7cae5c4a15401f0d088d8e53486d963143c"
   integrity sha512-mAZpE3FwrwHQvg5IUx0P2rsOUM8cCFhNv7pdrXL0O3sX8dpjmyX6mxedM26HfifyM40BJdrDer4ZQltfIf+3JA==
@@ -6595,10 +6597,30 @@ nested-error-stacks@^2.0.0, nested-error-stacks@^2.1.0:
   resolved "https://registry.yarnpkg.com/nested-error-stacks/-/nested-error-stacks-2.1.0.tgz#0fbdcf3e13fe4994781280524f8b96b0cdff9c61"
   integrity sha512-AO81vsIO1k1sM4Zrd6Hu7regmJN1NSiAja10gc4bX3F0wd+9rQmcuHQaHVQCYIEC8iFXnE+mavh23GOt7wBgug==
 
+ngraph.events@0.0.3:
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/ngraph.events/-/ngraph.events-0.0.3.tgz#38f55316f3d207ad631ff94f6622ca8f2c0e87d0"
+  integrity sha1-OPVTFvPSB61jH/lPZiLKjywOh9A=
+
 ngraph.events@1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/ngraph.events/-/ngraph.events-1.0.0.tgz#260b638f1d8b1394a10ce1dda9e5d9d9c85001b1"
   integrity sha512-Z7wyywdw8IKjOW0bDiOG4FUqX5fwqW7SDMO1huemDXho7Qy1b02RoBkPS43KLIZU2wrW2orju99k8wIr+xXvVA==
+
+ngraph.generators@^18.0.1:
+  version "18.0.1"
+  resolved "https://registry.yarnpkg.com/ngraph.generators/-/ngraph.generators-18.0.1.tgz#b92be07457832f427da504414b2bb059c39cc27b"
+  integrity sha512-RWV1k6nt/ZyufFfkHpeamTC9f/V4SHZFyuRxhfaA7l5CUrpy7Cm+ERBZMv2Ij273wzvTy4DNHLTGY2ZgBdCvDw==
+  dependencies:
+    ngraph.graph "18.0.0"
+    ngraph.random "0.1.0"
+
+ngraph.graph@18.0.0:
+  version "18.0.0"
+  resolved "https://registry.yarnpkg.com/ngraph.graph/-/ngraph.graph-18.0.0.tgz#f999131b1ea16bab110c0ba792bcf4925349c564"
+  integrity sha512-HH39PulrZrFIcO6Qw4Ts3aYqPauAV/6p2lbbtPiFZoUDAASLtfnfg4wtXohy0ZE9Ik51wUgWaZ+FfyKk/SRlzQ==
+  dependencies:
+    ngraph.events "0.0.3"
 
 ngraph.graph@^18.0.1:
   version "18.0.3"
@@ -6611,6 +6633,11 @@ ngraph.path@^1.2.0, ngraph.path@^1.3.1:
   version "1.3.1"
   resolved "https://registry.yarnpkg.com/ngraph.path/-/ngraph.path-1.3.1.tgz#bc05b3ad7a9719eedf6679804ca0e2d913239978"
   integrity sha512-A78BGNCDo/uMApMx9QRqtSOheV4wMrgxitOVR2+0ZdbTfgzd70IN2WjuSXUFbNh7T2o0fPebPB2AFx39IvP8Gw==
+
+ngraph.random@0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/ngraph.random/-/ngraph.random-0.1.0.tgz#1b6e9573529e080677da6ffa098790d76a0948a9"
+  integrity sha1-G26Vc1KeCAZ32m/6CYeQ12oJSKk=
 
 nice-try@^1.0.4:
   version "1.0.5"
