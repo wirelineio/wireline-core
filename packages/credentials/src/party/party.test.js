@@ -59,7 +59,7 @@ test('Process Basic Message Types', async (done) => {
   const extraFeed = await keyring.generate({ type: KeyTypes.FEED });
 
   const messages = [
-    // The Genesis message is signed by the party private key and one admitted key.
+    // The Genesis message is signed by the party private key, the feed key, and one admitted key.
     await signMessage({
       type: PartyMessageTypes.GENESIS,
       party: keyring.party.publicKey,
