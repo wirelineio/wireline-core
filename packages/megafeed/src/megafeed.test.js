@@ -13,7 +13,7 @@ import { keyToHex, keyToBuffer } from '@wirelineio/utils';
 
 import { Megafeed } from './megafeed';
 
-debug.enable('test,megafeed,replicator,feedmap,protocol,view,extension');
+debug.enable('test');
 
 const createMegafeed = async (name, topic) => {
   const mega = await Megafeed.create(ram, { valueEncoding: 'utf8' });
