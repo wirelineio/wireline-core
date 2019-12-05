@@ -1,6 +1,6 @@
 {
   "name": "@wirelineio/broadcast",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "Broadcast messages.",
   "homepage": "https://github.com/wirelineio/wireline-core/tree/master/packages/broadcast#readme",
   "bugs": {
@@ -52,5 +52,6 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "gitHead": "c3aa6907c917651e1dfec14eeb1838a60e51c127"
 }
