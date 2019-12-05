@@ -3,4 +3,5 @@
 //
 
 export * from './megafeed';
+export * from './replicator';
 export * from './kappa-manager';

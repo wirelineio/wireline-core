@@ -1,3 +1,7 @@
+//
+// Copyright 2019 Wireline, Inc.
+//
+
 import crypto from 'crypto';
 
 import ram from 'random-access-memory';
@@ -7,11 +11,12 @@ import pify from 'pify';
 import pump from 'pump';
 import waitForExpect from 'wait-for-expect';
 import eos from 'end-of-stream';
+
 import { FeedStore } from '@dxos/feed-store';
 
 import { Protocol } from '@wirelineio/protocol';
 
-import { Replicator } from './replicator';
+import { Replicator } from '.';
 
 jest.setTimeout(30000);
 
@@ -53,13 +58,13 @@ const createNode = async (topic) => {
   };
 };
 
-const createNodes = async (topic, graph) => {
-  const nodes = [];
+const createPeers = async (topic, graph) => {
+  const peers = [];
   graph.forEachNode((node) => {
-    nodes.push(node);
+    peers.push(node);
   });
 
-  await Promise.all(nodes.map(async (node) => {
+  await Promise.all(peers.map(async (node) => {
     node.data = await createNode(topic);
   }));
 };
@@ -84,13 +89,13 @@ const createConnections = (graph) => {
   });
 };
 
-describe('test data replication in a balanced network graph of 15 nodes', () => {
+describe('test data replication in a balanced network graph of 15 peers', () => {
   const topic = crypto.randomBytes(32);
   let graph;
 
   beforeAll(async () => {
     graph = generator.balancedBinTree(3);
-    await createNodes(topic, graph);
+    await createPeers(topic, graph);
     createConnections(graph);
   });
 
