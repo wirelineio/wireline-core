@@ -66,6 +66,7 @@ export class Auth extends EventEmitter {
       try {
         creds = this._codec.decode(creds);
       } catch (e) {
+        protocol.stream.destroy();
         throw new ProtocolError(401, e);
       }
     }
@@ -78,6 +79,7 @@ export class Auth extends EventEmitter {
     if (await this._authentication.authenticate(creds)) {
       log('Authenticated!');
     } else {
+      protocol.stream.destroy();
       throw new ProtocolError(401, 'Unauthorized access rejected!');
     }
   }

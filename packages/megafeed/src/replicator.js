@@ -20,9 +20,10 @@ export class Replicator extends EventEmitter {
    * @param {Object} [options]
    * @param {Number} [options.timeout]
    */
-  constructor(feedStore, options = {}) {
+  constructor(feedStore, party, options = {}) {
     super();
     console.assert(feedStore);
+    console.assert(party);
 
     this._options = Object.assign({
       timeout: 1000
@@ -30,11 +31,41 @@ export class Replicator extends EventEmitter {
 
     this._feedStore = feedStore;
     this._peers = new Map();
+    this._party = party;
+
+    this._party.on('admit:feed', async () => {
+      await this._replicateAll();
+    });
+  }
+
+  _addPeer(protocol) {
+    const { peerId } = protocol && protocol.getContext() ? protocol.getContext() : {};
+    if (!peerId) {
+      console.warn('peerId is empty.');
+      return;
+    }
+
+    if (this._peers.has(peerId)) {
+      return;
+    }
+
+    this._peers.set(peerId, protocol);
+    this.emit('peer:joined', peerId);
+  }
+
+  _removePeer(protocol) {
+    const { peerId } = protocol && protocol.getContext ? protocol.getContext() : {};
+    if (!peerId) {
+      console.warn('peerId is empty.');
+      return;
+    }
+
+    this._peers.delete(peerId);
+    this.emit('peer:left', peerId);
   }
 
   toString() {
     const meta = {};
-
     return `Replicator(${JSON.stringify(meta)})`;
   }
 
@@ -46,24 +77,8 @@ export class Replicator extends EventEmitter {
     return new Extension(Replicator.extension, { timeout: this._options.timeout })
       .on('error', err => this.emit(err))
       .setHandshakeHandler(this._handshakeHandler.bind(this))
-      .setMessageHandler(this._messageHandler.bind(this))
-      .setCloseHandler(this._closeHandler.bind(this))
-      .setFeedHandler(this._feedHandler.bind(this));
-  }
-
-  /**
-   * Discover topics from peer.
-   * @param protocol
-   * @returns {Promise<[{string}]>}
-   */
-  async getTopics(protocol) {
-    const extension = protocol.getExtension(Replicator.extension);
-    console.assert(extension);
-
-    // Ask peer for topics.
-    const { response: { topics } } = await extension.send({ type: 'get-topics' });
-
-    return topics;
+      .setCloseHandler(this._closeHandler.bind(this));
+      //.setFeedHandler(this._feedHandler.bind(this));
   }
 
   /**
@@ -77,35 +92,17 @@ export class Replicator extends EventEmitter {
     console.assert(extension);
 
     try {
-      const topics = await this.getTopics(protocol);
+      this._addPeer(protocol);
+      this._replicateAll(protocol);
 
-      this._peers.set(protocol, { topics });
-
-      const { feedKeysByTopic, feeds } = await this._getFeedsByTopic(topics);
-
-      await extension.send({ type: 'sync-keys', feedKeysByTopic }, { oneway: true });
-
-      feeds.forEach((feed) => {
+      const onFeed = async (feed) => {
         this._replicate(protocol, feed);
-      });
-
-      const onFeed = (feed, descriptor) => {
-        if (topics.includes(descriptor.metadata.topic)) {
-          const feedKeysByTopic = [{ topic: descriptor.metadata.topic, keys: [keyToHex(feed.key)] }];
-          this._peers.forEach(async (_, peer) => {
-            try {
-              await extension.send({ type: 'sync-keys', feedKeysByTopic  }, { oneway: true });
-              this._replicate(peer, feed);
-            } catch (err) {
-              console.warn('Replicator sync error: ', err.message);
-            }
-          });
-        }
       };
 
       this._feedStore.on('feed', onFeed);
 
       eos(protocol.stream, () => {
+        this._removePeer(protocol);
         this._feedStore.removeListener('feed', onFeed);
       });
     } catch (err) {
@@ -114,58 +111,33 @@ export class Replicator extends EventEmitter {
     }
   }
 
-  /**
-   * Handles key exchange requests.
-   *
-   * @param {Protocol} protocol
-   * @param {Object} context
-   * @param {Object} message
-   */
-  async _messageHandler(protocol, context, message) {
-    // TODO(burdon): Check credentials. By topic?
-    // Sould be optional not a restriction to share feeds.
-    // if (!context.user) {
-    // throw new ProtocolError(401);
-    // }
-
-    const { type } = message;
-    switch (type) {
-      //
-      // Get all topics.
-      //
-      case 'get-topics': {
-        const topics = Array.from(new Set(this._feedStore
-          .getDescriptors()
-          .filter(descriptor => !!descriptor.metadata.topic)
-          // This is the only way right now to prevent share topics that you don't want to.
-          .filter(descriptor => descriptor.opened)
-          .map(descriptor => descriptor.metadata.topic)));
-
-        return {
-          topics
-        };
-      }
-
-      //
-      // The remote user wants to share keys with me.
-      //
-      case 'sync-keys': {
-        const { feedKeysByTopic } = message;
-        await this._openFeeds(feedKeysByTopic);
-        break;
-      }
-
-      //
-      // Error.
-      //
-      default: {
-        throw new Error(`Invalid type: ${type}`);
-      }
-    }
+  _closeHandler(err, protocol) {
+    this._removePeer(protocol);
   }
 
-  _closeHandler(err, protocol) {
-    this._peers.delete(protocol);
+  async _replicateAll(protocol = null) {
+    // Shouldn't the topic be the discoveryKey?
+    const topic = keyToHex(this._party.publicKey);
+    const trustedFeeds = this._party.trustedFeeds;
+
+    for await (const feedKey of trustedFeeds) {
+      let feed = await this._feedStore.findFeed(d => d.key.equals(feedKey));
+      if (!feed) {
+        const path = `feed/${topic}/${keyToHex(feedKey)}`;
+        feed = await this._feedStore.openFeed(path, {
+          key: feedKey,
+          metadata: { topic }
+        });
+      }
+
+      if (protocol) {
+        this._replicate(protocol, feed);
+      } else {
+        for (const peer of this._peers.values()) {
+          this._replicate(peer, feed);
+        }
+      }
+    }
   }
 
   /**
@@ -193,57 +165,5 @@ export class Replicator extends EventEmitter {
     feed.replicate(replicateOptions);
 
     return true;
-  }
-
-  async _getFeedsByTopic(topics) {
-    const list = [];
-    const feedKeysByTopic = await Promise.all(topics.map(async (topic) => {
-      const feeds = await this._feedStore.loadFeeds((descriptor) => {
-        return descriptor.metadata.topic === topic;
-      });
-
-      const keys = feeds.map((feed) => {
-        list.push(feed);
-        return keyToHex(feed.key);
-      });
-
-
-      return { topic, keys };
-    }));
-
-    return { feedKeysByTopic, feeds: list };
-  }
-
-  async _openFeeds(feedKeysByTopic) {
-    return Promise.all(
-      feedKeysByTopic.map(async ({ topic, keys }) => {
-        await Promise.all(keys.map(async (key) => {
-          const path = `feed/${topic}/${key}`;
-          const keyBuffer = Buffer.from(key, 'hex');
-
-          try {
-            await this._feedStore.openFeed(path, {
-              key: keyBuffer,
-              metadata: { topic }
-            });
-          } catch (err) {
-            // eslint-disable-next-line no-empty
-          }
-        }));
-      })
-    );
-  }
-
-  _feedHandler(protocol, _, discoveryKey) {
-    const { topics = [] } = this._peers.get(protocol) || {};
-
-    const feed = this._feedStore.findFeed((descriptor) => {
-      const topic = descriptor.metadata && descriptor.metadata.topic;
-      return descriptor.discoveryKey.equals(discoveryKey) && topics.includes(topic);
-    });
-
-    if (feed) {
-      this._replicate(protocol, feed);
-    }
   }
 }

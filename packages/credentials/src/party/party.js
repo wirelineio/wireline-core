@@ -3,8 +3,9 @@
 //
 
 import debug from 'debug';
+import { EventEmitter } from 'events';
 
-import { keyToHex } from '@wirelineio/utils';
+import { keyToHex, getDiscoveryKey } from '@wirelineio/utils';
 
 import { PartyMessageTypes } from './partyMessage';
 import { Keyring, KeyTypes } from '../crypto';
@@ -14,15 +15,37 @@ const log = debug('creds:party');
 /**
  * Build up the party from signed messages.
  */
-export class Party {
-  constructor(partyKey) {
-    console.assert(Buffer.isBuffer(partyKey));
-    this._partyKey = partyKey;
+export class Party extends EventEmitter {
+  constructor(publicKey, mixer = null) {
+    super();
+    console.assert(Buffer.isBuffer(publicKey));
+    this._publicKey = publicKey;
     this._keyring = new Keyring();
+    this._mixer = mixer;
   }
 
-  get key() {
-    return this._partyKey;
+  get trustedFeeds() {
+    return this._keyring.find({ type: KeyTypes.FEED, trusted: true }).map(f => f.publicKey);
+  }
+
+  get trustedKeys() {
+    return this._keyring.find({ type: { $nin: [KeyTypes.FEED, KeyTypes.PARTY] }, trusted: true }).map(f => f.publicKey);
+  }
+
+  set mixer(v) {
+    this._mixer = v;
+  }
+
+  get mixer() {
+    return this._mixer;
+  }
+
+  get publicKey() {
+    return this._publicKey;
+  }
+
+  get discoveryKey() {
+    return getDiscoveryKey(this.publicKey);
   }
 
   /**
@@ -318,6 +341,7 @@ export class Party {
     if (!existing) {
       log('Admitting key:', keyToHex(key));
       await this._keyring.add(key, attributes);
+      this.emit('admit:key', key, attributes);
       return true;
     }
     return false;
@@ -337,8 +361,27 @@ export class Party {
       log('Admitting feed:', keyToHex(feed));
       attributes.type = KeyTypes.FEED;
       await this._keyring.add(feed, attributes);
+      this.emit('admit:feed', feed, attributes);
       return true;
     }
     return false;
+  }
+
+  async supplyHints(hints) {
+    if (!hints) {
+      return;
+    }
+
+    if (hints.keys) {
+      for await (const key of hints.keys) {
+        await this._admitKey(key, { hint: true });
+      }
+    }
+
+    if (hints.feeds) {
+      for (const feed of hints.feeds) {
+        await this._admitFeed(feed, { hint: true, type: KeyTypes.FEED });
+      }
+    }
   }
 }
