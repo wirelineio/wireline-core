@@ -78,7 +78,6 @@ export class Replicator extends EventEmitter {
       .on('error', err => this.emit(err))
       .setHandshakeHandler(this._handshakeHandler.bind(this))
       .setCloseHandler(this._closeHandler.bind(this));
-      //.setFeedHandler(this._feedHandler.bind(this));
   }
 
   /**
@@ -116,9 +115,9 @@ export class Replicator extends EventEmitter {
   }
 
   async _replicateAll(protocol = null) {
-    // Shouldn't the topic be the discoveryKey?
-    const topic = keyToHex(this._party.publicKey);
-    const trustedFeeds = this._party.trustedFeeds;
+    const { publicKey, trustedFeeds } = this._party;
+    // Shouldn't the "topic" be the discoveryKey?
+    const topic = keyToHex(publicKey);
 
     for await (const feedKey of trustedFeeds) {
       let feed = await this._feedStore.findFeed(d => d.key.equals(feedKey));
