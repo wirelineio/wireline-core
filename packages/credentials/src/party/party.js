@@ -6,7 +6,7 @@ import debug from 'debug';
 
 import { keyToHex } from '@wirelineio/utils';
 
-import { PartyMessageTypes } from './partyMessageTypes';
+import { PartyMessageTypes } from './partyMessage';
 import { Keyring, KeyTypes } from '../crypto';
 
 const log = debug('creds:party');

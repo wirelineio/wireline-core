@@ -5,5 +5,5 @@
 export * from './codec';
 export * from './party';
 export * from './partyKappaAdapter';
-export * from './partyMessageTypes';
+export * from './partyMessage';
 export * from './partyMixerAdapter';

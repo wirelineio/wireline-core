@@ -4,7 +4,7 @@
 
 import debug from 'debug';
 
-import { PartyMessageTypes } from './partyMessageTypes';
+import { PartyMessageTypes } from './partyMessage';
 
 const log = debug('creds:party:kappa');
 
