@@ -31,9 +31,10 @@ export class Megafeed extends EventEmitter {
    * @param {RandomAccessStorage} storage
    * @param {Object} [options]
    */
-  constructor(storage, options = {}) {
+  constructor(storage, party, options = {}) {
     super();
     console.assert(storage);
+    console.assert(party);
 
     // We save all our personal information like the feed list in a private feed.
     this._db = hypertrie(storage, options.publicKey, { secretKey: options.secretKey });
@@ -53,15 +54,24 @@ export class Megafeed extends EventEmitter {
         });
       });
 
-    // Manages feed replication.
-    this._replicator = new Replicator(this._feedStore)
-      .on('error', err => this.emit('error', err));
+    this._party = party;
+    party.mixer = new Mixer(this._feedStore);
 
-    this._mixer = new Mixer(this._feedStore);
+    // Manages feed replication.
+    this._replicator = new Replicator(this._feedStore, this._party)
+      .on('error', err => this.emit('error', err));
   }
 
-  get mixer() {
-    return this._mixer;
+  get party() {
+    return this._party;
+  }
+
+  get replicator() {
+    return this._replicator;
+  }
+
+  get feedStore() {
+    return this._feedStore;
   }
 
   get id() {

@@ -32,7 +32,7 @@ const signPartyMessage = async (message, keys) => {
 test('Authentication (GOOD)', async (done) => {
   const keyring = await mockKeyring();
   const party = new Party(keyring.party.publicKey);
-  const auth = await new Authentication(party).init();
+  const auth = new Authentication(party);
 
   const peer = await keyring.generate();
 
@@ -64,7 +64,7 @@ test('Authentication (GOOD)', async (done) => {
 test('Authentication (BAD)', async (done) => {
   const keyring = await mockKeyring();
   const party = new Party(keyring.party.publicKey);
-  const auth = await new Authentication(party).init();
+  const auth = new Authentication(party);
 
   const peer = await keyring.generate();
 

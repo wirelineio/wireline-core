@@ -15,11 +15,9 @@ const log = debug('creds:party:mixer');
 const BUCKET = 'party';
 
 export class PartyMixerAdapter {
-  constructor(mixer, party) {
-    console.assert(mixer);
+  constructor(party) {
     console.assert(party);
 
-    this._mixer = mixer;
     this._party = party;
     this._queue = [];
 
@@ -34,7 +32,7 @@ export class PartyMixerAdapter {
       return;
     }
 
-    this._stream = this._mixer.createKeyStream(feedKey('.*', keyToHex(this._party.key)), { bucketId: BUCKET });
+    this._stream = this._party.mixer.createKeyStream(feedKey('.*', keyToHex(this._party.publicKey)), { bucketId: BUCKET });
     this._stream.on('data', this._enqueue.bind(this));
     this._stream.on('close', () => {
       log('Stream closed.');

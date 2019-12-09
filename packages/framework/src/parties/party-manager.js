@@ -2,6 +2,8 @@
 // Copyright 2019 Wireline, Inc.
 //
 
+const { Party } = require("@wirelineio/credentials");
+
 const { EventEmitter } = require('events');
 
 const { getDiscoveryKey, keyToHex } = require('@wirelineio/utils');
@@ -10,28 +12,37 @@ const { getDiscoveryKey, keyToHex } = require('@wirelineio/utils');
  * Manages party-related state.
  */
 class PartyManager extends EventEmitter {
-
   constructor(currentPartyKey) {
     super();
-
-    this._parties = new Map();
-    this._currentPartyKey = currentPartyKey;
-    this.setParty(currentPartyKey);
+    this._currentParty = null;
+    if (currentPartyKey) {
+      this.setParty(currentPartyKey);
+    }
   }
 
-  // TODO(burdon): Currently only supports one party at a time?
-  get currentPartyKey() {
-    return this._currentPartyKey;
+  get currentParty() {
+    return this._currentParty;
+  }
+
+  get parties() {
+    return [this._currentParty];
   }
 
   findPartyByDiscovery(dk) {
-    return this._parties.get(keyToHex(dk));
+    if (dk && dk.equals(this.currentParty.discoveryKey)) {
+      return this.currentParty;
+    }
+    return null;
   }
 
-  setParty(partyKey) {
-    const dk = getDiscoveryKey(partyKey);
-    this._parties.set(keyToHex(dk), partyKey);
-    return { key: partyKey, dk };
+  setParty(partyOrKey) {
+    let party = Buffer.isBuffer(partyOrKey) ? new Party(partyOrKey) : partyOrKey;
+
+    if (!this._currentParty || !this.currentParty.publicKey.equals(party.publicKey)) {
+      this._currentParty = party;
+    }
+
+    return { key: this._currentParty.publicKey, dk: this._currentParty.discoveryKey, party: this._currentParty };
   }
 }
 
