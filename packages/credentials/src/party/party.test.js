@@ -4,45 +4,14 @@
 
 import debug from 'debug';
 
-import { partyCodec } from './codec';
-import { PartyMessageTypes } from './partyMessageTypes';
+import { PartyMessageTypes, signPartyMessage as _signPartyMessage } from './partyMessage';
 import { Keyring, KeyTypes } from '../crypto';
 import { Party } from './party';
+import { partyCodec } from './codec';
 
 const log = debug('creds:party:test');
 
 jest.setTimeout(60000);
-
-// This is analogous to the signAndWrite method on the kappa view.
-const signMessage = async (payload, keys) => {
-  const keyring = new Keyring();
-
-  switch (payload.type) {
-    case PartyMessageTypes.GENESIS:
-      payload.__type_url = '.dxos.party.PartyGenesis';
-      break;
-    case PartyMessageTypes.ADMIT_KEY:
-      payload.__type_url = '.dxos.party.KeyAdmit';
-      break;
-    case PartyMessageTypes.ADMIT_FEED:
-      payload.__type_url = '.dxos.party.FeedAdmit';
-      break;
-    case PartyMessageTypes.ENVELOPE:
-      payload.__type_url = '.dxos.party.Envelope';
-      break;
-    default:
-      log('Unknown type:', payload.type);
-  }
-
-  const signed = {
-    bucketId: 'party',
-    ...await keyring.sign(payload, keys)
-  };
-
-  // Loop it through the codec to make sure every message we use is valid to the protobuf def.
-  const encoded = partyCodec.encode(signed);
-  return partyCodec.decode(encoded);
-};
 
 const mockKeyring = async () => {
   const keyring = new Keyring();
@@ -52,6 +21,14 @@ const mockKeyring = async () => {
   return keyring;
 };
 
+// Create our own version of this that loops everything through the codec
+// so that we can test our protobufs fully.
+const signPartyMessage = async (message, keys) => {
+  const signed = await _signPartyMessage(message, keys);
+  const encoded = partyCodec.encode(signed);
+  return partyCodec.decode(encoded);
+};
+
 test('Process Basic Message Types', async (done) => {
   const keyring = await mockKeyring();
   const party = new Party(keyring.party.publicKey);
@@ -59,21 +36,21 @@ test('Process Basic Message Types', async (done) => {
   const extraFeed = await keyring.generate({ type: KeyTypes.FEED });
 
   const messages = [
-    // The Genesis message is signed by the party private key and one admitted key.
-    await signMessage({
+    // The Genesis message is signed by the party private key, the feed key, and one admitted key.
+    await signPartyMessage({
       type: PartyMessageTypes.GENESIS,
       party: keyring.party.publicKey,
       admit: keyring.pseudonym.publicKey,
       feed: keyring.feed.publicKey,
     }, [keyring.party, keyring.pseudonym, keyring.feed]),
     // A user (represented by the pseudonym key) will also need a device.
-    await signMessage({
+    await signPartyMessage({
       type: PartyMessageTypes.ADMIT_KEY,
       party: keyring.party.publicKey,
       admit: keyring.devicePseudonym.publicKey,
     }, [keyring.pseudonym, keyring.devicePseudonym]),
     // We don't actually need this feed, since the initial feed is in the Genesis message, but we want to test all types.
-    await signMessage({
+    await signPartyMessage({
       type: PartyMessageTypes.ADMIT_FEED,
       party: keyring.party.publicKey,
       feed: extraFeed.publicKey,
@@ -100,13 +77,13 @@ test('Reject Message from Unknown Source', async (done) => {
 
   const messages = [
     // We always need a Genesis.
-    await signMessage({
+    await signPartyMessage({
       type: PartyMessageTypes.GENESIS,
       party: keyring.party.publicKey,
       admit: keyring.pseudonym.publicKey,
       feed: keyring.feed.publicKey,
     }, [keyring.party, keyring.pseudonym, keyring.feed]),
-    await signMessage({
+    await signPartyMessage({
       type: PartyMessageTypes.ADMIT_KEY,
       party: keyring.party.publicKey,
       admit: keyring.devicePseudonym.publicKey
@@ -134,7 +111,7 @@ test('Greeter Envelopes', async (done) => {
   const keyring = await mockKeyring();
   const party = new Party(keyring.party.publicKey);
 
-  const genesis = await signMessage({
+  const genesis = await signPartyMessage({
     type: PartyMessageTypes.GENESIS,
     party: keyring.party.publicKey,
     admit: keyring.pseudonym.publicKey,
@@ -147,13 +124,13 @@ test('Greeter Envelopes', async (done) => {
 
   const secondKeyring = await mockKeyring();
 
-  const pseudo = await signMessage({
+  const pseudo = await signPartyMessage({
     type: PartyMessageTypes.ADMIT_KEY,
     party: keyring.party.publicKey,
     admit: secondKeyring.pseudonym.publicKey,
   }, [secondKeyring.pseudonym]);
 
-  const envelope = await signMessage({
+  const envelope = await signPartyMessage({
     type: PartyMessageTypes.ENVELOPE,
     contents: {
       ...pseudo,

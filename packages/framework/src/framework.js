@@ -57,18 +57,19 @@ class Framework extends EventEmitter {
 
     this._id = id || keys.publicKey;
 
-    // Create megafeed.
-    const { publicKey, secretKey } = keys;
-    this._megafeed = new Megafeed(storage, {
-      publicKey,
-      secretKey,
-      valueEncoding: 'json'
-    });
-
     // Import/export
     // TODO(burdon): Don't set initial party (use connect below).
     this._partySerializer = new PartySerializer(this._megafeed, partyKey);
     this._partyManager = new PartyManager(partyKey);
+
+    // Create megafeed.
+    const { publicKey, secretKey } = keys;
+    this._megafeed = new Megafeed(storage,
+      this._partyManager.currentParty, {
+        publicKey,
+        secretKey,
+        valueEncoding: 'json'
+      });
 
     // In-memory cache for views.
     this._db = db || levelup(memdown());
@@ -96,7 +97,7 @@ class Framework extends EventEmitter {
       maxPeers,
       userData,
       extensions: [...extensions, ...standardExtensions],
-      discoveryToPublicKey: dk => this._partyManager.findPartyByDiscovery(dk),
+      discoveryToPublicKey: dk => this._partyManager.findPartyByDiscovery(dk).publicKey,
       emit: this.emit.bind(this)
     });
 
@@ -142,8 +143,8 @@ class Framework extends EventEmitter {
     return this._partySerializer;
   }
 
-  get partyManager() {
-    return this._partyManager;
+  get party() {
+    return this._partyManager.currentParty;
   }
 
   toString() {
@@ -164,11 +165,17 @@ class Framework extends EventEmitter {
     await this._megafeed.initialize();
 
     // TODO(burdon): Don't assume party; call this externally.
-    const { partyKey } = this._conf;
+    const { partyKey, feedKeys = {} } = this._conf;
     const topic = keyToHex(partyKey);
 
     // Set the feed where we are going to write messages.
-    const feed = await this._megafeed.openFeed(`feed/${topic}/local`, { metadata: { topic } });
+    const feed = await this._megafeed.openFeed(`feed/${topic}/local`, {
+      key: feedKeys.publicKey,
+      secretKey: feedKeys.secretKey,
+      metadata: {
+        topic,
+      }
+    });
     this._viewManager.setWriterFeed(feed);
 
     // Load all feeds with the related topic.

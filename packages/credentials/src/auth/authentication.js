@@ -6,7 +6,7 @@ import debug from 'debug';
 
 import { keyToHex } from '@wirelineio/utils';
 
-import { Keyring, KeyTypes } from '../crypto';
+import { Keyring } from '../crypto';
 
 const ONE_HOUR = 60 * 60 * 1000;
 
@@ -17,29 +17,15 @@ const log = debug('creds:authentication');
  * Used by AuthExtension for authenticating nodes during handshake.
  */
 export class Authentication {
-  constructor(party, hints = null) {
+  /**
+   * The Party object, and any authentication hints required to get us going.
+   * Hints will only be needed immediately after Greeting, for our first round
+   * of replication.
+   * @param party
+   */
+  constructor(party) {
     console.assert(party);
-    this._hints = hints;
     this._party = party;
-    this._keyring = new Keyring();
-  }
-
-  async init() {
-    if (this._hints) {
-      if (this._hints.keys) {
-        for (const key of this._hints.keys) {
-          log('Allowing hinted key:', keyToHex(key));
-          await this._keyring.add(key, { hint: true });
-        }
-      }
-      if (this._hints.feeds) {
-        for (const feed of this._hints.feeds) {
-          log('Allowing hinted feed:', keyToHex(feed));
-          await this._keyring.add(feed, { hint: true, type: KeyTypes.FEED });
-        }
-      }
-    }
-    return this;
   }
 
   /**
@@ -66,7 +52,7 @@ export class Authentication {
     }
 
     // Check that the signature is valid.
-    const verified = await this._keyring.verify(credentials);
+    const verified = await this._verify(credentials);
     if (!verified) {
       log(`Bad signature: ${credentials}`);
       return false;
@@ -79,15 +65,14 @@ export class Authentication {
         log('Credentials signed with trusted key:', keyToHex(sig.key));
         return true;
       }
-
-      const hinted = await this._keyring.has(sig.key);
-      if (hinted) {
-        log('Credentials signed with hinted key:', keyToHex(sig.key));
-        return true;
-      }
     }
 
     log('Unauthorized credentials');
     return false;
+  }
+
+  async _verify(credentials) {
+    const keyring = new Keyring();
+    return keyring.verify(credentials);
   }
 }
