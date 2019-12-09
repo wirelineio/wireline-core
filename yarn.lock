@@ -712,25 +712,7 @@
     protobufjs "https://github.com/wirelineio/protobuf.js#wireline-dist"
     source-map-support "^0.5.12"
 
-"@dxos/feed-store@^1.0.3":
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/@dxos/feed-store/-/feed-store-1.0.3.tgz#5273b0d19daea104d689f5cf3e8d8072094eb785"
-  integrity sha512-lhKYJoXOjyUurt4/vhoVGI9OqyRp2L/wQR8EKMgbqcj8WhS0y0N74qLGZtazGbKQOjy7jvo4yZefV87MO/YRBQ==
-  dependencies:
-    "@dxos/codec-protobuf" "^1.0.0"
-    buffer-json-encoding "^1.0.2"
-    debug "^4.1.1"
-    hypercore "^6.24.0"
-    hypercore-crypto "^1.0.0"
-    hypertrie "^3.6.1"
-    mutexify "^1.2.0"
-    p-timeout "^3.2.0"
-    pify "^4.0.1"
-    random-access-file "^2.1.0"
-    sodium-universal "^2.0.0"
-    source-map-support "^0.5.12"
-
-"@dxos/feed-store@^1.1.1":
+"@dxos/feed-store@^1.1.0", "@dxos/feed-store@^1.1.1":
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/@dxos/feed-store/-/feed-store-1.1.1.tgz#1e6bfa451852edb96f51f82d4322e3a8d42bfe61"
   integrity sha512-4zSq6MWc1YBl5p9tPk3b5qRsDXy4ecDoS43fVdz7cdPnCPXyiYkt30et7yLlUoILOuwL6216FlwfC5JVkIZIAw==
@@ -4619,7 +4601,7 @@ hypercore-protocol@^7.1.0:
     streamx "^2.1.0"
     timeout-refresh "^1.0.0"
 
-hypercore@^6.24.0, hypercore@^6.25.2:
+hypercore@^6.25.2:
   version "6.26.0"
   resolved "https://registry.yarnpkg.com/hypercore/-/hypercore-6.26.0.tgz#a3b53f7980229da8e5badfd117ead8feebcaae5a"
   integrity sha512-su/bucp958SyFWWF5uzeLT05N0k7gTbktvLCo0TaloXWSSs2OiFyj3Ka7v93yaD9u0vBT3i0foPoZnj1yC/dog==
@@ -4728,7 +4710,7 @@ hyperid@^2.0.2:
     uuid "^3.3.2"
     uuid-parse "^1.0.0"
 
-hypertrie@^3.6.1, hypertrie@^3.7.1, hypertrie@^3.8.0:
+hypertrie@^3.7.1, hypertrie@^3.8.0:
   version "3.8.0"
   resolved "https://registry.yarnpkg.com/hypertrie/-/hypertrie-3.8.0.tgz#8227c7cae5c4a15401f0d088d8e53486d963143c"
   integrity sha512-mAZpE3FwrwHQvg5IUx0P2rsOUM8cCFhNv7pdrXL0O3sX8dpjmyX6mxedM26HfifyM40BJdrDer4ZQltfIf+3JA==
@@ -7584,25 +7566,6 @@ proto-list@~1.2.1:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/proto-list/-/proto-list-1.2.4.tgz#212d5bfe1318306a420f6402b8e26ff39647a849"
   integrity sha1-IS1b/hMYMGpCD2QCuOJv85ZHqEk=
-
-"protobufjs@git+https://github.com/wirelineio/protobuf.js.git#wireline-dist":
-  version "6.8.8"
-  uid ad757d3ffe2565f4deea8a4e1b4c2383ede574c4
-  resolved "git+https://github.com/wirelineio/protobuf.js.git#ad757d3ffe2565f4deea8a4e1b4c2383ede574c4"
-  dependencies:
-    "@protobufjs/aspromise" "^1.1.2"
-    "@protobufjs/base64" "^1.1.2"
-    "@protobufjs/codegen" "^2.0.4"
-    "@protobufjs/eventemitter" "^1.1.0"
-    "@protobufjs/fetch" "^1.1.0"
-    "@protobufjs/float" "^1.0.2"
-    "@protobufjs/inquire" "^1.1.0"
-    "@protobufjs/path" "^1.1.2"
-    "@protobufjs/pool" "^1.1.0"
-    "@protobufjs/utf8" "^1.1.0"
-    "@types/long" "^4.0.0"
-    "@types/node" "^10.1.0"
-    long "^4.0.0"
 
 "protobufjs@https://github.com/wirelineio/protobuf.js#wireline-dist":
   version "6.8.8"

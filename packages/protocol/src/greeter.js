@@ -9,9 +9,7 @@ import { keyToHex } from '@wirelineio/utils';
 import { Extension } from './extension';
 import { ProtocolError } from './protocol';
 
-
 const log = debug('protocol:greeter'); // eslint-disable-line no-unused-vars
-
 
 /**
  * An extension for 'greet' nodes.  The Greeter operates on party A in the open, verifying nodes'
@@ -21,15 +19,16 @@ export class Greeter extends EventEmitter {
 
   static EXTENSION_NAME = 'greeter';
 
-  constructor(peerId, peerMessageHandler, params = {}) {
+  constructor(peerId, codec, peerMessageHandler = null) {
     super();
 
     console.assert(Buffer.isBuffer(peerId));
+    console.assert(codec);
 
     this._peerId = peerId;
     this._peers = new Map();
+    this._codec = codec;
     this._peerMessageHandler = peerMessageHandler;
-    this._params = params;
   }
 
   get peerId() {
@@ -45,7 +44,7 @@ export class Greeter extends EventEmitter {
    * @return {Extension}
    */
   createExtension() {
-    return new Extension(Greeter.EXTENSION_NAME, { binary: false })
+    return new Extension(Greeter.EXTENSION_NAME, { binary: true })
       .setMessageHandler(this._receive.bind(this))
       .setHandshakeHandler(this._addPeer.bind(this))
       .setCloseHandler(this._removePeer.bind(this));
@@ -54,7 +53,8 @@ export class Greeter extends EventEmitter {
   async send(peerId, message) {
     const peer = this._peers.get(keyToHex(peerId));
     const gext = peer.getExtension(Greeter.EXTENSION_NAME);
-    return gext.send(message, { oneway: false });
+    const encoded = this._codec.encode(message);
+    return gext.send(encoded, { oneway: false });
   }
 
   async _receive(protocol, context, chunk) {
@@ -62,11 +62,9 @@ export class Greeter extends EventEmitter {
       throw new ProtocolError(500, 'No message handler!');
     }
 
-    const decoded = chunk; // TODO(telackey): Codec goes here.
-
-    const response = await this._peerMessageHandler(decoded);
-
-    const encoded = response; // TODO(telackey): Codec goes here.
+    const decoded = this._codec.decode(chunk);
+    const response = await this._peerMessageHandler(decoded.payload);
+    const encoded = this._codec.encode(response);
 
     return encoded;
   }

@@ -3,4 +3,4 @@
 //
 
 export * from './authentication';
-export * from './authKappaAdapter';
+export * from './codec';

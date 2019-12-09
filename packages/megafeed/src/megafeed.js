@@ -7,6 +7,7 @@ import hypertrie from 'hypertrie';
 import pify from 'pify';
 
 import { FeedStore } from '@dxos/feed-store';
+import { Mixer } from '@wirelineio/mixer';
 
 import { Replicator } from './replicator';
 
@@ -30,9 +31,10 @@ export class Megafeed extends EventEmitter {
    * @param {RandomAccessStorage} storage
    * @param {Object} [options]
    */
-  constructor(storage, options = {}) {
+  constructor(storage, party, options = {}) {
     super();
     console.assert(storage);
+    console.assert(party);
 
     // We save all our personal information like the feed list in a private feed.
     this._db = hypertrie(storage, options.publicKey, { secretKey: options.secretKey });
@@ -41,7 +43,8 @@ export class Megafeed extends EventEmitter {
     this._feedStore = new FeedStore(this._db, storage, {
       feedOptions: {
         valueEncoding: options.valueEncoding
-      }
+      },
+      codecs: options.codecs || {}
     })
       .on('feed', (feed, descriptor) => {
         this.emit('feed', feed, descriptor);
@@ -51,9 +54,24 @@ export class Megafeed extends EventEmitter {
         });
       });
 
+    this._party = party;
+    party.mixer = new Mixer(this._feedStore);
+
     // Manages feed replication.
-    this._replicator = new Replicator(this._feedStore)
+    this._replicator = new Replicator(this._feedStore, this._party)
       .on('error', err => this.emit('error', err));
+  }
+
+  get party() {
+    return this._party;
+  }
+
+  get replicator() {
+    return this._replicator;
+  }
+
+  get feedStore() {
+    return this._feedStore;
   }
 
   get id() {

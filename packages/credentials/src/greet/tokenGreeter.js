@@ -6,6 +6,7 @@ import debug from 'debug';
 import crypto from 'hypercore-crypto';
 
 import { ProtocolError } from '@wirelineio/protocol';
+import { keyToHex } from '@wirelineio/utils';
 
 import { Keyring } from '../crypto';
 
@@ -20,7 +21,7 @@ class Token {
     this._party = party;
     this._expiration = expiration;
     this._value = crypto.randomBytes(32).toString('hex');
-    this._challenge = crypto.randomBytes(8).toString('hex');
+    this._challenge = crypto.randomBytes(32);
     this._redeemed = null;
     this._revoked = null;
   }
@@ -83,17 +84,38 @@ class Token {
 }
 
 export class TokenGreeter {
-  constructor(partyWriter, gatherHints, props) {
+  constructor(partyWriter, gatherHints, props = {}) {
     this._props = props;
     this._keyring = new Keyring();
     this._tokens = new Map();
     this._partyWriter = partyWriter;
     this._gatherHints = gatherHints;
+    this._allowedParties = new Set();
+
+    this.addAllowedParty(props.party);
   }
 
-  _isAllowedParty(party) {
-    // TODO(telackey): Truly perform this check.
-    return true;
+  addAllowedParty(party) {
+    if (!party) {
+      return;
+    }
+
+    if (Buffer.isBuffer(party)) {
+      party = keyToHex(party);
+    }
+    this._allowedParties.add(party);
+  }
+
+  isAllowedParty(party) {
+    if (!party) {
+      return false;
+    }
+
+    if (Buffer.isBuffer(party)) {
+      party = keyToHex(party);
+    }
+
+    return this._allowedParties.has(party);
   }
 
   async _redeemToken(tokenValue, targetParty) {
@@ -103,8 +125,8 @@ export class TokenGreeter {
       return null;
     }
 
-    if (targetParty !== token.party) {
-      log(`${targetParty} !== ${token.party}`);
+    if (!targetParty.equals(token.party)) {
+      log(targetParty, '!==', token.party);
       token.revoke();
       return null;
     }
@@ -114,13 +136,14 @@ export class TokenGreeter {
   }
 
   issueToken({ token, party, expiration }) {
+    // If token is present, always use its values.
     if (token) {
       party = token.party;
       expiration = token.expiration;
     }
 
-    if (!this._isAllowedParty(party)) {
-      throw new Error(`Bad party: ${party}`);
+    if (!this.isAllowedParty(party)) {
+      throw new ProtocolError(403, `Bad party: ${party}`);
     }
 
     const ret = new Token(party, expiration);
@@ -139,18 +162,21 @@ export class TokenGreeter {
 
     if (command === 'negotiate') {
       const next = this.issueToken(redeemed);
-      return { token: next.token, challenge: next.challenge };
+      return {
+        __type_url: '.dxos.greet.Message',
+        payload: { __type_url: '.dxos.greet.NegotiateResponse', token: next.token, challenge: next.challenge }
+      };
     }
 
     if (command === 'submit') {
       for await (const msg of params) {
         // The message needs to have our challenge inside it.
-        if (msg.data.signed.original.challenge !== redeemed.challenge) {
-          throw new ProtocolError(401, `Bad challenge: ${msg.data.signed.original.challenge}`);
+        if (!msg.signed.nonce.equals(redeemed.challenge)) {
+          throw new ProtocolError(401, `Bad challenge: ${msg.signed.nonce.toString('hex')}`);
         }
 
-        if (!msg.type.startsWith('party.admit.')) {
-          throw new ProtocolError(403, `Bad type: ${msg.type}`);
+        if (!msg.signed.type.startsWith('party.admit.')) {
+          throw new ProtocolError(403, `Bad type: ${msg.signed.type}`);
         }
 
         // And the signature needs to check out.
@@ -160,11 +186,18 @@ export class TokenGreeter {
         }
       }
 
-      const messages = await this._partyWriter(params);
+      const copies = await this._partyWriter(params);
       const hints = await this._gatherHints(params);
       return {
-        messages,
-        hints
+        __type_url: '.dxos.greet.Message',
+        payload: {
+          __type_url: '.dxos.greet.SubmitResponse',
+          copies,
+          hints: {
+            __type_url: '.dxos.greet.Hints',
+            ...hints
+          }
+        }
       };
     }
 

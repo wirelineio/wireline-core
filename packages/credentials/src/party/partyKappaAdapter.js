@@ -4,17 +4,17 @@
 
 import debug from 'debug';
 
-import { AuthMessageTypes } from './authentication';
+import { PartyMessageTypes } from './partyMessage';
 
-const log = debug('creds:authentication:kappa');
+const log = debug('creds:party:kappa');
 
-export class AuthKappaAdapter {
-  constructor(view, auth) {
+export class PartyKappaAdapter {
+  constructor(view, party) {
     console.assert(view);
-    console.assert(auth);
+    console.assert(party);
 
     this._view = view;
-    this._auth = auth;
+    this._party = party;
     this._queue = [];
 
     this._draining = false;
@@ -22,12 +22,12 @@ export class AuthKappaAdapter {
 
   start() {
     // Process exactly one genesis message.
-    this._view.events.once(AuthMessageTypes.GENESIS, this._enqueue.bind(this));
+    this._view.events.once(PartyMessageTypes.GENESIS, this._enqueue.bind(this));
 
     // Process N messages of other types.
-    Object.getOwnPropertyNames(AuthMessageTypes).forEach((type) => {
-      if (type !== AuthMessageTypes.GENESIS) {
-        this._view.events.on(AuthMessageTypes[type], this._enqueue.bind(this));
+    Object.getOwnPropertyNames(PartyMessageTypes).forEach((type) => {
+      if (PartyMessageTypes[type] !== PartyMessageTypes.GENESIS) {
+        this._view.events.on(PartyMessageTypes[type], this._enqueue.bind(this));
       }
     });
   }
@@ -45,7 +45,7 @@ export class AuthKappaAdapter {
     this._draining = true;
     while (this._queue.length) {
       try {
-        await this._auth.processMessage(this._queue.shift());
+        await this._party.processMessage(this._queue.shift());
       } catch (err) {
         log(err);
       }

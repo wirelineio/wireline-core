@@ -92,9 +92,17 @@ export class Keyring {
     return this.find();
   }
 
+  has(key, trusted = true) {
+    return !!this.get(key, trusted);
+  }
+
   get(key, trusted = true) {
     if (key.publicKey) {
       key = keyToHex(key.publicKey);
+    }
+
+    if (key.data && key.type === 'Buffer') {
+      key = Buffer.from(key);
     }
 
     if (Buffer.isBuffer(key)) {

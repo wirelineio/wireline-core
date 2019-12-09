@@ -2,7 +2,7 @@
 // Copyright 2019 Wireline, Inc.
 //
 
-const AuthView = require('./auth');
+const PartyView = require('./party');
 const ContactsView = require('./contacts');
 const DocumentsView = require('./documents');
 const ItemsView = require('./items');
@@ -10,7 +10,7 @@ const LogsView = require('./logs');
 const ChatLogsView = require('./chat-logs');
 
 module.exports.ViewTypes = {
-  AuthView,
+  PartyView,
   ContactsView,
   DocumentsView,
   ItemsView,
@@ -23,8 +23,8 @@ module.exports.Views = [
 
   // System views.
   {
-    name: 'auth',
-    view: 'AuthView'
+    name: 'party',
+    view: 'PartyView'
   },
   {
     name: 'contacts',
