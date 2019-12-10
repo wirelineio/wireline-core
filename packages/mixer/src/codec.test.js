@@ -11,11 +11,7 @@ const types = require('./testing/types.json');
 
 test('encoding/decoding', () => {
 
-  const options = {
-    rootTypeUrl: '.dxos.Message'
-  };
-
-  const codec = new Codec(options)
+  const codec = new Codec('.dxos.Message')
     .addJson(schema)
     .addJson(types)
     .build();

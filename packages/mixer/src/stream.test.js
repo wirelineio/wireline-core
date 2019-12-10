@@ -189,11 +189,7 @@ test('feedstore proto stream', async (done) => {
     }
   ];
 
-  const options = {
-    rootTypeUrl: '.dxos.Message'
-  };
-
-  const codec = new Codec(options)
+  const codec = new Codec('.dxos.Message')
     .addJson(schema)
     .addJson(types)
     .build();
