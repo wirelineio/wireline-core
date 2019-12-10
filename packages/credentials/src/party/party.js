@@ -24,11 +24,11 @@ export class Party extends EventEmitter {
     this._mixer = mixer;
   }
 
-  get trustedFeeds() {
+  get feeds() {
     return this._keyring.find({ type: KeyTypes.FEED, trusted: true }).map(f => f.publicKey);
   }
 
-  get trustedKeys() {
+  get members() {
     return this._keyring.find({ type: { $nin: [KeyTypes.FEED, KeyTypes.PARTY] }, trusted: true }).map(f => f.publicKey);
   }
 

@@ -13,7 +13,7 @@ import sub from 'subleveldown';
 import through from 'through2';
 
 import { FeedStore } from '@dxos/feed-store';
-import { Codec } from '@wirelineio/codec-protobuf';
+import { Codec } from '@dxos/codec-protobuf';
 
 import { arrayFromStream } from './stream';
 

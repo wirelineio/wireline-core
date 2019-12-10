@@ -115,11 +115,11 @@ export class Replicator extends EventEmitter {
   }
 
   async _replicateAll(protocol = null) {
-    const { publicKey, trustedFeeds } = this._party;
+    const { publicKey, feeds } = this._party;
     // Shouldn't the "topic" be the discoveryKey?
     const topic = keyToHex(publicKey);
 
-    for await (const feedKey of trustedFeeds) {
+    for await (const feedKey of feeds) {
       let feed = await this._feedStore.findFeed(d => d.key.equals(feedKey));
       if (!feed) {
         const path = `feed/${topic}/${keyToHex(feedKey)}`;

@@ -712,6 +712,15 @@
     protobufjs "https://github.com/wirelineio/protobuf.js#wireline-dist"
     source-map-support "^0.5.12"
 
+"@dxos/codec-protobuf@^1.1.0-beta.1":
+  version "1.1.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@dxos/codec-protobuf/-/codec-protobuf-1.1.0-beta.1.tgz#bba5a6f925de84c313acd623b94be3a3d05b6e23"
+  integrity sha512-MurH4rN4uT1YWeGedGzyQ1qOqGXY0gLEb99Fbt3qs7Jrf6b6ENcfeLwObpy1kBZtbT7XbvPJnP7+FckJjWVqaA==
+  dependencies:
+    lodash.merge "^4.6.2"
+    protobufjs "https://github.com/protobufjs/protobuf.js"
+    source-map-support "^0.5.12"
+
 "@dxos/feed-store@^1.1.0", "@dxos/feed-store@^1.1.1":
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/@dxos/feed-store/-/feed-store-1.1.1.tgz#1e6bfa451852edb96f51f82d4322e3a8d42bfe61"
@@ -6078,7 +6087,7 @@ lodash.ismatch@^4.4.0:
   resolved "https://registry.yarnpkg.com/lodash.ismatch/-/lodash.ismatch-4.4.0.tgz#756cb5150ca3ba6f11085a78849645f188f85f37"
   integrity sha1-dWy1FQyjum8RCFp4hJZF8Yj4Xzc=
 
-lodash.merge@^4.6.1:
+lodash.merge@^4.6.1, lodash.merge@^4.6.2:
   version "4.6.2"
   resolved "https://registry.yarnpkg.com/lodash.merge/-/lodash.merge-4.6.2.tgz#558aa53b43b661e1925a0afdfa36a9a1085fe57a"
   integrity sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==
@@ -7566,6 +7575,24 @@ proto-list@~1.2.1:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/proto-list/-/proto-list-1.2.4.tgz#212d5bfe1318306a420f6402b8e26ff39647a849"
   integrity sha1-IS1b/hMYMGpCD2QCuOJv85ZHqEk=
+
+"protobufjs@https://github.com/protobufjs/protobuf.js":
+  version "6.8.8"
+  resolved "https://github.com/protobufjs/protobuf.js#5f2f62bcfd9bb69b34efbcfefffddf92daecf480"
+  dependencies:
+    "@protobufjs/aspromise" "^1.1.2"
+    "@protobufjs/base64" "^1.1.2"
+    "@protobufjs/codegen" "^2.0.4"
+    "@protobufjs/eventemitter" "^1.1.0"
+    "@protobufjs/fetch" "^1.1.0"
+    "@protobufjs/float" "^1.0.2"
+    "@protobufjs/inquire" "^1.1.0"
+    "@protobufjs/path" "^1.1.2"
+    "@protobufjs/pool" "^1.1.0"
+    "@protobufjs/utf8" "^1.1.0"
+    "@types/long" "^4.0.0"
+    "@types/node" "^10.1.0"
+    long "^4.0.0"
 
 "protobufjs@https://github.com/wirelineio/protobuf.js#wireline-dist":
   version "6.8.8"
